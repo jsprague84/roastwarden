@@ -1,0 +1,52 @@
+services:
+  # The broker's users from .env (docker/mosquitto/users.sh): the server and each roaster
+  mqtt-users:
+    image: eclipse-mosquitto:2.0
+    entrypoint: ["/bin/sh", "/users.sh"]
+    environment:
+      - MQTT_PASSWORD=${MQTT_PASSWORD:?set MQTT_PASSWORD in .env (openssl rand -hex 16)}
+      - MQTT_DEVICES=${MQTT_DEVICES:-}
+      # Home Assistant's user on this broker, for discovery (docs/home-assistant.md)
+      - MQTT_HOME_ASSISTANT_PASSWORD=${MQTT_HOME_ASSISTANT_PASSWORD:-}
+    volumes:
+      - ./docker/mosquitto/users.sh:/users.sh:ro
+      - ./docker/mosquitto/config:/mosquitto/config
+
+  # No anonymous clients, one MQTT listener (SECURITY.md, "MQTT"). Keep 1883 on the LAN.
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: roastwarden-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./docker/mosquitto/config:/mosquitto/config
+      - ./docker/mosquitto/data:/mosquitto/data
+    depends_on:
+      mqtt-users:
+        condition: service_completed_successfully
+
+  roastwarden:
+    # The image and its version (.env: ROASTWARDEN_IMAGE, ROASTWARDEN_VERSION; docs/DEPLOY.md,
+    # "Images"). A release's compose bundle sets the version to its own tag. amd64 and arm64.
+    image: ${ROASTWARDEN_IMAGE:-ghcr.io/jsprague84/roastwarden}:${ROASTWARDEN_VERSION:-latest}
+    container_name: roastwarden
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+      # Artisan as a screen (docs/artisan-screen.md): uncomment with ROASTWARDEN_MODBUS_ADDR below
+      # - "502:502"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - MQTT_BROKER_HOST=mosquitto
+      - MQTT_BROKER_PORT=1883
+      - MQTT_USERNAME=roastwarden
+      - MQTT_PASSWORD=${MQTT_PASSWORD:?set MQTT_PASSWORD in .env (openssl rand -hex 16)}
+      - ROASTWARDEN_DB_PATH=/app/data/roastwarden.db
+      - ROASTWARDEN_API_KEY=${ROASTWARDEN_API_KEY:-}
+      - ROASTWARDEN_READS=${ROASTWARDEN_READS:-login}
+      # - ROASTWARDEN_MODBUS_ADDR=0.0.0.0:502
+      - RUST_LOG=info
+    depends_on:
+      - mosquitto

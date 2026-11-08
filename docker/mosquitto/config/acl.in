@@ -1,0 +1,23 @@
+# Who may use which topics (mosquitto.conf; SECURITY.md, "MQTT"). users.sh copies this to
+# `acl` (owned by the broker, mode 0600) at every start.
+#
+# The server (MQTT_USERNAME, "roastwarden"): every topic, because a roaster set up with its own
+# topics (docs/ingest-mapping.md) or the simulated drum (sim/drum/...) uses topics of its own.
+user roastwarden
+topic readwrite #
+
+# Home Assistant (MQTT_HOME_ASSISTANT_PASSWORD; docs/home-assistant.md): reads the discovery,
+# the roasters' state and the server's presence, sends its own birth message, nothing else.
+user homeassistant
+topic read homeassistant/#
+topic read roastwarden/ha/#
+topic read roastwarden/server/status
+topic write homeassistant/status
+
+# Every other user is a roaster whose name is its device id: its own telemetry, status, debug
+# and commands under roaster/<id>/, and the server's presence (its heater stops when the
+# server goes offline). A roaster with topics of its own needs lines of its own here, e.g.
+#   user my_drum
+#   topic readwrite my_drum/#
+pattern readwrite roaster/%u/#
+pattern read roastwarden/server/status

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<!-- Search results want a square bitmap, a multiple of 48 px; crawlers also try /favicon.ico -->
+		<link
+			rel="icon"
+			type="image/png"
+			sizes="192x192"
+			href="%sveltekit.assets%/icons/icon-192.png"
+		/>
+		<link rel="icon" type="image/svg+xml" href="%sveltekit.assets%/favicon.svg" />
+		<link
+			rel="manifest"
+			href="%sveltekit.assets%/manifest.webmanifest"
+			crossorigin="use-credentials"
+		/>
+		<link rel="apple-touch-icon" href="%sveltekit.assets%/icons/apple-touch-icon.png" />
+		<meta name="theme-color" content="#1b1f25" />
+		<script>
+			// Before any store reads: keys saved as rustRoast (the API key, preferences) take
+			// Roastwarden's names once (0.25.0; remove a release or two later)
+			(function () {
+				[window.localStorage, window.sessionStorage].forEach(function (s) {
+					try {
+						for (var i = s.length - 1; i >= 0; i--) {
+							var k = s.key(i);
+							if (k && k.indexOf('rustroast') === 0) {
+								var n = 'roastwarden' + k.slice(9);
+								if (s.getItem(n) === null) s.setItem(n, s.getItem(k));
+								s.removeItem(k);
+							}
+						}
+					} catch (e) {}
+				});
+			})();
+			(function () {
+				try {
+					var p = localStorage.getItem('roastwarden.theme');
+					var light =
+						p === 'light' ||
+						(p !== 'dark' && window.matchMedia('(prefers-color-scheme: light)').matches);
+					document.documentElement.dataset.theme = light ? 'light' : 'dark';
+				} catch (e) {
+					document.documentElement.dataset.theme = 'dark';
+				}
+			})();
+		</script>
+		%sveltekit.head%
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
+</html>

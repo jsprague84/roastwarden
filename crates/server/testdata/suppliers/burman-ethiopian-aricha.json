@@ -1,0 +1,56 @@
+[
+  {
+    "id": 1000004,
+    "name": "Ethiopian Yirgacheffe Washed Gr. 2 &#8211; Aricha Station",
+    "slug": "ethiopian-aricha-washed",
+    "type": "simple",
+    "permalink": "https://burmancoffee.com/product/green-coffee-beans/ethiopian-aricha-washed/",
+    "sku": "",
+    "short_description": "<p><strong>Sale this month</strong><br />\nSynthetic test notes for a washed Ethiopian: lemon, peach and jasmine at a light roast, more chocolate &amp; body at medium.</p>\n<p><img src=\"https://example.com/icon.png\" alt=\"Placeholder\" width=\"300\" height=\"52\" /></p>",
+    "description": "<p>Synthetic test text in place of the supplier's long description.</p>",
+    "on_sale": true,
+    "prices": {
+      "price": "698",
+      "regular_price": "869",
+      "sale_price": "698",
+      "price_range": null,
+      "currency_code": "USD",
+      "currency_symbol": "$",
+      "currency_minor_unit": 2,
+      "currency_decimal_separator": ".",
+      "currency_thousand_separator": ",",
+      "currency_prefix": "$",
+      "currency_suffix": ""
+    },
+    "images": [
+      { "id": 1, "src": "https://example.com/coffee.jpg", "alt": "Placeholder image" }
+    ],
+    "categories": [
+      { "id": 1, "name": "Africa", "slug": "africa" },
+      { "id": 2, "name": "All Coffees", "slug": "all-coffees" },
+      { "id": 3, "name": "Ethiopia", "slug": "ethiopia" },
+      { "id": 4, "name": "Green Coffee Beans", "slug": "green-coffee-beans" },
+      { "id": 5, "name": "Washed", "slug": "washed" }
+    ],
+    "attributes": [
+      { "id": 14, "name": "Arrival Date:", "taxonomy": "pa_arrival-date", "has_variations": false,
+        "terms": [{ "id": 1, "name": "09/30/26", "slug": "09-30-26" }] },
+      { "id": 13, "name": "Lot #:", "taxonomy": "pa_lot", "has_variations": false,
+        "terms": [{ "id": 2, "name": "0072", "slug": "0072" }] },
+      { "id": 12, "name": "Origin:", "taxonomy": "pa_origin", "has_variations": false,
+        "terms": [{ "id": 3, "name": "Aricha Kebele, Yirga Chefe Woreda, Gedeo Zone", "slug": "aricha-kebele-yirga-chefe-woreda-gedeo-zone" }] },
+      { "id": 15, "name": "Processing Method:", "taxonomy": "pa_processing-method", "has_variations": false,
+        "terms": [{ "id": 4, "name": "Washed", "slug": "washed" }] },
+      { "id": 27, "name": "Altitude", "taxonomy": "pa_altitiude", "has_variations": false,
+        "terms": [{ "id": 5, "name": "1900 – 2200 masl", "slug": "1900-2200-masl" }] },
+      { "id": 29, "name": "Grower", "taxonomy": "pa_grower", "has_variations": false,
+        "terms": [{ "id": 6, "name": "Smallholder farmers at the Aricha station", "slug": "smallholder-farmers" }] },
+      { "id": 28, "name": "Variety", "taxonomy": "pa_variety", "has_variations": false,
+        "terms": [{ "id": 7, "name": "Heirloom landraces", "slug": "heirloom-landraces" }] }
+    ],
+    "is_purchasable": true,
+    "is_in_stock": true,
+    "stock_availability": { "text": "100 in stock", "class": "in-stock" },
+    "weight": "1.01"
+  }
+]

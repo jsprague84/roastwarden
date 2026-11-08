@@ -1,0 +1,77 @@
+[workspace]
+members = [
+  "crates/autotune",
+  "crates/core",
+  "crates/mqtt",
+  "crates/server",
+  "crates/ws-smoke",
+]
+resolver = "2"
+
+# Every crate: AGPL-3.0-or-later (LICENSE; CONTRIBUTING.md for contributions)
+[workspace.package]
+license = "AGPL-3.0-or-later"
+authors = ["Johnathon Sprague"]
+# Not on crates.io; cargo-about and cargo-deny treat them as private
+publish = false
+
+# Clippy for every crate (each crate's [lints] says `workspace = true`). Pedantic, less what this
+# project does not want; the reasons beside each. CI runs clippy with -D warnings, so a warning
+# here fails the build. Function length and complexity are not gated (DEVELOPMENT.md, "Lints").
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+# No unwrap in production code: `?`, a match, or `expect` naming the invariant (clippy.toml lets
+# tests unwrap). A leftover debugging macro or placeholder never ships.
+unwrap_used = "warn"
+dbg_macro = "warn"
+todo = "warn"
+unimplemented = "warn"
+
+# Telemetry, layout and protocol maths convert between integer and float types on purpose
+# (percent, °C, register words, millimetres); each cast is intended as written.
+cast_possible_truncation = "allow"
+cast_precision_loss = "allow"
+cast_sign_loss = "allow"
+cast_possible_wrap = "allow"
+cast_lossless = "allow"
+# Lints for a library's public API; these crates are an application and its parts.
+must_use_candidate = "allow"
+return_self_not_must_use = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+# Option<Option<T>> is a PATCH body's three states: absent, null (clear it), a value.
+option_option = "allow"
+# Exact float compares here are deliberate: sentinels (a scale of 1.0, -1 for no reading), values
+# the code rounded or set itself, a zero-width guard before a division.
+float_cmp = "allow"
+# The names compared are ones the server writes itself (backups, assets, firmware files).
+case_sensitive_file_extension_comparisons = "allow"
+# Style this project does not follow: short maths names, settings structs of flags, helper items
+# after the statements that use them, an if-let with an else, owned arguments a handler keeps.
+similar_names = "allow"
+many_single_char_names = "allow"
+struct_excessive_bools = "allow"
+fn_params_excessive_bools = "allow"
+struct_field_names = "allow"
+items_after_statements = "allow"
+single_match_else = "allow"
+needless_pass_by_value = "allow"
+# Futures here are the server's own tasks, spawned once; their size is not a cost.
+large_futures = "allow"
+# Not a gate: long functions are split when they are worked on.
+too_many_lines = "allow"
+
+# Release binaries without symbol tables: Typst (bag labels) made the unstripped server 85 MB
+[profile.release]
+strip = true
+
+# cargo-mutants builds and tests with this one: the test profile without
+# debug info, so each mutant links fast and the build copies stay small.
+[profile.mutants]
+inherits = "test"
+debug = "none"
+
+# The autotune analysis (model fits) is numeric work: optimised even in debug and test builds,
+# so the server's tests and a dev server analyse a run in well under a second
+[profile.dev.package.roastwarden-autotune]
+opt-level = 3

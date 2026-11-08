@@ -1,0 +1,23 @@
+{
+  "product": {
+    "id": 1000000000003,
+    "title": "Ethiopian Harrar",
+    "body_html": "<p>SPECIFICS:<\/p>\n<p>Name: Ethiopian Harrar<\/p>\n<p>Origin: Ethiopia<\/p>\n<p>Region: East Harrar<\/p>\n<p>Altitude: 1800 M<\/p>\n<p>Varietals: Heirloom<\/p>\n<p>Process: Natural<\/p>\n<p>Bag Size: 132 lb.<\/p>\n<p>Cupping Notes: Synthetic test notes, blueberry and cocoa.<\/p>",
+    "vendor": "ThetaRidge Coffee",
+    "product_type": "",
+    "handle": "ethiopian-harrar",
+    "tags": "woo_import_1",
+    "variants": [
+      { "id": 1, "title": "1 pound", "price": "6.95", "sku": "", "grams": 454, "price_currency": "USD" },
+      { "id": 2, "title": "3 pounds", "price": "19.80", "sku": "", "grams": 1361, "price_currency": "USD" },
+      { "id": 3, "title": "5 pounds", "price": "33.00", "sku": "", "grams": 2268, "price_currency": "USD" },
+      { "id": 4, "title": "10 pounds", "price": "64.00", "sku": "", "grams": 4536, "price_currency": "USD" }
+    ],
+    "options": [
+      { "name": "Bag Size", "position": 1, "values": ["1 pound", "3 pounds", "5 pounds", "10 pounds"] }
+    ],
+    "images": [
+      { "id": 1, "position": 1, "alt": null, "src": "https:\/\/example.com\/coffee.png" }
+    ]
+  }
+}

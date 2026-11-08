@@ -1,0 +1,23 @@
+# cargo audit (CI job "Audit", and `nix develop -c cargo audit` locally).
+# Every ignore has a reason here; drop it when the reason goes away.
+[advisories]
+ignore = [
+  # rsa (Marvin timing attack): in Cargo.lock through sqlx-mysql, which is never compiled
+  # (Roastwarden enables only sqlx's sqlite driver). No fixed release exists.
+  "RUSTSEC-2023-0071",
+  # rustls-webpki 0.102.8: rumqttc 0.25.1 pins it but uses it only for an error type
+  # (`TlsError::WebPki`). Certificates are verified by rustls 0.23 with rustls-webpki 0.103,
+  # which has the fixes. Drop these when rumqttc moves to webpki 0.103.
+  "RUSTSEC-2026-0049",
+  "RUSTSEC-2026-0098",
+  "RUSTSEC-2026-0099",
+  "RUSTSEC-2026-0104",
+  "RUSTSEC-2026-0382",
+  # quick-xml 0.38.4 (denial of service on hostile XML): Typst 0.15.1's bibliography support
+  # (hayagriva → citationberg 0.7.0, the latest, pins quick-xml 0.38) parses CSL citation
+  # styles with it. Bag labels never call bibliography(); an owner's design could only feed it
+  # files the owner put in the data folder. Typst's xml() and SVG use roxmltree, not
+  # quick-xml. Drop these when citationberg moves to quick-xml >= 0.41 (docs/labels.md).
+  "RUSTSEC-2026-0194",
+  "RUSTSEC-2026-0195",
+]

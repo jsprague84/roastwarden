@@ -1,0 +1,18 @@
+{
+  "device_id": "ws_roaster",
+  "name": "DIY roaster (WebSocket)",
+  "kind": "fluid_bed_electric",
+  "connection": {
+    "protocol": "websocket",
+    "config": {
+      "url": "ws://192.168.1.61:81/",
+      "ingest": { "fields": { "bt": "BT", "et": "ET", "heater": "heater", "fan": "fan" } },
+      "commands": {
+        "heater": { "payload": "{\"set\":\"heater\",\"value\":{value}}" },
+        "fan": { "payload": "{\"set\":\"fan\",\"value\":{value}}" },
+        "heater_enable": { "payload": "{\"set\":\"enable\",\"value\":{value}}" },
+        "emergency_stop": { "payload": "{\"set\":\"stop\"}" }
+      }
+    }
+  }
+}

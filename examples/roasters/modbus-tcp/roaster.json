@@ -1,0 +1,18 @@
+{
+  "device_id": "modbus_roaster",
+  "name": "DIY roaster (Modbus TCP)",
+  "kind": "fluid_bed_electric",
+  "connection": {
+    "protocol": "modbus_tcp",
+    "config": { "host": "192.168.1.60", "port": 502, "unit_id": 1, "poll_interval_ms": 1000 }
+  },
+  "register_map": [
+    {"register_type": "holding", "address": 0, "name": "bt", "data_type": "int16", "scale_factor": 0.1, "unit": "°C", "writable": false, "role": "bt"},
+    {"register_type": "holding", "address": 1, "name": "et", "data_type": "int16", "scale_factor": 0.1, "unit": "°C", "writable": false, "role": "et"},
+    {"register_type": "holding", "address": 2, "name": "heater", "data_type": "uint16", "unit": "%", "writable": true, "role": "heater"},
+    {"register_type": "holding", "address": 3, "name": "fan", "data_type": "uint16", "unit": "%", "writable": true, "role": "fan"},
+    {"register_type": "holding", "address": 4, "name": "heater_applied", "data_type": "uint16", "unit": "%", "writable": false, "role": "heater_applied"},
+    {"register_type": "holding", "address": 5, "name": "heater_enable", "data_type": "uint16", "writable": true, "role": "heater_enable"},
+    {"register_type": "holding", "address": 6, "name": "emergency_stop", "data_type": "uint16", "writable": true, "role": "emergency_stop"}
+  ]
+}

@@ -1,0 +1,15 @@
+# Clippy's settings (the lints themselves are in Cargo.toml's [workspace.lints.clippy]).
+# Tests may unwrap and expect: a panic there is the failure message. Production code may not
+# unwrap (`?`, a match, or `expect` with the invariant it relies on).
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+
+# Names doc comments may write as words, not code ("..": clippy's own list too). Product and
+# protocol names, and the roasting terms RoR (rate of rise), FCe and SCe (end of first and
+# second crack).
+doc-valid-idents = [
+  "..",
+  "RoR", "FCe", "SCe",
+  "AirPrint", "DeltaV", "ESPHome", "HttpOnly", "LaserJet", "OpenAPI", "PCLm", "PlatformIO",
+  "QoS", "RustCrypto", "SvelteKit", "WebSockets", "WooCommerce",
+]

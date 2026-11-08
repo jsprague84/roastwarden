@@ -1,0 +1,27 @@
+# Editor settings (https://editorconfig.org): new lines in each file type's style. rustfmt is the
+# Rust formatter; this file covers everything else.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.{rs,py}]
+indent_size = 4
+
+# The dashboard, the browser scripts and the installer are indented with tabs
+[{apps/dashboard/**,scripts/**/*.mjs,scripts/install.sh}]
+indent_style = tab
+
+# Two trailing spaces are a Markdown line break
+[*.md]
+trim_trailing_whitespace = false
+
+# Third-party files kept byte for byte (font licences, Artisan's setup files)
+[crates/server/assets/**]
+trim_trailing_whitespace = false
+insert_final_newline = unset

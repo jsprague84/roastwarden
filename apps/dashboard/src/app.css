@@ -1,0 +1,236 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/atkinson-hyperlegible-next/wght.css';
+
+/*
+ * The look: "Chart paper", a strip-chart recorder's paper and ink.
+ * Dark is carbon blue with a periwinkle ink, light is recorder-green paper with ink blue.
+ * Type is Atkinson Hyperlegible Next, drawn for reading at a distance, a size above
+ * Tailwind's default. Dark is the default; `[data-theme="light"]` on <html> switches the
+ * palette (src/lib/stores/theme.svelte.ts and app.html). The scope's series colours (BT
+ * amber, ET blue, RoR green) are not tokens: they stay the same in both themes.
+ */
+:root {
+	color-scheme: dark;
+	--font-sans: 'Atkinson Hyperlegible Next Variable', ui-sans-serif, system-ui, sans-serif;
+	--text-xs: 0.78rem;
+	--text-sm: 0.9rem;
+
+	--background: #1b1f25;
+	--foreground: #e8ebef;
+	--card: #22272f;
+	--card-foreground: #e8ebef;
+	--muted: #2c323b;
+	--muted-foreground: #a0a9b4;
+	--border: #39414c;
+	--input: #191c22;
+	--ring: #9db0ee;
+	--accent: #2c333d;
+	--accent-foreground: #e8ebef;
+	--destructive: oklch(0.704 0.191 22.216);
+
+	/* Primary buttons and the selected tab underline; focus rings. */
+	--action: #9db0ee;
+	--action-hover: #b4c3f3;
+	--action-foreground: #111933;
+	--focus: #9db0ee;
+	/* "Go" buttons (start, charge, engage); the selected option of a segmented control. */
+	--go: #5fae7d;
+	--go-hover: #71bd8e;
+	--go-foreground: #0c1a11;
+	--selected: #9db0ee;
+	--selected-foreground: #111933;
+	/* Where you are: the current step, the chosen unit. */
+	--highlight: #9db0ee;
+	--highlight-soft: rgb(157 176 238 / 0.18);
+
+	/* The label design editor's Typst colours (lib/components/labels/TypstEditor.svelte) */
+	--code-keyword: #b4c3f3;
+	--code-string: #e3b873;
+	--code-number: #8fcfa2;
+	--code-function: #e8ebef;
+	--code-property: #c9a7e8;
+}
+
+:root[data-theme='light'] {
+	color-scheme: light;
+
+	--background: #f1f4ef;
+	--foreground: #191e1b;
+	--card: #ffffff;
+	--card-foreground: #191e1b;
+	--muted: #e4e9e2;
+	--muted-foreground: #525d57;
+	--border: #c3cec4;
+	--input: #ffffff;
+	--ring: #263c7a;
+	--accent: #e6ece4;
+	--accent-foreground: #191e1b;
+	--destructive: oklch(0.577 0.245 27.325);
+
+	--action: #263c7a;
+	--action-hover: #1d2f63;
+	--action-foreground: #ffffff;
+	--focus: #263c7a;
+	--go: #2d7a4b;
+	--go-hover: #25663e;
+	--go-foreground: #ffffff;
+	--selected: #263c7a;
+	--selected-foreground: #ffffff;
+	--highlight: #263c7a;
+	--highlight-soft: rgb(38 60 122 / 0.1);
+
+	--code-keyword: #263c7a;
+	--code-string: #8a4b08;
+	--code-number: #2d7a4b;
+	--code-function: #191e1b;
+	--code-property: #6b3a8f;
+}
+
+@theme inline {
+	/* Background & foreground */
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+
+	/* Card surfaces */
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+
+	/* Muted / subdued elements */
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+
+	/* Borders & inputs */
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+
+	/* Interactive accent (hover states) */
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+
+	/* Primary action, focus */
+	--color-action: var(--action);
+	--color-action-hover: var(--action-hover);
+	--color-action-foreground: var(--action-foreground);
+	--color-focus: var(--focus);
+	--color-go: var(--go);
+	--color-go-hover: var(--go-hover);
+	--color-go-foreground: var(--go-foreground);
+	--color-selected: var(--selected);
+	--color-selected-foreground: var(--selected-foreground);
+	--color-highlight: var(--highlight);
+	--color-highlight-soft: var(--highlight-soft);
+
+	/* Destructive */
+	--color-destructive: var(--destructive);
+
+	/* Border radius */
+	--radius: 0.375rem;
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+}
+
+/* Base element defaults */
+body {
+	background-color: var(--color-background);
+	color: var(--color-foreground);
+}
+
+/* Checkboxes and radios take the ink colour; a class (accent-sky-500 …) still wins. */
+@layer base {
+	input[type='checkbox'],
+	input[type='radio'] {
+		accent-color: var(--action);
+	}
+}
+
+/* Range input styling for dark theme */
+input[type='range'] {
+	background: transparent;
+}
+
+input[type='range']::-webkit-slider-runnable-track {
+	background: var(--color-muted);
+	border-radius: 4px;
+	height: 6px;
+}
+
+input[type='range']::-moz-range-track {
+	background: var(--color-muted);
+	border-radius: 4px;
+	height: 6px;
+}
+
+/* Form controls follow the active theme */
+input[type='number'],
+input[type='text'],
+input[type='password'],
+select {
+	color-scheme: inherit;
+}
+
+/*
+ * Accent text utilities were chosen for a dark background (the -400 shades).
+ * On the light palette they are too pale, so remap them to darker shades.
+ * Unlayered, so these win over Tailwind's layered utilities.
+ */
+:root[data-theme='light'] .text-amber-400 {
+	color: var(--color-amber-700);
+}
+:root[data-theme='light'] .text-amber-300 {
+	color: var(--color-amber-700);
+}
+:root[data-theme='light'] .text-amber-400\/70 {
+	color: color-mix(in oklab, var(--color-amber-700) 70%, transparent);
+}
+:root[data-theme='light'] .text-orange-400 {
+	color: var(--color-orange-700);
+}
+:root[data-theme='light'] .text-red-400 {
+	color: var(--color-red-700);
+}
+:root[data-theme='light'] .text-red-300 {
+	color: var(--color-red-700);
+}
+:root[data-theme='light'] .text-green-400 {
+	color: var(--color-green-700);
+}
+:root[data-theme='light'] .text-emerald-400 {
+	color: var(--color-emerald-700);
+}
+:root[data-theme='light'] .text-blue-400 {
+	color: var(--color-blue-700);
+}
+:root[data-theme='light'] .text-sky-400 {
+	color: var(--color-sky-700);
+}
+:root[data-theme='light'] .text-sky-400\/70 {
+	color: color-mix(in oklab, var(--color-sky-700) 70%, transparent);
+}
+:root[data-theme='light'] .text-cyan-400 {
+	color: var(--color-cyan-700);
+}
+:root[data-theme='light'] .text-yellow-400 {
+	color: var(--color-yellow-700);
+}
+:root[data-theme='light'] .text-violet-400 {
+	color: var(--color-violet-700);
+}
+:root[data-theme='light'] .text-gray-300,
+:root[data-theme='light'] .text-gray-400 {
+	color: var(--color-gray-600);
+}
+
+/* Native <option> lists do not inherit the select's colours. */
+select option {
+	background-color: var(--card);
+	color: var(--foreground);
+}
+
+/* Scroll areas that should rarely scroll: a thin bar when they must. */
+.scroll-thin {
+	scrollbar-width: thin;
+	scrollbar-color: var(--color-muted) transparent;
+}

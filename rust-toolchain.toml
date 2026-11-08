@@ -1,0 +1,8 @@
+# The Rust release every build uses: the release image (rust:1.99-bookworm), CI's image (rust-ci)
+# and GitHub's runners. The full version, because rustup names an installed toolchain by it: a
+# channel of "1.99" is another name and would make every build download a toolchain. The dev
+# shell's Rust comes from the flake (flake.lock) and does not read this file. Clippy's pedantic
+# table (Cargo.toml) turns a clippy difference into a red build, so a toolchain move bumps this
+# file, the flake, rust-ci and the Dockerfile's and release.yml's images together.
+[toolchain]
+channel = "1.99.1"

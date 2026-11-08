@@ -1,0 +1,46 @@
+# Roastwarden in one container (docs/INSTALL.md; docs/DEPLOY.md, "One container"): the server runs
+# its own MQTT broker (ROASTWARDEN_BROKER_ADDR), so there is no mosquitto beside it. For a
+# Raspberry Pi 4 or 5 (64-bit OS) or any Linux machine on the roaster's network:
+#
+#   cp .env.example .env        # then fill in MQTT_DEVICES (your roaster and its password)
+#   mkdir -p data && sudo chown 999:999 data   # the server runs as uid 999 and writes here
+#   docker compose -f docker-compose.single.yml up -d
+#   docker logs roastwarden       # the owner key, printed once at first start
+#
+# The host's network: mDNS finds roasters on the LAN, the roaster reaches the broker on port
+# 1883 and the dashboard is on port 8080 of this machine (http://<this machine>:8080).
+# Keep both ports on your LAN; never forward them to the internet.
+services:
+  roastwarden:
+    image: ${ROASTWARDEN_IMAGE:-ghcr.io/jsprague84/roastwarden}:${ROASTWARDEN_VERSION:-latest}
+    container_name: roastwarden
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./data:/app/data
+    # Every variable in .env reaches the server (README, the variables table); the lines below
+    # set what this install needs and its defaults
+    env_file: .env
+    environment:
+      # The built-in broker: no anonymous clients; each roaster in MQTT_DEVICES signs in as its
+      # device id with its password and may use only roaster/<id>/#. A broker of your own
+      # (Home Assistant's, your Mosquitto): ROASTWARDEN_BROKER_ADDR=off and MQTT_BROKER_HOST,
+      # MQTT_USERNAME, MQTT_PASSWORD in .env (docs/install-docker.md, "With your own MQTT broker")
+      - ROASTWARDEN_BROKER_ADDR=${ROASTWARDEN_BROKER_ADDR:-0.0.0.0:1883}
+      - MQTT_DEVICES=${MQTT_DEVICES:-}
+      # Home Assistant signs in as `homeassistant` with this password and reads the roasters'
+      # discovery and state only (docs/home-assistant.md); unset: no Home Assistant user
+      - MQTT_HOME_ASSISTANT_PASSWORD=${MQTT_HOME_ASSISTANT_PASSWORD:-}
+      # Optional here: the server's own password on its broker (made at each start when unset)
+      - MQTT_PASSWORD=${MQTT_PASSWORD:-}
+      - ROASTWARDEN_HTTP_ADDR=${ROASTWARDEN_HTTP_ADDR:-0.0.0.0:8080}
+      - ROASTWARDEN_DB_PATH=/app/data/roastwarden.db
+      # Unset: made at first start, saved as data/owner.key and printed in the log once
+      - ROASTWARDEN_API_KEY=${ROASTWARDEN_API_KEY:-}
+      # login: every browser signs in once (the owner key or a token). open: anyone on the
+      # LAN reads without signing in; writes still need the key or a token
+      - ROASTWARDEN_READS=${ROASTWARDEN_READS:-login}
+      # Artisan as a screen (docs/artisan-screen.md): ROASTWARDEN_MODBUS_ADDR=0.0.0.0:1502 in .env.
+      # On the host's network the server (not root) cannot use port 502; the setup file
+      # `roast artisan-screen --aset` writes carries the port it uses
+      - RUST_LOG=${RUST_LOG:-info}

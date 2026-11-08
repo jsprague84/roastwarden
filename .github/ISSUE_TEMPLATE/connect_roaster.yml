@@ -1,0 +1,68 @@
+name: Help connecting a roaster
+description: Your roaster does not show up, reads wrong, or does not take commands.
+labels: [question]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Two things answer most of these first:
+        [Connect your roaster](https://roastwarden.com/docs/connect-your-roaster/), what
+        Roastwarden expects from a roaster on one page, and the check: Roasters → the roaster →
+        Check, or `roast roaster check <roaster>`, which says line by line what is fine and what
+        is not.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Settings → About (or `roast status`).
+    validations:
+      required: true
+  - type: input
+    id: roaster
+    attributes:
+      label: The roaster
+      description: Make and model, or what you built (the board, the thermocouple boards).
+    validations:
+      required: true
+  - type: dropdown
+    id: transport
+    attributes:
+      label: How it connects
+      options:
+        - MQTT
+        - WebSocket
+        - Modbus TCP
+        - Modbus RTU or ASCII (RS-485)
+        - Serial TC4 / aArtisan
+        - Phidgets board
+        - A machine from Artisan's catalogue
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: artisan
+    attributes:
+      label: In Artisan
+      description: If Artisan reads this roaster, the machine you picked there (Config → Machine), or attach its settings file.
+  - type: textarea
+    id: check
+    attributes:
+      label: The check
+      description: The output of `roast roaster check <roaster>`, or a screenshot of the Check tab.
+      render: text
+  - type: textarea
+    id: raw
+    attributes:
+      label: What the roaster sends
+      description: |
+        The newest message as it arrived: the connection's mapping on the roaster's page shows
+        it, and `roast roaster map <roaster> --try` prints it with what Roastwarden makes of each
+        field.
+      render: text
+  - type: textarea
+    id: what
+    attributes:
+      label: What happens
+      description: What you expected and what you see instead.
+    validations:
+      required: true

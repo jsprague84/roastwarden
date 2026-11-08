@@ -1,0 +1,25 @@
+name: A feature idea
+description: Something Roastwarden could do for your roasting.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas are welcome. Not sure yet, or want to talk it through first? Start a
+        [discussion](https://github.com/jsprague84/roastwarden/discussions).
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you want to do
+      description: The job, in your own words, rather than the button you imagine. What do you do today instead?
+    validations:
+      required: true
+  - type: textarea
+    id: roasting
+    attributes:
+      label: How you roast
+      description: The roaster, how much you roast, what you use now (Artisan, a notebook, a spreadsheet).
+  - type: textarea
+    id: idea
+    attributes:
+      label: An idea of how it could work

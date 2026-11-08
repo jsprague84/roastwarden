@@ -1,0 +1,12 @@
+{
+  "device_id": "tc4_roaster",
+  "name": "DIY roaster (TC4)",
+  "kind": "fluid_bed_electric",
+  "connection": {
+    "protocol": "serial_tc4",
+    "config": {
+      "port": "/dev/ttyUSB0", "baud": 115200, "poll_interval_ms": 1000,
+      "reply_format": "active", "et_channel": 1, "bt_channel": 2, "fan_output": "io3"
+    }
+  }
+}

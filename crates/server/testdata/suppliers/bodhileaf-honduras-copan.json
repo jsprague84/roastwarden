@@ -1,0 +1,22 @@
+{
+  "product": {
+    "id": 1000000000002,
+    "title": "Honduras Organic Copan - Green",
+    "body_html": "<p><b>Country:<\/b> Honduras<br><b>Region:<\/b><span> <\/span><span>Copán, Corquín<\/span><br><b>Varietal:<\/b><span> Various<\/span><br><b>Process:<\/b><span> Washed<\/span><br><b>Altitude:<\/b><span> 1200-1700M<\/span><br><b>Cupping Notes: <\/b><span data-mce-fragment=\"1\">Nougat, Red Apple, Brownie<\/span><b><br><\/b><strong>Recommended Roast: <\/strong><span>City+ to Full City+<\/span><br><\/p>\n<p><strong>Good For: <\/strong>A<span>uto-drip, Full immersion, Espresso, Cold Brew<\/span><\/p>\n<p><b>Description:<span> <\/span><\/b><span>Synthetic test text in place of the supplier's description.<\/span><br><\/p>\n<p><span>A second made-up paragraph, long enough to stand in for a story about the farm.<\/span><\/p>",
+    "vendor": "Bodhi Leaf Coffee",
+    "product_type": "Green Coffee",
+    "handle": "honduras-copan-organic-green",
+    "tags": "Green Coffee, Honduras, Organic, washed",
+    "variants": [
+      { "id": 1, "title": "1 LB", "price": "8.86", "sku": "\/073_1", "grams": 454, "price_currency": "USD" },
+      { "id": 2, "title": "5 LB", "price": "42.09", "sku": "\/073_5", "grams": 2268, "price_currency": "USD" },
+      { "id": 3, "title": "20 LB", "price": "155.94", "sku": "\/073_20", "grams": 9072, "price_currency": "USD" }
+    ],
+    "options": [
+      { "name": "Weight", "position": 1, "values": ["1 LB", "5 LB", "20 LB"] }
+    ],
+    "images": [
+      { "id": 1, "position": 1, "alt": "Placeholder image", "src": "https:\/\/example.com\/coffee.jpg" }
+    ]
+  }
+}

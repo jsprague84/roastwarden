@@ -1,0 +1,9 @@
+{
+  "device_id": "my_roaster",
+  "name": "My fluid-bed roaster",
+  "kind": "fluid_bed_electric",
+  "connection": {
+    "protocol": "mqtt",
+    "config": { "topic_prefix": "roaster/my_roaster" }
+  }
+}

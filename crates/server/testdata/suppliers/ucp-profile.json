@@ -1,0 +1,22 @@
+{
+  "ucp": {
+    "version": "2026-08-25",
+    "supported_versions": { "2026-04-08": "https://example-store.myshopify.com/.well-known/ucp/2026-04-08" },
+    "services": {
+      "dev.ucp.shopping": [
+        { "version": "2026-08-25", "transport": "mcp", "endpoint": "https://example-store.myshopify.com/api/ucp/mcp" }
+      ]
+    },
+    "capabilities": {
+      "dev.ucp.shopping.cart": [ { "version": "2026-08-25" } ],
+      "dev.ucp.shopping.checkout": [ { "version": "2026-08-25" } ],
+      "dev.ucp.shopping.permalink": [
+        {
+          "version": "2026-08-25",
+          "spec": "https://ucp.dev/2026-08-25/specification/permalink/",
+          "config": { "endpoint": "https://www.sweetmarias.com/buy" }
+        }
+      ]
+    }
+  }
+}

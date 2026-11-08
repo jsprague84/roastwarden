@@ -1,0 +1,15 @@
+target/
+node_modules/
+.git/
+data/
+docker/
+*.md
+.env
+.env.*
+.github/
+ralph/
+tools/
+Esp32_FluidBedCoffeeRoaster/
+# roast builds the Agent Skill in (bin/roast/setup.rs)
+!skills/roastwarden/SKILL.md
+!skills/roastwarden/label-design.md

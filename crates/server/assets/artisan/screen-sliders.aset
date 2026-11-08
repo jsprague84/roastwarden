@@ -1,0 +1,13 @@
+[Sliders]
+slidervisibilities=1, 0, 0, 1
+slideractions=2, 0, 0, 2
+slidercommands="writeSingle(1,2,{})", , , "writeSingle(1,5,1);writeSingle(1,3,{})"
+slidermin=0, 0, 0, 0
+slidermax=100, 100, 100, 100
+sliderfactors=1, 1, 1, 1
+slideroffsets=0, 0, 0, 0
+eventsliderBernoulli=0, 0, 0, 0
+eventslidercoarse=0, 0, 0, 0
+eventslidertemp=0, 0, 0, 0
+eventsliderunits=" %", , , " %"
+eventslidersflags=0, 1, 1

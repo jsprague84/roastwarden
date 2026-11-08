@@ -1,0 +1,22 @@
+{
+	"id": "/",
+	"name": "Roastwarden",
+	"short_name": "Roastwarden",
+	"description": "Coffee roaster control, logging and roast analysis",
+	"start_url": "/",
+	"scope": "/",
+	"display": "standalone",
+	"orientation": "any",
+	"background_color": "#1b1f25",
+	"theme_color": "#1b1f25",
+	"icons": [
+		{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+		{ "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+		{ "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+	],
+	"shortcuts": [
+		{ "name": "Roast", "short_name": "Roast", "url": "/", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+		{ "name": "Beans", "short_name": "Beans", "url": "/beans", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+		{ "name": "History", "short_name": "History", "url": "/history", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+	]
+}

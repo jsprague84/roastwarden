@@ -1,0 +1,9 @@
+{
+  "device_id": "mqtt_roaster",
+  "name": "DIY roaster (MQTT)",
+  "kind": "fluid_bed_electric",
+  "connection": {
+    "protocol": "mqtt",
+    "config": { "topic_prefix": "roaster/mqtt_roaster" }
+  }
+}

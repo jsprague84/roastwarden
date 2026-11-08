@@ -1,0 +1,58 @@
+name: Bug report
+description: Something in Roastwarden does not work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting it. A security problem goes privately to
+        security@roastwarden.com, never in an issue. A question, or not sure it is a bug? Ask in
+        the [discussions](https://github.com/jsprague84/roastwarden/discussions).
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Settings → About shows it (or `roast status`), for example "0.42.0" or "0.42.0 + 3 commits".
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How it runs
+      options:
+        - Docker, one container (the installer, or docker-compose.single.yml)
+        - Docker with Mosquitto (docker-compose.yml)
+        - Built from source
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: roaster
+    attributes:
+      label: Roaster
+      description: The roaster and how it connects, if it matters here.
+      placeholder: an ESP32 fluid bed over MQTT; a Kaleido from Artisan's catalogue; the simulated roaster
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you saw, and what you expected instead. A screenshot helps.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to make it happen again
+      placeholder: |
+        1. Open …
+        2. Press …
+        3. …
+  - type: textarea
+    id: bundle
+    attributes:
+      label: Support bundle
+      description: |
+        Settings → About → Download the support bundle, or `roast support-bundle`. It holds the
+        versions, the roasters' setups, the newest roast and the recent log, with every password,
+        key and token removed and no green coffee or receipts
+        ([what is in it](https://roastwarden.com/docs/support/)). Look it over, then drop the file here.

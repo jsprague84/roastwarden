@@ -1,0 +1,97 @@
+; Roastwarden as a Modbus TCP roaster for Artisan (Roastwarden Standard map), read only.
+; Load with Help >> Load Settings. Host and port are the Roastwarden server's Modbus slave.
+[General]
+Mode=C
+Delay=1000
+roastertype_setup=Roastwarden
+swapETBT=false
+
+[Device]
+id=29
+
+[ExtraDev]
+extradevices=@Variant(\0\0\0\t\0\0\0\x1\0\0\0\x2\0\0\0!)
+extraname1=Heater,
+extraname2=Fan,
+extramathexpression1=,
+extramathexpression2=,
+extradevicecolor1=#c1272d,
+extradevicecolor2=#0071bc,
+extraLCDvisibility1=true, false, false, false, false, false, false, false, false, false
+extraLCDvisibility2=true, false, false, false, false, false, false, false, false, false
+extraCurveVisibility1=true, true, true, true, true, true, true, true, true, true
+extraCurveVisibility2=true, true, true, true, true, true, true, true, true, true
+extraDelta1=false, false, false, false, false, false, false, false, false, false
+extraDelta2=false, false, false, false, false, false, false, false, false, false
+
+[ExtraComm]
+extracomport=@Variant(\0\0\0\t\0\0\0\x1\0\0\0\n\0\0\0\b\0\x43\0O\0M\0\x31)
+extrabaudrate=@Variant(\0\0\0\t\0\0\0\x1\0\0\0\x2\0\0%\x80)
+extrabytesize=@Variant(\0\0\0\t\0\0\0\x1\0\0\0\x2\0\0\0\b)
+extraparity=@Variant(\0\0\0\t\0\0\0\x1\0\0\0\n\0\0\0\x2\0N)
+extrastopbits=@Variant(\0\0\0\t\0\0\0\x1\0\0\0\x2\0\0\0\x1)
+extratimeout=@Variant(\0\0\0\t\0\0\0\x1\0\0\0\x6?\xf0\0\0\0\0\0\0)
+
+[Modbus]
+type=3
+host=SERVER_ADDRESS
+port=502
+IP_timeout=0.5
+IP_retries=1
+wordorderLittle=false
+optimizer=true
+fetch_max_blocks=true
+input1deviceId=1
+input1register=0
+input1code=4
+input1float=true
+input1bcd=false
+input1FloatsAsInt=false
+input1BCDsAsInt=false
+input1Signed=false
+input1div=0
+input1mode=C
+input2deviceId=1
+input2register=2
+input2code=4
+input2float=true
+input2bcd=false
+input2FloatsAsInt=false
+input2BCDsAsInt=false
+input2Signed=false
+input2div=0
+input2mode=C
+input3deviceId=1
+input3register=6
+input3code=4
+input3float=false
+input3bcd=false
+input3FloatsAsInt=false
+input3BCDsAsInt=false
+input3Signed=false
+input3div=0
+input3mode=
+input4deviceId=1
+input4register=7
+input4code=4
+input4float=false
+input4bcd=false
+input4FloatsAsInt=false
+input4BCDsAsInt=false
+input4Signed=false
+input4div=0
+input4mode=
+input5deviceId=0
+input6deviceId=0
+input7deviceId=0
+input8deviceId=0
+input9deviceId=0
+input10deviceId=0
+
+[DefaultButtons]
+extrabuttonactions=0, 0, 0
+extrabuttonactionstrings=, , 
+
+[Sliders]
+slidervisibilities=0, 0, 0, 0
+slideractions=0, 0, 0, 0

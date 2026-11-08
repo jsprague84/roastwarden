@@ -1,0 +1,26 @@
+{
+  "product": {
+    "id": 1000000000001,
+    "title": "Ethiopia Dry Process Kercha Haruse",
+    "body_html": "<div>A synthetic test coffee, a clean natural with citron, mandarin and black tea. Brew it as pour-over. City to City+.</div>",
+    "vendor": "Sweet Maria's",
+    "product_type": "Green Coffee",
+    "handle": "ethiopia-dry-process-kercha-haruse-8647",
+    "tags": "Category_Coffee Shrub, Category_Coffee Shrub\/Green Coffee, Category_Coffee Shrub\/Green Coffee\/Africa, Category_Coffee Shrub\/Green Coffee\/Africa\/Ethiopia, Category_Sweet Marias\/Green Coffee, Category_Sweet Marias\/Green Coffee\/Africa, Category_Sweet Marias\/Green Coffee\/Africa\/Ethiopia, Store_default",
+    "variants": [
+      { "id": 1, "title": "1 LB", "price": "9.65", "sku": "GCX-8647-001", "grams": 449, "price_currency": "USD" },
+      { "id": 2, "title": "2 LB", "price": "19.00", "sku": "GCX-8647-002", "grams": 903, "price_currency": "USD" },
+      { "id": 3, "title": "5 LB", "price": "46.00", "sku": "GCX-8647-005", "grams": 2263, "price_currency": "USD" },
+      { "id": 4, "title": "10 LB", "price": "89.00", "sku": "GCX-8647-010", "grams": 4531, "price_currency": "USD" },
+      { "id": 5, "title": "20 LB", "price": "172.00", "sku": "GCX-8647-020", "grams": 9067, "price_currency": "USD" },
+      { "id": 6, "title": "50 LB", "price": "385.00", "sku": "GCX-8647-050", "grams": 22675, "price_currency": "USD" },
+      { "id": 7, "title": "132 LBS \/ 60 KG", "price": "992.08", "sku": "GCX-8647-132", "grams": 59874, "price_currency": "USD" }
+    ],
+    "options": [
+      { "name": "Weight", "position": 1, "values": ["1 LB", "2 LB", "5 LB", "10 LB", "20 LB", "50 LB", "132 LBS \/ 60 KG"] }
+    ],
+    "images": [
+      { "id": 1, "position": 1, "alt": "Placeholder image", "src": "https:\/\/example.com\/coffee.jpg" }
+    ]
+  }
+}

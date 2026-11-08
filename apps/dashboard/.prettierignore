@@ -1,0 +1,11 @@
+# Generated, installed or kept as shipped
+build/
+.svelte-kit/
+coverage/
+node_modules/
+package-lock.json
+static/
+# The site's demo roast, written compact by the site's build
+src/demo/roast.json
+# Prose is written by hand
+*.md

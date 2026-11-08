@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/jsprague84/roastwarden/discussions
+    about: How do I…? Share a roast, ask about a roaster, talk an idea through.
+  - name: The documentation
+    url: https://roastwarden.com/docs/
+    about: Install, connect a roaster, roast, labels, the roast command line.
+  - name: A security problem
+    url: https://roastwarden.com/docs/security/
+    about: Report it privately to security@roastwarden.com, never in an issue.
