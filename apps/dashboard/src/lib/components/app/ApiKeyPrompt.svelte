@@ -6,6 +6,7 @@
 	 */
 	import { onMount } from 'svelte';
 	import { auth, adoptStoredKey, LoginRefused } from '#lib/api/auth.js';
+	import { nextReason, type PromptReason } from '#lib/auth/prompt.js';
 	import { notifications } from '#lib/stores/notifications.js';
 	import { KeyRound } from '@lucide/svelte';
 
@@ -13,12 +14,12 @@
 	let key = $state('');
 	let error = $state('');
 	let busy = $state(false);
-	let reason = $state<'missing' | 'rejected'>('missing');
+	let reason = $state<PromptReason>('missing');
 	/** Reads need a credential here: after signing in the page loads again. */
 	let readsClosed = $state(false);
 
-	function show(why: 'missing' | 'rejected') {
-		reason = why;
+	function show(why: PromptReason) {
+		reason = nextReason(open, reason, why);
 		error = '';
 		open = true;
 	}
