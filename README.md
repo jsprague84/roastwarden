@@ -103,8 +103,9 @@ maintainer's design and review.
 - **Support bundle**: one JSON file for a bug report (Settings → About, `roast support-bundle`):
   versions, the roasters' setups, the newest roast, settings, problems and the recent log, every
   secret removed, no green coffee or receipts (`docs/support.md`).
-- **Firmware**: the paired ESP32 project lives in `Esp32_FluidBedCoffeeRoaster` (MQTT, serial
-  TC4, OTA).
+- **Firmware**: the sketches in `examples/roasters/` (above): the starter logger, the fluid-bed
+  controller and one per transport, each filled in for your server under Roasters → ESP32
+  firmware.
 - **Site**: [roastwarden.com](https://roastwarden.com), a recorded roast played on the app's own
   chart, the documentation and releases, built from `docs/` and `CHANGELOG.md` at each release;
   each doc says when it changed and which release it describes; visits counted privately with Umami (the site's Privacy page). Contact: hello@roastwarden.com; security reports to
