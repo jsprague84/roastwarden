@@ -7,6 +7,17 @@ matching section (`docs/DEVELOPMENT.md`, "Releasing").
 
 ## [Unreleased]
 
+## [0.42.1] - 2026-11-08
+
+A fix for a new install's first sign-in.
+
+### Fixed
+
+- After the first sign-in on a new install, the dashboard opens its first-run page (what kind of
+  roasting, units, time zone) as it should. A refused request arriving while the sign-in box was
+  already open made the sign-in end with "Retry the last action" on the Roast page instead, so
+  the first-run page only came after a reload.
+
 ## [0.42.0] - 2026-11-08
 
 The public beta: Roastwarden's source, image and releases are public. The public repository's
@@ -2186,5 +2197,6 @@ browser is a view.
 First tagged version: server, MQTT, dashboard with sessions, profiles, designer, transposer,
 cupping, comparison and exports.
 
-[Unreleased]: https://github.com/jsprague84/roastwarden/compare/v0.42.0...main
+[Unreleased]: https://github.com/jsprague84/roastwarden/compare/v0.42.1...main
+[0.42.1]: https://github.com/jsprague84/roastwarden/compare/v0.42.0...v0.42.1
 [0.42.0]: https://github.com/jsprague84/roastwarden/releases/tag/v0.42.0
