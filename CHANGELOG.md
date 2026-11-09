@@ -7,6 +7,10 @@ matching section (`docs/DEVELOPMENT.md`, "Releases").
 
 ## [Unreleased]
 
+## [0.42.3] - 2026-11-08
+
+A fix for supplier pages read under a store's rate limit.
+
 ### Fixed
 
 - A supplier's product page costs the store one request. Under a 429 or a 5xx the server no
@@ -68,7 +72,8 @@ API and the `roast` commands, and says so here when it does.
 - The API's descriptions of the gain schedule, the autotune runs and a supplier's bag id name
   the public docs.
 
-[Unreleased]: https://github.com/jsprague84/roastwarden/compare/v0.42.2...main
+[Unreleased]: https://github.com/jsprague84/roastwarden/compare/v0.42.3...main
+[0.42.3]: https://github.com/jsprague84/roastwarden/compare/v0.42.2...v0.42.3
 [0.42.2]: https://github.com/jsprague84/roastwarden/compare/v0.42.1...v0.42.2
 [0.42.1]: https://github.com/jsprague84/roastwarden/compare/v0.42.0...v0.42.1
 [0.42.0]: https://github.com/jsprague84/roastwarden/releases/tag/v0.42.0
