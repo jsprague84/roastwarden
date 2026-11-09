@@ -334,6 +334,11 @@ pub async fn start(
 ) -> Result<Handle> {
     use rmqtt::{context::ServerContext, net::Builder, server::MqttServer};
     let scx = ServerContext::new()
+        // rmqtt refuses every new connection (ServiceUnavailable) while the machine's load
+        // average is over 80 or its CPU over 90 %. A roaster reconnecting mid-roast must be let
+        // in however busy the computer is (a Raspberry Pi rendering a report), and a dozen
+        // clients are no load to shed.
+        .busy_check_enable(false)
         .plugins_config_map_add("rmqtt-acl", acl_rules(cfg))
         .plugins_config_map_add("rmqtt-retainer", RETAINER)
         .build()
@@ -615,6 +620,30 @@ mod tests {
         // Removed: no longer signs in
         passwords.remove("r3").await.unwrap();
         assert!(!client(port, "r3", &new, &[], &[], short).await.0);
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn a_busy_computer_does_not_turn_a_roaster_away() {
+        let port = free_port();
+        let cfg = BrokerConfig {
+            addr: format!("127.0.0.1:{port}").parse().unwrap(),
+            server_password: "server-pw".into(),
+            devices: vec![("r1".into(), "pw1".into())],
+            home_assistant_password: None,
+        };
+        let (passwords, dir) = passwords(&cfg).await;
+        let handle = start(&cfg, passwords).await.unwrap();
+        // With the check on, a load average over 80 or a CPU over 90 % refused every sign-in
+        // (seen in CI with four test runs on one machine).
+        assert!(!handle.scx.busy_check_enable);
+        assert!(!handle.scx.is_busy().await);
+        listening(port).await;
+        assert!(
+            client(port, "r1", "pw1", &[], &[], Duration::from_secs(1))
+                .await
+                .0
+        );
         let _ = std::fs::remove_dir_all(dir);
     }
 
