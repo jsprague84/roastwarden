@@ -3,6 +3,7 @@
 
 use anyhow::Result;
 use chrono::{DateTime, Duration, NaiveDate, Utc};
+use sqlx::AssertSqlSafe;
 
 use crate::ops::zone::Zone;
 
@@ -433,10 +434,11 @@ impl RoastedService {
         now: DateTime<Utc>,
     ) -> Result<Option<RoastedLot>> {
         let w = Windows::load(&self.db).await;
-        let row: Option<LotRow> = sqlx::query_as(&format!("{LOT_SELECT} AND s.id = ?"))
-            .bind(session_id)
-            .fetch_optional(&self.db)
-            .await?;
+        let row: Option<LotRow> =
+            sqlx::query_as(AssertSqlSafe(format!("{LOT_SELECT} AND s.id = ?")))
+                .bind(session_id)
+                .fetch_optional(&self.db)
+                .await?;
         let Some(row) = row else {
             return Ok(None);
         };
@@ -447,9 +449,9 @@ impl RoastedService {
                 l.combined = Some(c);
             }
         }
-        let mut moves: Vec<RoastedMove> = sqlx::query_as(&format!(
+        let mut moves: Vec<RoastedMove> = sqlx::query_as(AssertSqlSafe(format!(
             "SELECT {MOVE_COLUMNS} FROM roasted_moves WHERE session_id = ? ORDER BY at, created_at"
-        ))
+        )))
         .bind(session_id)
         .fetch_all(&self.db)
         .await?;

@@ -5,6 +5,7 @@ use std::fmt::Write as _;
 
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
+use sqlx::AssertSqlSafe;
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
@@ -184,7 +185,7 @@ pub async fn list_sessions(
         let _ = write!(query, " LIMIT {limit}");
     }
 
-    let mut query_builder = sqlx::query_as::<_, RoastSession>(&query);
+    let mut query_builder = sqlx::query_as::<_, RoastSession>(AssertSqlSafe(query.as_str()));
 
     if let Some(device_id) = device_id {
         query_builder = query_builder.bind(device_id);
@@ -329,7 +330,7 @@ pub async fn update_session(
     query.push_str(" WHERE id = ?");
 
     let mut tx = db.begin().await?;
-    let mut q = sqlx::query(&query).bind(Utc::now());
+    let mut q = sqlx::query(AssertSqlSafe(query.as_str())).bind(Utc::now());
     for (_, v) in sets {
         q = match v {
             SqlValue::Text(t) => q.bind(t),

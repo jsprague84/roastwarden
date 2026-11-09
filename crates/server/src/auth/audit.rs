@@ -14,6 +14,7 @@ use axum::middleware::Next;
 use axum::response::{IntoResponse, Json, Response};
 use futures_util::{stream, StreamExt};
 use serde::{Deserialize, Serialize};
+use sqlx::AssertSqlSafe;
 use sqlx::SqlitePool;
 use std::fmt::Write as _;
 
@@ -479,7 +480,7 @@ async fn query(db: &SqlitePool, q: &AuditQuery) -> Result<Vec<AuditEntry>, Query
          ORDER BY id DESC LIMIT ?7",
         kind = kind_sql()
     );
-    sqlx::query_as::<_, AuditEntry>(&sql)
+    sqlx::query_as::<_, AuditEntry>(AssertSqlSafe(sql.as_str()))
         .bind(q.before)
         .bind(&q.device_id)
         .bind(kinds)
@@ -903,12 +904,14 @@ mod tests {
                 continue;
             }
             let concrete = path.replace(['{', '}'], "");
-            let kind: String =
-                sqlx::query_scalar(&format!("SELECT {} FROM (SELECT ? AS path)", kind_sql()))
-                    .bind(&concrete)
-                    .fetch_one(&db)
-                    .await
-                    .unwrap();
+            let kind: String = sqlx::query_scalar(AssertSqlSafe(format!(
+                "SELECT {} FROM (SELECT ? AS path)",
+                kind_sql()
+            )))
+            .bind(&concrete)
+            .fetch_one(&db)
+            .await
+            .unwrap();
             if kind == "other" {
                 unkinded.push(path.clone());
             }

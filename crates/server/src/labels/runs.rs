@@ -6,6 +6,7 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sqlx::AssertSqlSafe;
 use sqlx::SqlitePool;
 use utoipa::ToSchema;
 
@@ -178,25 +179,25 @@ pub async fn insert(db: &SqlitePool, r: NewRun<'_>) -> Result<()> {
 
 /// The newest runs first
 pub async fn list(db: &SqlitePool, limit: i64) -> Result<Vec<RunSummary>> {
-    Ok(sqlx::query_as::<_, RunSummary>(&format!(
+    Ok(sqlx::query_as::<_, RunSummary>(AssertSqlSafe(format!(
         "SELECT {COLUMNS} FROM label_runs ORDER BY created_at DESC, rowid DESC LIMIT ?"
-    ))
+    )))
     .bind(limit)
     .fetch_all(db)
     .await?)
 }
 
 pub async fn get(db: &SqlitePool, id: &str) -> Result<Option<Run>> {
-    let row = sqlx::query_as::<_, Row>(&format!(
+    let row = sqlx::query_as::<_, Row>(AssertSqlSafe(format!(
         "SELECT {COLUMNS}, items, states, tray FROM label_runs WHERE id = ?"
-    ))
+    )))
     .bind(id)
     .fetch_optional(db)
     .await?;
-    let packed = sqlx::query_as::<_, crate::coffee::roasted::RoastedMove>(&format!(
+    let packed = sqlx::query_as::<_, crate::coffee::roasted::RoastedMove>(AssertSqlSafe(format!(
         "SELECT {} FROM roasted_moves WHERE label_run = ? ORDER BY at, created_at",
         crate::coffee::roasted::MOVE_COLUMNS
-    ))
+    )))
     .bind(id)
     .fetch_all(db)
     .await?;

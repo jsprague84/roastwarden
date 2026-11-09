@@ -117,10 +117,10 @@ impl<'r> Decode<'r, sqlx::Sqlite> for SessionStatus {
     }
 }
 
-impl<'q> Encode<'q, sqlx::Sqlite> for SessionStatus {
+impl Encode<'_, sqlx::Sqlite> for SessionStatus {
     fn encode_by_ref(
         &self,
-        buf: &mut Vec<sqlx::sqlite::SqliteArgumentValue<'q>>,
+        buf: &mut sqlx::sqlite::SqliteArgumentsBuffer,
     ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
         <String as Encode<sqlx::Sqlite>>::encode_by_ref(&self.to_string(), buf)
     }
@@ -273,10 +273,10 @@ impl<'r> Decode<'r, sqlx::Sqlite> for RoastEventType {
     }
 }
 
-impl<'q> Encode<'q, sqlx::Sqlite> for RoastEventType {
+impl Encode<'_, sqlx::Sqlite> for RoastEventType {
     fn encode_by_ref(
         &self,
-        buf: &mut Vec<sqlx::sqlite::SqliteArgumentValue<'q>>,
+        buf: &mut sqlx::sqlite::SqliteArgumentsBuffer,
     ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
         <String as Encode<sqlx::Sqlite>>::encode_by_ref(&self.to_string(), buf)
     }

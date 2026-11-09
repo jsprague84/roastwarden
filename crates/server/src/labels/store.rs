@@ -9,6 +9,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use serde_json::{json, Map, Value};
+use sqlx::AssertSqlSafe;
 use sqlx::SqlitePool;
 use utoipa::ToSchema;
 
@@ -570,17 +571,17 @@ const BRAND_COLUMNS: &str = "id, name, tagline, place, website, logo, ink, accen
     font_display, font_body, font_script, created_at, updated_at";
 
 pub async fn brands(db: &SqlitePool) -> Result<Vec<Brand>> {
-    Ok(sqlx::query_as::<_, Brand>(&format!(
+    Ok(sqlx::query_as::<_, Brand>(AssertSqlSafe(format!(
         "SELECT {BRAND_COLUMNS} FROM label_brands ORDER BY name COLLATE NOCASE"
-    ))
+    )))
     .fetch_all(db)
     .await?)
 }
 
 pub async fn brand(db: &SqlitePool, id: &str) -> Result<Option<Brand>> {
-    Ok(sqlx::query_as::<_, Brand>(&format!(
+    Ok(sqlx::query_as::<_, Brand>(AssertSqlSafe(format!(
         "SELECT {BRAND_COLUMNS} FROM label_brands WHERE id = ?"
-    ))
+    )))
     .bind(id)
     .fetch_optional(db)
     .await?)

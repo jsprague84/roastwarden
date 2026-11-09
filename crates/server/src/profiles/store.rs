@@ -3,6 +3,7 @@
 
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
+use sqlx::AssertSqlSafe;
 use sqlx::{Row, SqlitePool};
 use uuid::Uuid;
 
@@ -214,11 +215,13 @@ pub async fn update_profile(
         ("roaster_kind", kind),
     ] {
         if let Some(v) = value {
-            sqlx::query(&format!("UPDATE roast_profiles SET {col} = ? WHERE id = ?"))
-                .bind(v)
-                .bind(id)
-                .execute(&mut *tx)
-                .await?;
+            sqlx::query(AssertSqlSafe(format!(
+                "UPDATE roast_profiles SET {col} = ? WHERE id = ?"
+            )))
+            .bind(v)
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
         }
     }
 

@@ -6,6 +6,7 @@ use std::collections::BTreeSet;
 
 use anyhow::Result;
 use serde::Serialize;
+use sqlx::AssertSqlSafe;
 use sqlx::SqlitePool;
 
 /// Coffee-producing countries a home roaster meets (Wikipedia's production list, by region).
@@ -146,7 +147,9 @@ fn merge(used: Vec<String>, seeds: &[&str]) -> Vec<String> {
 }
 
 async fn used(db: &SqlitePool, sql: &str) -> Result<Vec<String>> {
-    Ok(sqlx::query_scalar::<_, String>(sql).fetch_all(db).await?)
+    Ok(sqlx::query_scalar::<_, String>(AssertSqlSafe(sql))
+        .fetch_all(db)
+        .await?)
 }
 
 /// `SELECT col FROM … GROUP BY col ORDER BY COUNT(*) DESC` over the beans (and, for the

@@ -5,6 +5,7 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::AssertSqlSafe;
 use sqlx::{FromRow, SqlitePool};
 use uuid::Uuid;
 
@@ -171,12 +172,14 @@ impl WantedService {
         } else {
             format!("{SELECT} WHERE w.status IN ('wanted', 'ordered') ORDER BY w.created_at")
         };
-        Ok(sqlx::query_as::<_, Wanted>(&q).fetch_all(&self.db).await?)
+        Ok(sqlx::query_as::<_, Wanted>(AssertSqlSafe(q.as_str()))
+            .fetch_all(&self.db)
+            .await?)
     }
 
     pub async fn get(&self, id: &str) -> Result<Option<Wanted>> {
         Ok(
-            sqlx::query_as::<_, Wanted>(&format!("{SELECT} WHERE w.id = ?"))
+            sqlx::query_as::<_, Wanted>(AssertSqlSafe(format!("{SELECT} WHERE w.id = ?")))
                 .bind(id)
                 .fetch_optional(&self.db)
                 .await?,

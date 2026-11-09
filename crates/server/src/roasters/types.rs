@@ -29,10 +29,10 @@ impl<'r> Decode<'r, sqlx::Sqlite> for DeviceStatus {
     }
 }
 
-impl<'q> Encode<'q, sqlx::Sqlite> for DeviceStatus {
+impl Encode<'_, sqlx::Sqlite> for DeviceStatus {
     fn encode_by_ref(
         &self,
-        buf: &mut Vec<sqlx::sqlite::SqliteArgumentValue<'q>>,
+        buf: &mut sqlx::sqlite::SqliteArgumentsBuffer,
     ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
         <String as Encode<sqlx::Sqlite>>::encode_by_ref(&self.to_string(), buf)
     }
@@ -94,10 +94,10 @@ impl<'r> Decode<'r, sqlx::Sqlite> for Protocol {
     }
 }
 
-impl<'q> Encode<'q, sqlx::Sqlite> for Protocol {
+impl Encode<'_, sqlx::Sqlite> for Protocol {
     fn encode_by_ref(
         &self,
-        buf: &mut Vec<sqlx::sqlite::SqliteArgumentValue<'q>>,
+        buf: &mut sqlx::sqlite::SqliteArgumentsBuffer,
     ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
         <String as Encode<sqlx::Sqlite>>::encode_by_ref(&self.to_string(), buf)
     }
@@ -156,10 +156,10 @@ impl<'r> Decode<'r, sqlx::Sqlite> for ModbusRegisterType {
     }
 }
 
-impl<'q> Encode<'q, sqlx::Sqlite> for ModbusRegisterType {
+impl Encode<'_, sqlx::Sqlite> for ModbusRegisterType {
     fn encode_by_ref(
         &self,
-        buf: &mut Vec<sqlx::sqlite::SqliteArgumentValue<'q>>,
+        buf: &mut sqlx::sqlite::SqliteArgumentsBuffer,
     ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
         <String as Encode<sqlx::Sqlite>>::encode_by_ref(&self.to_string(), buf)
     }
@@ -234,10 +234,10 @@ impl<'r> Decode<'r, sqlx::Sqlite> for ModbusDataType {
     }
 }
 
-impl<'q> Encode<'q, sqlx::Sqlite> for ModbusDataType {
+impl Encode<'_, sqlx::Sqlite> for ModbusDataType {
     fn encode_by_ref(
         &self,
-        buf: &mut Vec<sqlx::sqlite::SqliteArgumentValue<'q>>,
+        buf: &mut sqlx::sqlite::SqliteArgumentsBuffer,
     ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
         <String as Encode<sqlx::Sqlite>>::encode_by_ref(&self.to_string(), buf)
     }

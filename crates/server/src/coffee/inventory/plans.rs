@@ -1,5 +1,6 @@
 //! Planned roasts: the queue in order, a plan made, edited, deleted and the queue reordered.
 
+use sqlx::AssertSqlSafe;
 use std::fmt::Write as _;
 
 use anyhow::{Context, Result};
@@ -25,7 +26,7 @@ impl InventoryService {
             q.push_str(" AND (p.device_id IS NULL OR p.device_id = ?)");
         }
         q.push_str(" ORDER BY p.session_id IS NOT NULL, p.position, p.created_at");
-        let mut query = sqlx::query_as::<_, PlannedRoast>(&q);
+        let mut query = sqlx::query_as::<_, PlannedRoast>(AssertSqlSafe(q.as_str()));
         if let Some(d) = device_id {
             query = query.bind(d);
         }
@@ -33,12 +34,12 @@ impl InventoryService {
     }
 
     pub async fn plan(&self, id: &str) -> Result<Option<PlannedRoast>> {
-        Ok(
-            sqlx::query_as::<_, PlannedRoast>(&format!("{PLAN_SELECT} WHERE p.id = ?"))
-                .bind(id)
-                .fetch_optional(&self.db)
-                .await?,
-        )
+        Ok(sqlx::query_as::<_, PlannedRoast>(AssertSqlSafe(format!(
+            "{PLAN_SELECT} WHERE p.id = ?"
+        )))
+        .bind(id)
+        .fetch_optional(&self.db)
+        .await?)
     }
 
     /// A plan's bean and profile must exist (a typo would start a roast with neither).
@@ -136,7 +137,7 @@ impl InventoryService {
                 q.push_str(", position = ?");
             }
             q.push_str(" WHERE id = ?");
-            let mut query = sqlx::query(&q).bind(Utc::now());
+            let mut query = sqlx::query(AssertSqlSafe(q.as_str())).bind(Utc::now());
             for (_, v) in sets {
                 query = match v {
                     Val::Text(t) => query.bind(t),

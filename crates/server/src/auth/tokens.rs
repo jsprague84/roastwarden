@@ -19,6 +19,7 @@
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use sqlx::AssertSqlSafe;
 use sqlx::SqlitePool;
 
 /// What every token starts with.
@@ -703,9 +704,9 @@ pub async fn check(db: &SqlitePool, value: &str, now: chrono::DateTime<chrono::U
     if !well_formed(value) {
         return TokenCheck::Malformed;
     }
-    let row = sqlx::query_as::<_, ApiToken>(&format!(
+    let row = sqlx::query_as::<_, ApiToken>(AssertSqlSafe(format!(
         "SELECT {COLUMNS} FROM api_tokens WHERE token_hash = ?"
-    ))
+    )))
     .bind(hash(value))
     .fetch_optional(db)
     .await;
@@ -782,9 +783,9 @@ pub async fn touch(db: &SqlitePool, id: i64, ip: Option<String>) {
 }
 
 pub async fn list(db: &SqlitePool) -> anyhow::Result<Vec<ApiToken>> {
-    Ok(sqlx::query_as::<_, ApiToken>(&format!(
+    Ok(sqlx::query_as::<_, ApiToken>(AssertSqlSafe(format!(
         "SELECT {COLUMNS} FROM api_tokens ORDER BY revoked_at IS NOT NULL, created_at DESC"
-    ))
+    )))
     .fetch_all(db)
     .await?)
 }
@@ -813,10 +814,10 @@ pub async fn create(
     }
     let new = generate();
     let expires = expires_at.map(|t| t.to_rfc3339_opts(chrono::SecondsFormat::Millis, true));
-    let rows = sqlx::query_as::<_, ApiToken>(&format!(
+    let rows = sqlx::query_as::<_, ApiToken>(AssertSqlSafe(format!(
         "INSERT INTO api_tokens (name, prefix, token_hash, preset, created_at, expires_at,
          require_approval) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING {COLUMNS}"
-    ))
+    )))
     .bind(name)
     .bind(&new.prefix)
     .bind(&new.hash)
@@ -838,12 +839,12 @@ pub async fn create(
 
 /// One token (never with its secret).
 pub async fn get(db: &SqlitePool, id: i64) -> anyhow::Result<Option<ApiToken>> {
-    Ok(
-        sqlx::query_as::<_, ApiToken>(&format!("SELECT {COLUMNS} FROM api_tokens WHERE id = ?"))
-            .bind(id)
-            .fetch_optional(db)
-            .await?,
-    )
+    Ok(sqlx::query_as::<_, ApiToken>(AssertSqlSafe(format!(
+        "SELECT {COLUMNS} FROM api_tokens WHERE id = ?"
+    )))
+    .bind(id)
+    .fetch_optional(db)
+    .await?)
 }
 
 /// Whether the token is good now: not revoked, not expired, a known preset.
@@ -860,9 +861,9 @@ pub async fn set_require_approval(
     id: i64,
     on: bool,
 ) -> anyhow::Result<Option<ApiToken>> {
-    let mut rows = sqlx::query_as::<_, ApiToken>(&format!(
+    let mut rows = sqlx::query_as::<_, ApiToken>(AssertSqlSafe(format!(
         "UPDATE api_tokens SET require_approval = ? WHERE id = ? RETURNING {COLUMNS}"
-    ))
+    )))
     .bind(on)
     .bind(id)
     .fetch_all(db)
@@ -872,9 +873,9 @@ pub async fn set_require_approval(
 
 /// Revoke a token now. `None` when there is no such token.
 pub async fn revoke(db: &SqlitePool, id: i64) -> anyhow::Result<Option<ApiToken>> {
-    let mut rows = sqlx::query_as::<_, ApiToken>(&format!(
+    let mut rows = sqlx::query_as::<_, ApiToken>(AssertSqlSafe(format!(
         "UPDATE api_tokens SET revoked_at = COALESCE(revoked_at, ?) WHERE id = ? RETURNING {COLUMNS}"
-    ))
+    )))
     .bind(now_text())
     .bind(id)
     .fetch_all(db)

@@ -20,6 +20,7 @@ use std::time::Duration;
 use anyhow::Result;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use sqlx::AssertSqlSafe;
 use sqlx::SqlitePool;
 use std::fmt::Write as _;
 use utoipa::ToSchema;
@@ -79,19 +80,23 @@ pub async fn list(
         "{SELECT} WHERE (?1 IS NULL OR l.profile_id = ?1) AND (?2 OR l.revoked_at IS NULL)
          ORDER BY l.created_at DESC, l.rowid DESC"
     );
-    Ok(sqlx::query_as::<_, ProfileShareLink>(&sql)
-        .bind(profile)
-        .bind(all)
-        .fetch_all(db)
-        .await?)
+    Ok(
+        sqlx::query_as::<_, ProfileShareLink>(AssertSqlSafe(sql.as_str()))
+            .bind(profile)
+            .bind(all)
+            .fetch_all(db)
+            .await?,
+    )
 }
 
 pub async fn get(db: &SqlitePool, code: &str) -> Result<Option<ProfileShareLink>> {
     let sql = format!("{SELECT} WHERE l.code = ?");
-    Ok(sqlx::query_as::<_, ProfileShareLink>(&sql)
-        .bind(code)
-        .fetch_optional(db)
-        .await?)
+    Ok(
+        sqlx::query_as::<_, ProfileShareLink>(AssertSqlSafe(sql.as_str()))
+            .bind(code)
+            .fetch_optional(db)
+            .await?,
+    )
 }
 
 /// The profile's newest link that is not revoked
@@ -142,10 +147,10 @@ pub async fn used(db: &SqlitePool, code: &str, what: Use) -> Result<Option<Profi
         Use::View => "views",
         Use::Download => "downloads",
     };
-    let n = sqlx::query(&format!(
+    let n = sqlx::query(AssertSqlSafe(format!(
         "UPDATE profile_share_links SET {column} = {column} + 1, last_used_at = ?
          WHERE code = ? AND revoked_at IS NULL"
-    ))
+    )))
     .bind(now_text())
     .bind(code)
     .execute(db)

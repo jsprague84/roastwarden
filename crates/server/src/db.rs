@@ -10,6 +10,7 @@
 //! creates; present markers are recorded as applied without re-running, and
 //! anything missing is applied normally.
 
+use sqlx::AssertSqlSafe;
 use sqlx::{Executor, Row, SqlitePool};
 use tracing::{debug, info, warn};
 
@@ -449,7 +450,7 @@ pub async fn column_exists(
         return Ok(false);
     }
     // PRAGMA table_info cannot be parameterised; table names come from this file only.
-    let rows = sqlx::query(&format!("PRAGMA table_info({table})"))
+    let rows = sqlx::query(AssertSqlSafe(format!("PRAGMA table_info({table})")))
         .fetch_all(pool)
         .await?;
     Ok(rows

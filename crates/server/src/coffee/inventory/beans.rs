@@ -1,5 +1,6 @@
 //! Beans: listed, read with their ledger and cost, made, edited and deleted or archived.
 
+use sqlx::AssertSqlSafe;
 use std::collections::HashMap;
 use std::fmt::Write as _;
 
@@ -24,7 +25,9 @@ impl InventoryService {
         } else {
             format!("{BEAN_SELECT} WHERE b.archived = 0 ORDER BY b.name COLLATE NOCASE")
         };
-        let mut beans = sqlx::query_as::<_, Bean>(&q).fetch_all(&self.db).await?;
+        let mut beans = sqlx::query_as::<_, Bean>(AssertSqlSafe(q.as_str()))
+            .fetch_all(&self.db)
+            .await?;
         let (home, _) = cost_settings(&self.db).await;
         let ledgers = self.ledgers(None, &home).await?;
         for b in &mut beans {
@@ -37,10 +40,11 @@ impl InventoryService {
     }
 
     pub async fn bean(&self, id: &str) -> Result<Option<Bean>> {
-        let Some(mut b) = sqlx::query_as::<_, Bean>(&format!("{BEAN_SELECT} WHERE b.id = ?"))
-            .bind(id)
-            .fetch_optional(&self.db)
-            .await?
+        let Some(mut b) =
+            sqlx::query_as::<_, Bean>(AssertSqlSafe(format!("{BEAN_SELECT} WHERE b.id = ?")))
+                .bind(id)
+                .fetch_optional(&self.db)
+                .await?
         else {
             return Ok(None);
         };
@@ -66,7 +70,7 @@ impl InventoryService {
                 ""
             }
         );
-        let mut query = sqlx::query_as::<_, StockMove>(&q);
+        let mut query = sqlx::query_as::<_, StockMove>(AssertSqlSafe(q.as_str()));
         if let Some(b) = bean_id {
             query = query.bind(b);
         }
@@ -151,11 +155,13 @@ impl InventoryService {
         .await?;
         for (col, v) in texts {
             if let Some(t) = clean(v.flatten()) {
-                sqlx::query(&format!("UPDATE beans SET {col} = ? WHERE id = ?"))
-                    .bind(t)
-                    .bind(&id)
-                    .execute(&mut *tx)
-                    .await?;
+                sqlx::query(AssertSqlSafe(format!(
+                    "UPDATE beans SET {col} = ? WHERE id = ?"
+                )))
+                .bind(t)
+                .bind(&id)
+                .execute(&mut *tx)
+                .await?;
             }
         }
         sqlx::query("UPDATE beans SET score = ?, details = ? WHERE id = ?")
@@ -234,7 +240,7 @@ impl InventoryService {
                 let _ = write!(q, ", {col} = ?");
             }
             q.push_str(" WHERE id = ?");
-            let mut query = sqlx::query(&q).bind(Utc::now());
+            let mut query = sqlx::query(AssertSqlSafe(q.as_str())).bind(Utc::now());
             for (_, v) in sets {
                 query = match v {
                     Val::Text(t) => query.bind(t),

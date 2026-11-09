@@ -15,6 +15,7 @@ use chrono::{DateTime, Utc};
 use roastwarden_autotune::analysis::{Analysis, Quality};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sqlx::AssertSqlSafe;
 use sqlx::{Row, SqlitePool};
 
 /// PID gains in device units (Kp per °C on the 0..255 output, Ki per °C·s,
@@ -443,9 +444,9 @@ pub async fn list_runs_with_analysis(
     device_id: &str,
     limit: i64,
 ) -> Result<Vec<(AutotuneRun, Option<Analysis>)>, sqlx::Error> {
-    let rows = sqlx::query(&format!(
+    let rows = sqlx::query(AssertSqlSafe(format!(
         "SELECT {RUN_COLUMNS} FROM autotune_runs WHERE device_id = ? ORDER BY created_at DESC, rowid DESC LIMIT ?"
-    ))
+    )))
     .bind(device_id)
     .bind(limit)
     .fetch_all(db)
@@ -471,9 +472,9 @@ pub async fn get_run_with_analysis(
     device_id: &str,
     run_id: &str,
 ) -> Result<Option<(AutotuneRun, Option<Analysis>)>, sqlx::Error> {
-    let row = sqlx::query(&format!(
+    let row = sqlx::query(AssertSqlSafe(format!(
         "SELECT {RUN_COLUMNS} FROM autotune_runs WHERE device_id = ? AND id = ?"
-    ))
+    )))
     .bind(device_id)
     .bind(run_id)
     .fetch_optional(db)

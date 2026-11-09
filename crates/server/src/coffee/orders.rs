@@ -20,6 +20,7 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use sqlx::AssertSqlSafe;
 use sqlx::{FromRow, SqlitePool};
 use uuid::Uuid;
 
@@ -1135,7 +1136,7 @@ impl OrderService {
             sql.push_str(" AND supplier_key = ?");
         }
         sql.push_str(" ORDER BY placed_at DESC, created_at DESC");
-        let mut query = sqlx::query_as::<_, PurchaseOrder>(&sql);
+        let mut query = sqlx::query_as::<_, PurchaseOrder>(AssertSqlSafe(sql.as_str()));
         if status_ok(status) {
             query = query.bind(status);
         }

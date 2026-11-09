@@ -24,6 +24,7 @@ use axum::response::{IntoResponse, Response};
 use axum::{Json, Router};
 use serde::Serialize;
 use serde_json::{json, Value};
+use sqlx::AssertSqlSafe;
 use sqlx::SqlitePool;
 use tower::ServiceExt;
 use tracing::{info, warn};
@@ -540,11 +541,11 @@ impl Approvals {
             _ => None,
         };
         let now = tokens::now_text();
-        let waiting = sqlx::query_as::<_, Row>(&format!(
+        let waiting = sqlx::query_as::<_, Row>(AssertSqlSafe(format!(
             "SELECT {COLUMNS} FROM approvals WHERE token_id = ? AND method = ? AND path = ?
              AND body IS ? AND status = 'pending' AND expires_at > ?
              ORDER BY created_at DESC LIMIT 1"
-        ))
+        )))
         .bind(token.id)
         .bind(method)
         .bind(path)
@@ -573,11 +574,11 @@ impl Approvals {
             self.link_base(headers).await
         );
         let ip = crate::auth::audit::client_ip(headers);
-        let inserted = sqlx::query_as::<_, Row>(&format!(
+        let inserted = sqlx::query_as::<_, Row>(AssertSqlSafe(format!(
             "INSERT INTO approvals (id, token_id, token_name, action, method, path, body,
              target_id, target_name, device_id, client_ip, url, created_at, expires_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING {COLUMNS}"
-        ))
+        )))
         .bind(&id)
         .bind(token.id)
         .bind(&token.name)
@@ -621,12 +622,12 @@ impl Approvals {
     }
 
     async fn row(&self, id: &str) -> Result<Option<Row>> {
-        Ok(
-            sqlx::query_as::<_, Row>(&format!("SELECT {COLUMNS} FROM approvals WHERE id = ?"))
-                .bind(id)
-                .fetch_optional(&self.db)
-                .await?,
-        )
+        Ok(sqlx::query_as::<_, Row>(AssertSqlSafe(format!(
+            "SELECT {COLUMNS} FROM approvals WHERE id = ?"
+        )))
+        .bind(id)
+        .fetch_optional(&self.db)
+        .await?)
     }
 
     pub async fn get(&self, id: &str) -> Result<Option<Approval>> {
@@ -651,10 +652,10 @@ impl Approvals {
     /// Newest first, the pending ones on top.
     pub async fn list(&self, limit: i64) -> Result<Vec<Approval>> {
         let now = tokens::now_text();
-        let rows = sqlx::query_as::<_, Row>(&format!(
+        let rows = sqlx::query_as::<_, Row>(AssertSqlSafe(format!(
             "SELECT {COLUMNS} FROM approvals
              ORDER BY (status = 'pending' AND expires_at > ?) DESC, created_at DESC LIMIT ?"
-        ))
+        )))
         .bind(&now)
         .bind(limit.clamp(1, 500))
         .fetch_all(&self.db)
@@ -666,10 +667,10 @@ impl Approvals {
     /// token, and its answer is kept in `result`.
     pub async fn decide(&self, id: &str, approve: bool) -> Result<Decision> {
         let now = tokens::now_text();
-        let decided = sqlx::query_as::<_, Row>(&format!(
+        let decided = sqlx::query_as::<_, Row>(AssertSqlSafe(format!(
             "UPDATE approvals SET status = ?, decided_at = ?
              WHERE id = ? AND status = 'pending' AND expires_at > ? RETURNING {COLUMNS}"
-        ))
+        )))
         .bind(if approve { "approved" } else { "denied" })
         .bind(&now)
         .bind(id)
@@ -688,10 +689,10 @@ impl Approvals {
             return Ok(Decision::Decided(Box::new(view(&row, &now))));
         }
         let (status, body) = self.run(&row).await;
-        let finished = sqlx::query_as::<_, Row>(&format!(
+        let finished = sqlx::query_as::<_, Row>(AssertSqlSafe(format!(
             "UPDATE approvals SET status = ?, result_status = ?, result = ? WHERE id = ?
              RETURNING {COLUMNS}"
-        ))
+        )))
         .bind(if status.is_success() {
             "done"
         } else {

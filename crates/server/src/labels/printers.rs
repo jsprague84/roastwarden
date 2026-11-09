@@ -7,6 +7,7 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sqlx::AssertSqlSafe;
 use sqlx::SqlitePool;
 use utoipa::ToSchema;
 
@@ -106,17 +107,17 @@ const COLUMNS: &str =
     "id, name, url, is_default, tray, color, send, fingerprint, info, info_at, created_at, updated_at";
 
 pub async fn list(db: &SqlitePool) -> Result<Vec<Printer>> {
-    Ok(sqlx::query_as::<_, Printer>(&format!(
+    Ok(sqlx::query_as::<_, Printer>(AssertSqlSafe(format!(
         "SELECT {COLUMNS} FROM label_printers ORDER BY is_default DESC, name"
-    ))
+    )))
     .fetch_all(db)
     .await?)
 }
 
 pub async fn get(db: &SqlitePool, id: &str) -> Result<Option<Printer>> {
-    Ok(sqlx::query_as::<_, Printer>(&format!(
+    Ok(sqlx::query_as::<_, Printer>(AssertSqlSafe(format!(
         "SELECT {COLUMNS} FROM label_printers WHERE id = ?"
-    ))
+    )))
     .bind(id)
     .fetch_optional(db)
     .await?)

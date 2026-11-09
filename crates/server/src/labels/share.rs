@@ -9,6 +9,7 @@
 use anyhow::Result;
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::AssertSqlSafe;
 use sqlx::SqlitePool;
 use std::fmt::Write as _;
 use utoipa::ToSchema;
@@ -116,7 +117,7 @@ pub async fn list(db: &SqlitePool, session: Option<&str>, all: bool) -> Result<V
         "{SELECT} WHERE (?1 IS NULL OR l.session_id = ?1) AND (?2 OR l.revoked_at IS NULL)
          ORDER BY l.created_at DESC, l.rowid DESC"
     );
-    Ok(sqlx::query_as::<_, ShareLink>(&sql)
+    Ok(sqlx::query_as::<_, ShareLink>(AssertSqlSafe(sql.as_str()))
         .bind(session)
         .bind(all)
         .fetch_all(db)
@@ -125,7 +126,7 @@ pub async fn list(db: &SqlitePool, session: Option<&str>, all: bool) -> Result<V
 
 pub async fn get(db: &SqlitePool, code: &str) -> Result<Option<ShareLink>> {
     let sql = format!("{SELECT} WHERE l.code = ?");
-    Ok(sqlx::query_as::<_, ShareLink>(&sql)
+    Ok(sqlx::query_as::<_, ShareLink>(AssertSqlSafe(sql.as_str()))
         .bind(code)
         .fetch_optional(db)
         .await?)

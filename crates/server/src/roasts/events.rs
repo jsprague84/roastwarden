@@ -3,6 +3,7 @@
 
 use anyhow::{anyhow, Result};
 use chrono::Utc;
+use sqlx::AssertSqlSafe;
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
@@ -84,7 +85,7 @@ pub async fn update_roast_event(
         updates.join(", ")
     );
 
-    let mut query_builder = sqlx::query_as::<_, RoastEvent>(&query);
+    let mut query_builder = sqlx::query_as::<_, RoastEvent>(AssertSqlSafe(query.as_str()));
 
     // Bind parameters in the same order as they appear in the updates
     if let Some(elapsed_seconds) = req.elapsed_seconds {

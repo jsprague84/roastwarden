@@ -7,6 +7,12 @@ matching section (`docs/DEVELOPMENT.md`, "Releases").
 
 ## [Unreleased]
 
+### Changed
+
+- sqlx 0.9: every query built at run time is marked as audited (`AssertSqlSafe`), with only
+  column names and fragments from the code in it and every value bound as before; the stored
+  types' encoders follow the new argument buffer. No schema or behaviour change.
+
 ### Fixed
 
 - Complete while the roaster cools no longer cuts the roast's trend at DROP: the samples go

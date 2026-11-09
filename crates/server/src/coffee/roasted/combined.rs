@@ -3,6 +3,7 @@
 
 use anyhow::{Context, Result};
 use chrono::{DateTime, NaiveDate, Utc};
+use sqlx::AssertSqlSafe;
 use uuid::Uuid;
 
 use crate::ops::zone::Zone;
@@ -85,9 +86,9 @@ impl RoastedService {
         let Some(name) = name else {
             return Ok(None);
         };
-        let rows: Vec<LotRow> = sqlx::query_as(&format!(
+        let rows: Vec<LotRow> = sqlx::query_as(AssertSqlSafe(format!(
             "{LOT_SELECT} AND s.id IN (SELECT session_id FROM roasted_combine_roasts WHERE combine_id = ?)"
-        ))
+        )))
         .bind(combine_id)
         .fetch_all(&self.db)
         .await?;
@@ -146,10 +147,10 @@ impl RoastedService {
                 .bind(&cid)
                 .fetch_one(&self.db)
                 .await?;
-        let rows: Vec<RoastedMove> = sqlx::query_as(&format!(
+        let rows: Vec<RoastedMove> = sqlx::query_as(AssertSqlSafe(format!(
             "SELECT {MOVE_COLUMNS} FROM roasted_moves WHERE combine_move IS NOT NULL AND session_id IN \
              (SELECT session_id FROM roasted_combine_roasts WHERE combine_id = ?) ORDER BY at, created_at"
-        ))
+        )))
         .bind(&cid)
         .fetch_all(&self.db)
         .await?;

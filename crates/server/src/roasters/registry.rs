@@ -2,6 +2,7 @@
 
 use anyhow::{Context, Result};
 use chrono::Utc;
+use sqlx::AssertSqlSafe;
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
@@ -151,7 +152,7 @@ pub async fn update_device(
 
     query.push_str(" WHERE id = ? RETURNING *");
 
-    let mut query_builder = sqlx::query_as::<_, Device>(&query).bind(now);
+    let mut query_builder = sqlx::query_as::<_, Device>(AssertSqlSafe(query.as_str())).bind(now);
 
     if let Some(ref name) = req.name {
         query_builder = query_builder.bind(name);
@@ -389,7 +390,8 @@ pub async fn update_connection(
 
     query.push_str(" WHERE id = ? RETURNING *");
 
-    let mut query_builder = sqlx::query_as::<_, DeviceConnection>(&query).bind(now);
+    let mut query_builder =
+        sqlx::query_as::<_, DeviceConnection>(AssertSqlSafe(query.as_str())).bind(now);
 
     if let Some(enabled) = req.enabled {
         query_builder = query_builder.bind(enabled);

@@ -10,6 +10,7 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::Serialize;
 use serde_json::{json, Value};
+use sqlx::AssertSqlSafe;
 use sqlx::SqlitePool;
 use utoipa::ToSchema;
 
@@ -258,10 +259,11 @@ pub async fn of_roast(
     zone: Zone,
     now: DateTime<Utc>,
 ) -> anyhow::Result<Option<Trace>> {
-    let row: Option<RoastRow> = sqlx::query_as(&format!("{ROAST_SELECT} WHERE s.id = ?"))
-        .bind(id)
-        .fetch_optional(db)
-        .await?;
+    let row: Option<RoastRow> =
+        sqlx::query_as(AssertSqlSafe(format!("{ROAST_SELECT} WHERE s.id = ?")))
+            .bind(id)
+            .fetch_optional(db)
+            .await?;
     let Some(row) = row else {
         return Ok(None);
     };
@@ -286,9 +288,9 @@ pub async fn of_bean(
     let Some(coffee) = coffee(db, id).await? else {
         return Ok(None);
     };
-    let rows: Vec<RoastRow> = sqlx::query_as(&format!(
+    let rows: Vec<RoastRow> = sqlx::query_as(AssertSqlSafe(format!(
         "{ROAST_SELECT} WHERE s.bean_id = ? AND s.status = 'completed' ORDER BY roasted_at LIMIT ?"
-    ))
+    )))
     .bind(id)
     .bind(MAX_ROASTS as i64)
     .fetch_all(db)
