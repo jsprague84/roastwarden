@@ -7,6 +7,13 @@ matching section (`docs/DEVELOPMENT.md`, "Releases").
 
 ## [Unreleased]
 
+## [0.42.4] - 2026-11-08
+
+Nothing in the app changed since 0.42.3. This release exists so that the public image, the
+installer and the demo reach the supplier fix: 0.42.3's release checks failed on a timing flaw
+in the checks themselves (a page read before the roaster's heater echo arrived), so its image
+never went public and the installer stayed on 0.42.2.
+
 ## [0.42.3] - 2026-11-08
 
 A fix for supplier pages read under a store's rate limit.
@@ -72,7 +79,8 @@ API and the `roast` commands, and says so here when it does.
 - The API's descriptions of the gain schedule, the autotune runs and a supplier's bag id name
   the public docs.
 
-[Unreleased]: https://github.com/jsprague84/roastwarden/compare/v0.42.3...main
+[Unreleased]: https://github.com/jsprague84/roastwarden/compare/v0.42.4...main
+[0.42.4]: https://github.com/jsprague84/roastwarden/compare/v0.42.3...v0.42.4
 [0.42.3]: https://github.com/jsprague84/roastwarden/compare/v0.42.2...v0.42.3
 [0.42.2]: https://github.com/jsprague84/roastwarden/compare/v0.42.1...v0.42.2
 [0.42.1]: https://github.com/jsprague84/roastwarden/compare/v0.42.0...v0.42.1
