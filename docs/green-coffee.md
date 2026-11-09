@@ -47,7 +47,9 @@ until you choose:
 **Buy for** an existing bean to buy it again rather than make a new one. Supported suppliers:
 Sweet Maria's, Bodhi Leaf, Theta Ridge, Coffee Bean Corral, Showroom, Happy Mug and Burman
 Coffee Traders. A link to another shop is refused with the list. The server only reads that
-one page, over https. When the store is busy or down it says so: try again in a few minutes.
+one page, over https. When the store is busy or down it says so, and names the wait the store
+asked for when it gave one. A page read in the last ten minutes is answered from memory, so
+asking again costs the store nothing.
 
 The bean form suggests values you used before and common ones (countries, processes,
 varieties), and keeps a **Label name** and **Label notes** for bag labels ([labels](labels.md)).
@@ -322,8 +324,9 @@ Nothing here logs in, holds a cart or pays.
 list → Carts): the open entries (not on order) with a supplier link, grouped by store:
 
 - **Read again first**: each product once (Shopify's `/products/<handle>.js`, Burman's store
-  API; one request per coffee, 3 s apart, stopping at a store's 429 with the rest as the list
-  saw them). The bag is the entry's size label (else its weight). A sold-out bag is left out,
+  API; one request per coffee, 3 s apart, a product read in the last ten minutes from memory,
+  stopping at a store's 429 with the rest as the list saw them and the wait it asked for in
+  the warning). The bag is the entry's size label (else its weight). A sold-out bag is left out,
   a price that moved is noted, a line without a shop id (an entry from before v0.20.1) asks
   for the link to be added again. `offline` reads nothing.
 - **Shopify**: the store's UCP profile (`/.well-known/ucp`, read once a day per store) names

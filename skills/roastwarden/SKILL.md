@@ -120,8 +120,9 @@ now: say so before putting it on the list. A sold-out Sweet Maria's coffee shows
 
 Do not read the supplier's page yourself and do not guess a size: if the owner's size is not
 in the preview, list the sizes and ask. Another shop: `bean add` with what the owner gives.
-A `BAD_GATEWAY` answer saying the store "is busy or down" (it answered 429 or 5xx) is the
-store's: tell the owner, try once more after a minute, and add nothing without its price.
+A `BAD_GATEWAY` answer saying the store "is busy" (it answered 429 or 5xx) is the store's:
+tell the owner, wait what the answer asks (it names the seconds when the store gave them,
+else a minute), try once more, and add nothing without its price.
 **A cart for the shopping list** ("put my shopping list in a cart"): `roast wanted cart`
 answers one link per supplier that opens a filled cart in the owner's browser, after reading
 each bag's price and availability again (`--supplier "Sweet Maria's"` for one; `--offline`

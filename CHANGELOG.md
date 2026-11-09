@@ -7,6 +7,14 @@ matching section (`docs/DEVELOPMENT.md`, "Releases").
 
 ## [Unreleased]
 
+### Fixed
+
+- A supplier's product page costs the store one request. Under a 429 or a 5xx the server no
+  longer asks a second endpoint for the same product, a page read in the last ten minutes is
+  answered from memory (an agent's retry, or the cart right after an import, reads nothing
+  again), and a store's `Retry-After` is passed on in the error and in the cart's warning, so
+  the caller waits what the store asked instead of guessing.
+
 ## [0.42.2] - 2026-11-08
 
 A fix for the built-in MQTT broker on a busy computer.

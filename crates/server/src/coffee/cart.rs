@@ -11,7 +11,7 @@ use std::time::Duration;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use crate::coffee::import::{CartShop, Draft, Importer, Size};
+use crate::coffee::import::{store_busy, CartShop, Draft, Importer, Size};
 use crate::coffee::orders::supplier_key;
 use crate::coffee::wanted::{Wanted, WantedService};
 
@@ -298,10 +298,11 @@ pub async fn carts(wanted: &WantedService, importer: &Importer, req: CartRequest
             importer.permalink(&shop.host).await
         };
         let mut read = Vec::new();
-        let mut slowed = false;
+        // Some(the wait the store asked for) once it answered 429
+        let mut slowed: Option<Option<u64>> = None;
         for w in &entries {
             let stored = w.draft.as_deref().and_then(|d| bag(d, w)).cloned();
-            if req.offline || slowed {
+            if req.offline || slowed.is_some() {
                 read.push((w, stored, false));
                 continue;
             }
@@ -315,17 +316,20 @@ pub async fn carts(wanted: &WantedService, importer: &Importer, req: CartRequest
                 }
                 Err(e) => {
                     // A 429: stop asking this store; the rest go as the list saw them
-                    slowed = e.to_string().contains("429");
+                    if let Some(b) = store_busy(&e).filter(|b| b.throttled()) {
+                        slowed = Some(b.retry_after_s);
+                    }
                     read.push((w, stored, false));
                 }
             }
         }
         let mut cart = build(&shop, endpoint.as_deref(), &read);
-        if slowed {
+        if let Some(wait) = slowed {
+            let when = wait.map_or_else(|| "in a while".to_string(), |s| format!("in {s} s"));
             cart.warnings.insert(
                 0,
                 format!(
-                    "{} asked to slow down (429): try again in a while",
+                    "{} asked to slow down (429): try again {when}",
                     shop.supplier
                 ),
             );

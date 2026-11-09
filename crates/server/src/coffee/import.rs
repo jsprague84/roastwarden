@@ -6,6 +6,11 @@
 //! other address may be reached), one product per request, with a timeout, a size cap and an
 //! honest User-Agent; a redirect must stay on the same host.
 //!
+//! A read costs the store as little as possible, for every adapter alike: a page read is kept
+//! ten minutes (an agent's retry, or the cart right after an import, reads nothing again), a
+//! store that answered 429 or 5xx is not asked a second endpoint for the same product, and a
+//! 429's `Retry-After` goes into the error, so the caller waits what the store asked.
+//!
 //! Adapters, by platform: Shopify's product JSON with a "Label: value" reader for the
 //! description, Sweet Maria's specs table on top of it, and WooCommerce's store API with its
 //! named attributes (Burman). Each is tested against a synthetic answer shaped after a real
@@ -32,6 +37,55 @@ impl std::error::Error for ImportError {}
 
 fn refuse(msg: impl Into<String>) -> anyhow::Error {
     ImportError(msg.into()).into()
+}
+
+/// The store answered 429 or 5xx: the store's, not the link's. The handler answers 502 and
+/// the caller tries again later; a 429's `Retry-After` says how much later.
+#[derive(Debug)]
+pub struct StoreBusy {
+    pub status: reqwest::StatusCode,
+    /// Seconds the store asked to wait (`Retry-After`, as seconds or a date)
+    pub retry_after_s: Option<u64>,
+    url: String,
+}
+
+impl StoreBusy {
+    /// 429: the store asked to slow down (a 5xx is the store down)
+    pub fn throttled(&self) -> bool {
+        self.status == reqwest::StatusCode::TOO_MANY_REQUESTS
+    }
+}
+
+impl std::fmt::Display for StoreBusy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} answered {}: the store is busy",
+            self.url, self.status
+        )?;
+        match self.retry_after_s {
+            Some(s) => write!(f, "; it asked to wait {s} s before the next request"),
+            None => f.write_str(" or down, try again in a few minutes"),
+        }
+    }
+}
+
+impl std::error::Error for StoreBusy {}
+
+/// The store's own trouble behind an error, if that is what it was.
+pub fn store_busy(e: &anyhow::Error) -> Option<&StoreBusy> {
+    e.downcast_ref::<StoreBusy>()
+}
+
+/// `Retry-After`: seconds, or an HTTP date (seconds from now, 0 when it has passed).
+fn retry_after_s(h: Option<&reqwest::header::HeaderValue>) -> Option<u64> {
+    let v = h?.to_str().ok()?.trim();
+    if let Ok(s) = v.parse::<u64>() {
+        return Some(s);
+    }
+    let at = chrono::DateTime::parse_from_rfc2822(v).ok()?;
+    let left = (at.with_timezone(&chrono::Utc) - chrono::Utc::now()).num_seconds();
+    Some(u64::try_from(left).unwrap_or(0))
 }
 
 /// What one bag size costs.
@@ -251,6 +305,17 @@ type Profiles = std::sync::Arc<
     std::sync::Mutex<std::collections::HashMap<String, (std::time::Instant, Option<String>)>>,
 >;
 
+/// A page read is answered from memory this long: an agent's retry after a refusal, or the
+/// cart right after an import, costs the store nothing. Prices move slower than that.
+const KEEP_FOR: Duration = Duration::from_mins(10);
+/// Pages kept at most (the shopping list's worth; a page is under a megabyte)
+const MAX_PAGES: usize = 32;
+
+/// url → (when read, the body)
+type Pages = std::sync::Arc<
+    std::sync::Mutex<std::collections::HashMap<String, (std::time::Instant, String)>>,
+>;
+
 // ------------------------------------------------------------------ fetching --
 
 const USER_AGENT: &str = concat!(
@@ -264,6 +329,7 @@ const MAX_BYTES: usize = 4 << 20;
 pub struct Importer {
     http: reqwest::Client,
     profiles: Profiles,
+    pages: Pages,
 }
 
 impl Default for Importer {
@@ -298,7 +364,36 @@ impl Importer {
         Self {
             http,
             profiles: Profiles::default(),
+            pages: Pages::default(),
         }
+    }
+
+    /// The page as it was read within [`KEEP_FOR`], if it was.
+    fn kept(&self, url: &str) -> Option<String> {
+        let m = self.pages.lock().ok()?;
+        m.get(url)
+            .filter(|(at, _)| at.elapsed() < KEEP_FOR)
+            .map(|(_, body)| body.clone())
+    }
+
+    /// Keep a page just read; the stale ones go, and the oldest when there are too many.
+    fn keep(&self, url: &str, body: &str) {
+        let Ok(mut m) = self.pages.lock() else { return };
+        m.retain(|_, (at, _)| at.elapsed() < KEEP_FOR);
+        while m.len() >= MAX_PAGES {
+            let Some(oldest) = m
+                .iter()
+                .min_by_key(|(_, (at, _))| *at)
+                .map(|(k, _)| k.clone())
+            else {
+                break;
+            };
+            m.remove(&oldest);
+        }
+        m.insert(
+            url.to_string(),
+            (std::time::Instant::now(), body.to_string()),
+        );
     }
 
     /// The permalink endpoint if the profile was read today: no request.
@@ -319,7 +414,7 @@ impl Importer {
         }
         let e = match self.get(&format!("https://{host}/.well-known/ucp")).await {
             Ok(p) => permalink_endpoint(&p, host),
-            Err(e) if e.to_string().contains("429") => return None,
+            Err(e) if store_busy(&e).is_some_and(StoreBusy::throttled) => return None,
             Err(_) => None,
         };
         if let Ok(mut m) = self.profiles.lock() {
@@ -342,7 +437,11 @@ impl Importer {
         }
     }
 
+    /// One page, over the network or from the pages kept ([`KEEP_FOR`]).
     async fn get(&self, url: &str) -> Result<String> {
+        if let Some(body) = self.kept(url) {
+            return Ok(body);
+        }
         let mut r = self
             .http
             .get(url)
@@ -352,7 +451,12 @@ impl Importer {
         let status = r.status();
         // Busy or down is the store's, not the link's: a 502 to try again later, not a 400
         if status == reqwest::StatusCode::TOO_MANY_REQUESTS || status.is_server_error() {
-            bail!("{url} answered {status}: the store is busy or down, try again in a few minutes");
+            return Err(StoreBusy {
+                status,
+                retry_after_s: retry_after_s(r.headers().get(reqwest::header::RETRY_AFTER)),
+                url: url.to_string(),
+            }
+            .into());
         }
         if !status.is_success() {
             bail!(refuse(format!("{url} answered {status}")));
@@ -367,16 +471,24 @@ impl Importer {
                 )));
             }
         }
-        Ok(String::from_utf8_lossy(&body).into_owned())
+        let body = String::from_utf8_lossy(&body).into_owned();
+        self.keep(url, &body);
+        Ok(body)
     }
 
     /// A Shopify product: the theme's `/products/<handle>.js` (it says which bags can be
     /// bought; the `.json` does not), else `/products/<handle>.json`. One request when the
-    /// first answers.
+    /// first answers; the second only when the theme has no `.js` (a 404, a page instead of
+    /// JSON), never after a 429 or a 5xx, when a second hit would cost the store the same
+    /// answer again, nor when it could not be reached.
     async fn shopify_product(&self, base: &str, handle: &str) -> Result<String> {
         match self.get(&format!("{base}/products/{handle}.js")).await {
             Ok(js) if js.trim_start().starts_with('{') => Ok(js),
-            _ => self.get(&format!("{base}/products/{handle}.json")).await,
+            Ok(_) => self.get(&format!("{base}/products/{handle}.json")).await,
+            Err(e) if not_readable(&e).is_some() => {
+                self.get(&format!("{base}/products/{handle}.json")).await
+            }
+            Err(e) => Err(e),
         }
     }
 
@@ -1099,38 +1211,134 @@ mod tests {
         }
     }
 
-    /// A store that is busy (429) or down (5xx) is not a bad link: a 502 to try again later;
-    /// a missing page (404) is the link's
-    #[tokio::test]
-    async fn a_busy_store_is_not_a_bad_link() {
+    /// A store that answers each request in turn (status line, extra header lines, body) and
+    /// counts them; one more request than answers is refused.
+    async fn store(
+        answers: &'static [(&'static str, &'static str, &'static str)],
+    ) -> (String, std::sync::Arc<std::sync::atomic::AtomicUsize>) {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
         let l = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = l.local_addr().unwrap();
+        let hits = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let counted = hits.clone();
         tokio::spawn(async move {
-            for code in [
-                "429 Too Many Requests",
-                "503 Service Unavailable",
-                "404 Not Found",
-            ] {
+            for (code, headers, body) in answers {
                 let (mut c, _) = l.accept().await.unwrap();
+                counted.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                 let mut buf = [0u8; 1024];
                 let _ = c.read(&mut buf).await;
                 let _ = c
                     .write_all(
                         format!(
-                            "HTTP/1.1 {code}\r\ncontent-length: 0\r\nconnection: close\r\n\r\n"
+                            "HTTP/1.1 {code}\r\n{headers}content-length: {}\r\nconnection: close\r\n\r\n{body}",
+                            body.len()
                         )
                         .as_bytes(),
                     )
                     .await;
             }
         });
+        (format!("http://{addr}"), hits)
+    }
+
+    fn hits(h: &std::sync::Arc<std::sync::atomic::AtomicUsize>) -> usize {
+        h.load(std::sync::atomic::Ordering::SeqCst)
+    }
+
+    /// A store that is busy (429) or down (5xx) is not a bad link: a 502 to try again later;
+    /// a missing page (404) is the link's
+    #[tokio::test]
+    async fn a_busy_store_is_not_a_bad_link() {
+        let (base, _) = store(&[
+            ("429 Too Many Requests", "", ""),
+            ("503 Service Unavailable", "", ""),
+            ("404 Not Found", "", ""),
+        ])
+        .await;
         let i = Importer::new();
-        let url = format!("http://{addr}/products/x");
+        let url = format!("{base}/products/x");
         for busy in [true, true, false] {
             let e = i.get(&url).await.unwrap_err();
             assert_eq!(not_readable(&e).is_none(), busy, "{e}");
+            assert_eq!(store_busy(&e).is_some(), busy, "{e}");
         }
+    }
+
+    /// Under a 429 the store is asked once: no `.json` after the `.js`, and the wait it asked
+    /// for goes into the error, so the caller waits that instead of guessing.
+    #[tokio::test]
+    async fn a_throttled_store_is_asked_once_and_its_wait_passed_on() {
+        let (base, hits_) = store(&[
+            ("429 Too Many Requests", "retry-after: 45\r\n", ""),
+            ("200 OK", "", "{\"product\":{}}"),
+        ])
+        .await;
+        let e = Importer::new()
+            .shopify_product(&base, "x")
+            .await
+            .unwrap_err();
+        let busy = store_busy(&e).expect("the store's trouble");
+        assert!(busy.throttled());
+        assert_eq!(busy.retry_after_s, Some(45));
+        assert!(e.to_string().contains("asked to wait 45 s"), "{e}");
+        assert_eq!(hits(&hits_), 1, "the .json was not asked for");
+
+        // Down (5xx) is final too
+        let (base, hits_) = store(&[
+            ("502 Bad Gateway", "", ""),
+            ("200 OK", "", "{\"product\":{}}"),
+        ])
+        .await;
+        let e = Importer::new()
+            .shopify_product(&base, "x")
+            .await
+            .unwrap_err();
+        assert!(!store_busy(&e).expect("busy").throttled());
+        assert_eq!(hits(&hits_), 1);
+    }
+
+    /// The `.json` is read when the theme has no `.js` (404) or answers a page instead of JSON
+    #[tokio::test]
+    async fn the_json_is_read_only_when_the_theme_has_no_js() {
+        for first in [
+            ("404 Not Found", "", ""),
+            ("200 OK", "", "<html>a page</html>"),
+        ] {
+            let answers: &'static [_] = Box::leak(Box::new([
+                first,
+                ("200 OK", "", "{\"product\":{\"id\":1}}"),
+            ]));
+            let (base, hits_) = store(answers).await;
+            let json = Importer::new().shopify_product(&base, "x").await.unwrap();
+            assert_eq!(json, "{\"product\":{\"id\":1}}");
+            assert_eq!(hits(&hits_), 2, "{}", first.0);
+        }
+    }
+
+    /// A page read is kept: the same link again reads nothing from the store
+    #[tokio::test]
+    async fn a_page_read_is_kept_so_a_retry_costs_the_store_nothing() {
+        let (base, hits_) = store(&[("200 OK", "", "{\"a\":1}")]).await;
+        let i = Importer::new();
+        let url = format!("{base}/products/x.js");
+        assert_eq!(i.get(&url).await.unwrap(), "{\"a\":1}");
+        assert_eq!(i.get(&url).await.unwrap(), "{\"a\":1}", "from memory");
+        assert_eq!(hits(&hits_), 1);
+        assert!(i.kept(&format!("{base}/products/y.js")).is_none());
+    }
+
+    #[test]
+    fn retry_after_is_seconds_or_a_date() {
+        let h = |v: &str| reqwest::header::HeaderValue::from_str(v).unwrap();
+        assert_eq!(retry_after_s(Some(&h("45"))), Some(45));
+        assert_eq!(retry_after_s(Some(&h(" 7 "))), Some(7));
+        assert_eq!(retry_after_s(Some(&h("soon"))), None);
+        assert_eq!(retry_after_s(None), None);
+        let soon = (chrono::Utc::now() + chrono::Duration::seconds(90)).to_rfc2822();
+        let s = retry_after_s(Some(&h(&soon))).unwrap();
+        assert!((88..=90).contains(&s), "{s}");
+        let past = (chrono::Utc::now() - chrono::Duration::seconds(90)).to_rfc2822();
+        assert_eq!(retry_after_s(Some(&h(&past))), Some(0));
     }
 
     #[test]

@@ -57,6 +57,12 @@ one product when asked is fine; crawling catalogs is not the goal.
   stock move with price and date, which also feeds the roast cost. A refresh re-reads the
   page for the current price and availability (Shopify variants carry `available` in the
   theme's `/products/<handle>.js`, not in `.json`).
+- **One request per read, under a store's rate limit.** A Shopify product is the theme's
+  `/products/<handle>.js` first; its `.json` only when the theme has none (a 404, a page
+  instead of JSON), never after a 429 or a 5xx, when a second request would cost the store the
+  same answer again. A page read is kept ten minutes, so an agent's retry or the cart right
+  after an import reads nothing again. A 429's `Retry-After` goes into the error (the handler
+  answers 502) and into the cart's warning: the caller waits what the store asked.
 - **Agent path**: the `inventory` token preset covers import, beans,
   purchases and the shopping list. The skill tells Hermes to preview, show the owner the
   draft, then save. `roastwarden bean import <url> [--want | --bought <size>]` does the same
