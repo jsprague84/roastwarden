@@ -4148,7 +4148,7 @@ dependencies = [
  "comemo",
  "dotenvy",
  "futures-util",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "hkdf",
  "http",
  "ipp",
