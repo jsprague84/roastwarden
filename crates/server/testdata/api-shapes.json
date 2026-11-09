@@ -3757,6 +3757,7 @@
           "q": "integer",
           "rb": "number",
           "rd": "number",
+          "re": "absent|number",
           "sp": "number",
           "t": "integer",
           "x": {
@@ -3838,6 +3839,7 @@
         "heaterApplied": "number",
         "heaterEnable": "integer",
         "rateOfRise": "number",
+        "rateOfRiseEt": "number",
         "rorLimited": "integer",
         "setpoint": "number",
         "uptime": "integer",

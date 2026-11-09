@@ -275,9 +275,14 @@ async fn api_shapes_are_unchanged() {
     )
     .await;
     let latest = format!("/api/roaster/{VR}/telemetry/latest");
+    // The ET rate of rise needs two samples: wait for it, or the telemetry's shape and the
+    // samples' `re` depend on how many samples a loaded runner let through (as it did in CI).
     assert!(
-        eventually(|| async { h.owner("GET", &latest, None).await.status.is_success() }).await,
-        "the virtual roaster sends telemetry"
+        eventually(|| async {
+            h.owner("GET", &latest, None).await.json()["telemetry"]["rateOfRiseEt"].is_number()
+        })
+        .await,
+        "the virtual roaster sends telemetry with an ET rate of rise"
     );
     r.owner(
         "GET /api/virtual-roaster",
