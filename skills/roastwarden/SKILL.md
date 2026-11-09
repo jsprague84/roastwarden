@@ -38,8 +38,9 @@ password add <id>` counts at once, no restart). Its firmware signs in with that 
 and the password, to the server's address on the port in `mqtt_broker.addr`. With
 `mqtt_broker` null the server uses the owner's own broker (Mosquitto, Home Assistant's): the
 roaster's user and its topic rules are added there (`docs/install-docker.md`, "With your own
-MQTT broker"). Never print or ask for the passwords in chat beyond telling the owner where
-they go.
+MQTT broker"). A password just added is shown once, by `password add`: give it to the owner
+as it is, it goes into the roaster's firmware. Never print one that already exists, nor ask
+for one in chat, beyond telling the owner where it goes.
 
 **Modules.** `roast status` also lists the modules that are on (`reports`, `cupping`,
 `tuning`, `agents`, `costs`, `labels`; `roast modules` shows them alone). The owner turned the
