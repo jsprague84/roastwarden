@@ -315,7 +315,7 @@ docker cp "roastwarden:/app/data/backups/$B" "$D/data/roastwarden.db.restore"   
 chmod 666 "$D/data/roastwarden.db.restore"         # the container's user writes it
 docker run -d --name roastwarden-restore-drill --network none --restart no \
   -e ROASTWARDEN_DB_PATH=/app/data/roastwarden.db -e ROASTWARDEN_MDNS=false \
-  -v "$D/data:/app/data" "$IMAGE"
+  -e ROASTWARDEN_READS=open -v "$D/data:/app/data" "$IMAGE"   # open reads: the counts below need no key
 for i in $(seq 1 60); do [ "$(docker inspect roastwarden-restore-drill --format "{{.State.Health.Status}}")" = healthy ] && break; sleep 2; done
 docker logs roastwarden-restore-drill 2>&1 | grep -i 'restored'
 docker exec roastwarden-restore-drill curl -s localhost:8080/api/sessions?limit=500 | grep -o '"id"' | wc -l
