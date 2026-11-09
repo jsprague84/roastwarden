@@ -17,6 +17,8 @@ matching section (`docs/DEVELOPMENT.md`, "Releases").
   list, with ring as the one TLS provider in the build as before.
 - tower-http 0.7: the dashboard's files are served with strong ETags, so a browser's
   revalidation gets a 304 instead of the file again.
+- sha2 0.11, hkdf 0.13 and aes-gcm 0.11 (the push messages' encryption, the token and login
+  hashes, receipts' and label assets' checksums): the same bytes as before, one hex helper.
 
 ### Fixed
 

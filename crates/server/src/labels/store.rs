@@ -434,8 +434,7 @@ pub async fn put_asset(
     note: Option<&str>,
     by: &str,
 ) -> Result<bool> {
-    use sha2::Digest;
-    let sha = format!("{:x}", sha2::Sha256::digest(data));
+    let sha = crate::sha256_hex(data);
     let existed = asset(db, name).await?.is_some();
     sqlx::query(
         "INSERT INTO label_assets (name, kind, content_type, data, size, sha256, family, note, created_by, created_at)

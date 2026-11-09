@@ -14,7 +14,6 @@
 
 use axum::http::{header, HeaderMap, HeaderValue};
 use serde::Serialize;
-use sha2::{Digest, Sha256};
 use sqlx::SqlitePool;
 use std::fmt::Write as _;
 use utoipa::ToSchema;
@@ -31,7 +30,7 @@ pub const RENEW_AFTER_SECS: i64 = 24 * 3600;
 const TOUCH_AFTER_SECS: i64 = 60;
 
 fn hex_sha256(text: &str) -> String {
-    format!("{:x}", Sha256::digest(text.as_bytes()))
+    crate::sha256_hex(text.as_bytes())
 }
 
 fn proof(owner_key: &str, secret: &str) -> String {

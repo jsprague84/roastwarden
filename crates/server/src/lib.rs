@@ -73,6 +73,18 @@ pub fn install_crypto_provider() {
     let _ = rustls::crypto::ring::default_provider().install_default();
 }
 
+/// The SHA-256 of `data` as 64 hex digits (the token store, logins, receipts, label assets).
+pub fn sha256_hex(data: &[u8]) -> String {
+    use sha2::Digest;
+    sha2::Sha256::digest(data)
+        .iter()
+        .fold(String::with_capacity(64), |mut s, b| {
+            use std::fmt::Write;
+            let _ = write!(s, "{b:02x}");
+            s
+        })
+}
+
 pub async fn run(shutdown: impl std::future::Future<Output = ()> + Send + 'static) {
     routes::about::mark_started();
     install_crypto_provider();

@@ -18,7 +18,6 @@
 //! tokens for that roaster ([`hardware_refusal`]).
 
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use sqlx::AssertSqlSafe;
 use sqlx::SqlitePool;
 
@@ -61,7 +60,7 @@ pub fn generate() -> NewSecret {
 
 /// Hex SHA-256 of the whole token, prefix included.
 pub fn hash(secret: &str) -> String {
-    format!("{:x}", Sha256::digest(secret.as_bytes()))
+    crate::sha256_hex(secret.as_bytes())
 }
 
 /// Whether a credential is meant as an API token (rather than the owner key).

@@ -10,7 +10,6 @@ use std::time::Duration;
 use clap::{Args, Subcommand};
 use reqwest::Method;
 use serde_json::{json, Value};
-use sha2::{Digest, Sha256};
 
 use crate::api::{enc, Api, Upload};
 use crate::cli::Wait;
@@ -513,7 +512,7 @@ async fn import(
     let mut shas = Vec::new();
     for (_, f) in &files {
         let bytes = read(f)?;
-        shas.push(format!("{:x}", Sha256::digest(&bytes)));
+        shas.push(roastwarden_server::sha256_hex(&bytes));
     }
     if !shas.is_empty() {
         body["receipt_sha256"] = json!(shas);

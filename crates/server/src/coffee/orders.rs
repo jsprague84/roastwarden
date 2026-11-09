@@ -19,7 +19,6 @@ use std::collections::HashMap;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use sqlx::AssertSqlSafe;
 use sqlx::{FromRow, SqlitePool};
 use uuid::Uuid;
@@ -1469,7 +1468,7 @@ impl OrderService {
         let ct = receipt_type(content_type, file_name.as_deref()).ok_or_else(|| {
             bad("a receipt is an email (.eml), a web page (.html), a PDF, an image (PNG, JPEG, WebP, HEIC) or text")
         })?;
-        let sha = format!("{:x}", Sha256::digest(body));
+        let sha = crate::sha256_hex(body);
         let held: Option<(String, String)> = sqlx::query_as(
             "SELECT o.supplier, o.order_number FROM purchase_receipts r \
              JOIN purchase_orders o ON o.id = r.order_id WHERE r.sha256 = ?",

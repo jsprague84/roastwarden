@@ -103,7 +103,7 @@ pub fn encrypt(
     record.push(2);
     let sealed = Aes128Gcm::new_from_slice(&cek)
         .expect("16-byte key")
-        .encrypt(Nonce::from_slice(&nonce), record.as_slice())
+        .encrypt(&Nonce::from(nonce), record.as_slice())
         .map_err(|_| anyhow::anyhow!("AES-GCM failed"))?;
 
     let mut out = Vec::with_capacity(86 + sealed.len());
@@ -611,7 +611,7 @@ mod tests {
         hkdf(salt, &ikm, b"Content-Encoding: nonce\0", &mut nonce);
         let mut plain = Aes128Gcm::new_from_slice(&cek)
             .unwrap()
-            .decrypt(Nonce::from_slice(&nonce), &body[86..])
+            .decrypt(&Nonce::from(nonce), &body[86..])
             .unwrap();
         assert_eq!(plain.pop(), Some(2), "last-record delimiter");
         plain
