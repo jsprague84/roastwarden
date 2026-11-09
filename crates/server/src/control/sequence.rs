@@ -395,11 +395,38 @@ impl SequenceService {
         self.cooling.lock().await.contains_key(device_id)
     }
 
+    /// The roast the roaster is cooling after its DROP, if any: its samples are stored
+    /// until COOL END, Complete or not.
+    pub async fn cooling_roast(&self, device_id: &str) -> Option<String> {
+        self.cooling
+            .lock()
+            .await
+            .get(device_id)
+            .and_then(|c| c.session_id.clone())
+    }
+
+    /// Cooling starts: the fan runs until the chamber is cold, and the roast's samples are
+    /// stored until then even once it is complete (a roast completed a second after DROP
+    /// otherwise ends its trend at DROP while the roaster cools for minutes).
+    async fn start_cooling(&self, device_id: &str, c: Cooling) {
+        if let Some(sid) = &c.session_id {
+            self.telemetry.record_cooling(device_id, sid);
+        }
+        self.cooling.lock().await.insert(device_id.to_string(), c);
+    }
+
+    /// Cooling is over, however it ended: the roast records no more.
+    async fn remove_cooling(&self, device_id: &str) -> Option<Cooling> {
+        let c = self.cooling.lock().await.remove(device_id);
+        self.telemetry.cooling_over(device_id);
+        c
+    }
+
     /// End the last roast's cooling without its fan-off: something else (a new roast, the
     /// server's autotune) now runs the roaster, and a fan-off landing in it would gate the
     /// heater. Returns whether it was cooling.
     pub async fn end_cooling(&self, device_id: &str, why: &str) -> bool {
-        let ended = self.cooling.lock().await.remove(device_id).is_some();
+        let ended = self.remove_cooling(device_id).await.is_some();
         if ended {
             tracing::info!(device_id, why, "cooling of the last roast ends");
         }
@@ -708,15 +735,16 @@ impl SequenceService {
                 Ok(())
             }
             Act::Cool { until_bt_c, mark } => {
-                self.cooling.lock().await.insert(
-                    device_id.to_string(),
+                self.start_cooling(
+                    device_id,
                     Cooling {
                         session_id: session_id.map(str::to_string),
                         until_bt_c: *until_bt_c,
                         mark: *mark,
                         since: tokio::time::Instant::now(),
                     },
-                );
+                )
+                .await;
                 Ok(())
             }
         }
@@ -725,25 +753,31 @@ impl SequenceService {
     /// Cooling ends when the hotter of BT and ET is below the threshold; `bt` is what a
     /// COOL END mark records.
     async fn on_sample(&self, device_id: &str, bt: Option<f64>, hot: Option<f64>) {
-        let done = {
-            let mut cooling = self.cooling.lock().await;
+        let outcome = {
+            let cooling = self.cooling.lock().await;
             let Some(c) = cooling.get(device_id) else {
                 return;
             };
             if c.since.elapsed() > COOL_TIMEOUT {
-                tracing::warn!(
-                    device_id,
-                    "cooling did not reach its end temperature; fan left as it is"
-                );
-                cooling.remove(device_id);
-                return;
-            }
-            match hot {
-                Some(t) if t < c.until_bt_c => cooling.remove(device_id),
-                _ => None,
+                Some(false)
+            } else {
+                match hot {
+                    Some(t) if t < c.until_bt_c => Some(true),
+                    _ => None,
+                }
             }
         };
-        let Some(c) = done else { return };
+        let Some(reached) = outcome else { return };
+        let Some(c) = self.remove_cooling(device_id).await else {
+            return;
+        };
+        if !reached {
+            tracing::warn!(
+                device_id,
+                "cooling did not reach its end temperature; fan left as it is"
+            );
+            return;
+        }
         let fan = self.apply(&Act::Fan(0.0), device_id, None).await;
         if let Err(e) = fan {
             tracing::warn!(device_id, error = %e, "cooling: could not switch the fan off");
@@ -758,7 +792,8 @@ impl SequenceService {
         let Ok(Some(s)) = crate::roasts::sessions::get_session(&self.db, session_id).await else {
             return;
         };
-        if s.status != SessionStatus::Active {
+        // Complete may come before the chamber is cold: COOL END still lands on the roast.
+        if !matches!(s.status, SessionStatus::Active | SessionStatus::Completed) {
             return;
         }
         let Ok(events) = crate::roasts::events::get_roast_events(&self.db, session_id).await else {
@@ -983,15 +1018,18 @@ mod tests {
         assert!(eventually(|| async { fan().await.is_some() }).await);
         // A roast that just dropped, still cooling. The roaster is cold, so without the fix
         // the cooling's fan-off lands on the next sample, inside the test.
-        h.state.sequence.cooling.lock().await.insert(
-            vr.to_string(),
-            Cooling {
-                session_id: None,
-                until_bt_c: 45.0,
-                mark: false,
-                since: tokio::time::Instant::now(),
-            },
-        );
+        h.state
+            .sequence
+            .start_cooling(
+                vr,
+                Cooling {
+                    session_id: None,
+                    until_bt_c: 45.0,
+                    mark: false,
+                    since: tokio::time::Instant::now(),
+                },
+            )
+            .await;
         let r = h
             .owner(
                 "POST",
@@ -1013,5 +1051,114 @@ mod tests {
         );
         h.owner("POST", &format!("/api/roaster/{vr}/tune/stop"), None)
             .await;
+    }
+
+    /// Roast #18: DROP, Complete a second later, and the trend ended at DROP while the
+    /// roaster cooled for two minutes. Complete while cooling keeps the roast's samples
+    /// until the chamber is cold, then COOL END lands on the completed roast.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn complete_while_cooling_keeps_the_trend_to_cool_end() {
+        use crate::test_support::{eventually, Harness};
+        use serde_json::json;
+        let h = Harness::new().await;
+        let vr = crate::sim::virtual_roaster::DEVICE_ID;
+        let on = h
+            .owner(
+                "PUT",
+                "/api/virtual-roaster",
+                Some(json!({ "enabled": true })),
+            )
+            .await;
+        assert!(on.status.is_success());
+        let r = h
+            .owner(
+                "POST",
+                "/api/sessions",
+                Some(json!({ "name": "cooling kept", "device_id": vr })),
+            )
+            .await;
+        let sid = r.json()["id"].as_str().expect("a roast").to_string();
+        h.owner("POST", &format!("/api/sessions/{sid}/start"), None)
+            .await;
+        let telemetry = format!("/api/sessions/{sid}/telemetry");
+        let rows = || async {
+            h.owner("GET", &telemetry, None).await.json()["telemetry"]
+                .as_array()
+                .map_or(0, Vec::len)
+        };
+        assert!(
+            eventually(|| async { rows().await >= 2 }).await,
+            "the roast records"
+        );
+        // DROP's cooling, as the sequence sets it: a threshold no sample reaches yet.
+        h.state
+            .sequence
+            .start_cooling(
+                vr,
+                Cooling {
+                    session_id: Some(sid.clone()),
+                    until_bt_c: 1.0,
+                    mark: true,
+                    since: tokio::time::Instant::now(),
+                },
+            )
+            .await;
+        let done = h
+            .owner("POST", &format!("/api/sessions/{sid}/complete"), None)
+            .await;
+        assert_eq!(done.json()["status"], "completed", "{}", done.json());
+        let seq = h
+            .owner("GET", &format!("/api/roaster/{vr}/sequence"), None)
+            .await
+            .json();
+        assert_eq!(seq["cooling"], true);
+        assert_eq!(seq["cooling_roast_id"], sid.as_str());
+        let at_complete = rows().await;
+        assert!(
+            eventually(|| async { rows().await > at_complete }).await,
+            "a completed roast still records while the roaster cools"
+        );
+        let events = format!("/api/sessions/{sid}/events");
+        let cool_end = || async {
+            h.owner("GET", &events, None)
+                .await
+                .json()
+                .as_array()
+                .is_some_and(|evs| evs.iter().any(|e| e["event_type"] == "cool_end"))
+        };
+        assert!(!cool_end().await);
+        // The chamber is cold against a threshold every sample is under: the next sample ends it.
+        h.state
+            .sequence
+            .start_cooling(
+                vr,
+                Cooling {
+                    session_id: Some(sid.clone()),
+                    until_bt_c: 500.0,
+                    mark: true,
+                    since: tokio::time::Instant::now(),
+                },
+            )
+            .await;
+        assert!(
+            eventually(cool_end).await,
+            "COOL END lands on the completed roast"
+        );
+        assert!(!h.state.sequence.cooling(vr).await);
+        assert_eq!(
+            h.owner("GET", &format!("/api/roaster/{vr}/sequence"), None)
+                .await
+                .json()["cooling_roast_id"],
+            serde_json::Value::Null
+        );
+        let at_end = rows().await;
+        tokio::time::sleep(std::time::Duration::from_millis(2500)).await;
+        assert_eq!(rows().await, at_end, "no sample is stored after COOL END");
+        // The statistics are DROP-based and stay as Complete stored them.
+        let shown = h
+            .owner("GET", &format!("/api/sessions/{sid}"), None)
+            .await
+            .json();
+        assert_eq!(shown["status"], "completed");
     }
 }

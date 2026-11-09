@@ -7,6 +7,12 @@ matching section (`docs/DEVELOPMENT.md`, "Releases").
 
 ## [Unreleased]
 
+### Fixed
+
+- Complete while the roaster cools no longer cuts the roast's trend at DROP: the samples go
+  on the roast until COOL END, which is marked on it, and the Roast page says so under Saved
+  ("Cooling is still recorded"). The statistics still run CHARGE to DROP.
+
 ## [0.42.4] - 2026-11-08
 
 Nothing in the app changed since 0.42.3. This release exists so that the public image, the

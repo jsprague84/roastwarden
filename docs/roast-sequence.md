@@ -40,6 +40,10 @@ Good to know:
 
 - **Hot means BT or ET.** Just after a cold charge the beans can read 30 °C while the air is
   80 °C, so cooling waits for both.
+- **Complete while it cools** and the roast keeps recording: the samples go on the roast
+  until COOL END, which is marked on it, so weighing and notes need not wait for the fan. The
+  Roast page says so under Saved ("Cooling is still recorded"). The statistics run CHARGE to
+  DROP as before.
 - **Cooling gives up after 20 minutes**, and a new Charge ends the last roast's cooling.
 - **Each kind of roaster starts with its own sequence.** A fluid bed's acts as above; a drum's
   and a logger's only record, since a drum is preheated and keeps running. Changing the kind
@@ -105,6 +109,17 @@ preheat to run before CHARGE.
   and gate the heater.
 - **Hot means BT or ET.** A hot-air heater wants airflow until the air is cool, not only the
   beans: just after a cold charge BT can be 30 °C while ET is 80 °C.
+- **Complete while cooling keeps the trend.** The telemetry service stores a sample for the
+  roast running on the roaster (`status = 'active'`) and, while the sequence cools a roast,
+  for that roast once it is complete too (`TelemetryService::record_cooling`, set when
+  cooling starts, cleared when it ends however it ends: the threshold, the 20-minute
+  give-up, a new CHARGE). COOL END is marked on an active or a completed roast. A recorded
+  roast had DROP, Complete a second later and its trend ending at DROP while the roaster
+  cooled for two minutes; refusing Complete while cooling was the alternative, worse because
+  the roast is weighed and noted right after DROP. The statistics stay DROP-based: the roast
+  time runs CHARGE → DROP and the peaks are before DROP, so the cooling samples change none
+  of them. `GET …/sequence` returns `cooling_roast_id`, the roast being cooled; the Roast
+  page reads it after Complete and says "Cooling is still recorded" until it clears.
 - **Fans stay at the roaster's fan floor or more** (validated; 45 % on the fluid bed, whose
   firmware's heater interlock is 40 %, `SAFETY_MIN_FAN_PCT`), and the fan is set before heater
   power goes on.
@@ -187,10 +202,14 @@ heater-off, lease renewed 2 s before; cause unknown). What the server does when 
 
 `charge_fan_pct` and `cool_fan_pct` 45..100 %; `charge_heater_pct` 0..100 %; `cool_end_bt_c` 0
 (off) or 25..120 °C.
-`GET` also returns `cooling`: the roaster is cooling after a DROP or a cancel.
+`GET` also returns `cooling`: the roaster is cooling after a DROP or a cancel; and
+`cooling_roast_id`, the roast whose cooling it is (null after a cancel), recorded until COOL END.
 
 ## Checked
 
 `drive-check.mjs` (virtual roaster): Charge starts the drive with heater power on (it
 fails if the drive needs a click or the heater warning shows), Drop leaves heater power
-off and the fan at 100 %, and Cool end is marked by itself.
+off and the fan at 100 %, Complete during the cooling says "Cooling is still recorded", and
+Cool end is marked on the completed roast by itself, its trend reaching it.
+`control::sequence::tests::complete_while_cooling_keeps_the_trend_to_cool_end` is the
+server's test of the same.

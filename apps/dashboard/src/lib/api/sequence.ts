@@ -22,6 +22,8 @@ export interface SequenceView {
 	config: SequenceConfig;
 	/** The roaster is cooling after a DROP or a cancel. */
 	cooling: boolean;
+	/** The roast being cooled: its samples are stored until COOL END, Complete or not. */
+	cooling_roast_id: string | null;
 }
 
 export const roastSequence = {

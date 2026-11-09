@@ -437,6 +437,11 @@
 						<FileText class="h-3.5 w-3.5" />
 					</a>
 				{/if}
+				{#if roast.coolingRecorded}
+					<span class="basis-full text-xs text-muted-foreground"
+						>Cooling is still recorded: the samples go on the roast until Cool end.</span
+					>
+				{/if}
 			</div>
 			<RoastAfterSummary session={roast.lastCompleted} onsaved={(u) => (roast.lastCompleted = u)} />
 		{/if}

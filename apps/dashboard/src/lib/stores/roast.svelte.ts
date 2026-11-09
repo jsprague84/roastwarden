@@ -15,6 +15,7 @@ import { events as eventsApi, type RoastEvent } from '#lib/api/events.js';
 import { AlreadyMarkedError } from '#lib/api/http.js';
 import { profiles } from '#lib/api/profiles.js';
 import { roasterSetup, type RoasterSetup, type ControlLevel } from '#lib/api/roasters.js';
+import { roastSequence } from '#lib/api/sequence.js';
 import { sessions, type RoastSession, type CreateSessionRequest } from '#lib/api/sessions.js';
 import { virtualRoaster } from '#lib/api/virtual.js';
 import { listDevices } from '#lib/api/devices.js';
@@ -62,6 +63,8 @@ export const roast = $state<{
 	previewProfileId: string | null;
 	/** The roast completed last in this browser, for the "review" step. */
 	lastCompleted: RoastSession | null;
+	/** `lastCompleted` still records: the roaster cools and its samples go on the roast until COOL END. */
+	coolingRecorded: boolean;
 	/** A start/complete/mark request is in flight. */
 	busy: boolean;
 	/** The selected roaster's setup (docs/roaster-setup.md); null until it has loaded. */
@@ -75,6 +78,7 @@ export const roast = $state<{
 	eventsLoaded: false,
 	previewProfileId: null,
 	lastCompleted: null,
+	coolingRecorded: false,
 	busy: false,
 	setup: null
 });
@@ -360,6 +364,8 @@ export async function startRoast(details: StartDetails = {}) {
 		clearHistory();
 		seeded.add(started.id);
 		roast.lastCompleted = null;
+		roast.coolingRecorded = false;
+		coolingWatch++;
 		adoptSession(started);
 	});
 }
@@ -391,6 +397,33 @@ export async function completeRoast() {
 	if (done) {
 		roast.lastCompleted = done;
 		adoptSession(null);
+		if (dev) void watchCoolingRecord(dev, done.id);
+	}
+}
+
+/** The poll for the cooling's end; a newer one or a cleared card stops the last. */
+let coolingWatch = 0;
+
+/**
+ * Completed while the roaster cools, the roast keeps recording until COOL END
+ * (docs/roast-sequence.md): say so under Saved while the server's sequence names it.
+ */
+async function watchCoolingRecord(dev: string, sessionId: string) {
+	const token = ++coolingWatch;
+	const recording = async () => {
+		try {
+			return (await roastSequence.get(dev)).cooling_roast_id === sessionId;
+		} catch {
+			return false;
+		}
+	};
+	roast.coolingRecorded = await recording();
+	if (token !== coolingWatch) return;
+	// Cooling gives up after 20 minutes on the server; the poll stops with it.
+	for (let i = 0; roast.coolingRecorded && i < 240; i++) {
+		await new Promise((r) => setTimeout(r, 5000));
+		if (token !== coolingWatch || roast.lastCompleted?.id !== sessionId) return;
+		roast.coolingRecorded = await recording();
 	}
 }
 

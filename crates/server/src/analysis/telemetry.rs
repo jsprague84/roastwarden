@@ -294,6 +294,9 @@ pub struct TelemetryService {
     setups: Arc<crate::roasters::setup::Setups>,
     /// The newest raw message of each roaster's connection (docs/add-roaster.md)
     pub(crate) raw: Arc<crate::roasters::raw::RawStore>,
+    /// Per roaster, the roast whose cooling is still recorded after Complete: the roast
+    /// sequence sets it at DROP and clears it at COOL END (docs/roast-sequence.md).
+    cooling_roasts: Arc<std::sync::RwLock<HashMap<String, String>>>,
 }
 
 impl TelemetryService {
@@ -316,7 +319,35 @@ impl TelemetryService {
             rings: Arc::new(Rings::new(ring_capacity_from_env())),
             setups,
             raw: Arc::new(crate::roasters::raw::RawStore::default()),
+            cooling_roasts: Arc::new(std::sync::RwLock::new(HashMap::new())),
         }
+    }
+
+    /// Keep storing this roaster's samples for `session_id` once it is complete, until
+    /// `cooling_over` (the roast sequence's cooling: a roast completed a second after DROP
+    /// would otherwise end its trend at DROP while the roaster cools for minutes).
+    pub fn record_cooling(&self, device_id: &str, session_id: &str) {
+        self.cooling_roasts
+            .write()
+            .expect("a telemetry lock is poisoned")
+            .insert(device_id.to_string(), session_id.to_string());
+    }
+
+    /// The cooling is over (or ended by a new roast): a completed roast gets no more samples.
+    pub fn cooling_over(&self, device_id: &str) {
+        self.cooling_roasts
+            .write()
+            .expect("a telemetry lock is poisoned")
+            .remove(device_id);
+    }
+
+    /// The roast whose cooling this roaster still records, if any.
+    pub fn cooling_roast(&self, device_id: &str) -> Option<String> {
+        self.cooling_roasts
+            .read()
+            .expect("a telemetry lock is poisoned")
+            .get(device_id)
+            .cloned()
     }
 
     /// Recent samples with `seq > since_seq` (oldest first).
@@ -487,7 +518,8 @@ impl TelemetryService {
             sample,
         });
 
-        // Record to active session telemetry (skip for disabled devices)
+        // Record to the roast running on the roaster, and to the one it still cools after
+        // Complete (skip for disabled devices)
         let is_disabled = device_status == Some(&DeviceStatus::Disabled);
         if !is_disabled {
             let payload_str = serde_json::to_string(payload).unwrap_or_default();
@@ -495,44 +527,21 @@ impl TelemetryService {
             let declared = self.setups.channels(device_id).await;
             let keys: Vec<&str> = declared.iter().map(|c| c.key.as_str()).collect();
             let extras = control_extras(payload, &keys);
-            let point_id = Uuid::new_v4().to_string();
             // Elapsed to the millisecond (julianday keeps the start's fraction; strftime('%s')
             // dropped it, so samples sat up to a second off the event marks).
             let now_s = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .map_or(now as f64, |d| d.as_secs_f64());
-            let result = sqlx::query(r"
-                INSERT INTO session_telemetry (id, session_id, timestamp, elapsed_seconds, bean_temp, env_temp, rate_of_rise, heater, fan, setpoint, extras)
-                SELECT ?, s.id, ?,
-                       CASE WHEN s.start_time IS NOT NULL
-                            THEN ROUND(CAST(? AS REAL) - (julianday(s.start_time) - 2440587.5) * 86400.0, 3)
-                            ELSE 0.0
-                       END,
-                       json_extract(?, '$.beanTemp'),
-                       json_extract(?, '$.envTemp'),
-                       json_extract(?, '$.rateOfRise'),
-                       json_extract(?, '$.heater'),
-                       json_extract(?, '$.fan'),
-                       json_extract(?, '$.setpoint'),
-                       ?
-                FROM roast_sessions s
-                WHERE s.device_id = ? AND s.status = 'active'
-            ")
-                .bind(&point_id)
-                .bind(now as i64)
-                .bind(now_s)
-                .bind(&payload_str)
-                .bind(&payload_str)
-                .bind(&payload_str)
-                .bind(&payload_str)
-                .bind(&payload_str)
-                .bind(&payload_str)
-                .bind(extras)
-                .bind(device_id)
-                .execute(&self.db)
-                .await;
-            if let Err(e) = result {
-                tracing::warn!(%device_id, error = %e, "Failed to insert session telemetry");
+            let point = StoredPoint {
+                now,
+                now_s,
+                payload: &payload_str,
+                extras: &extras,
+                device_id,
+            };
+            self.store_point(&point, RoastFilter::Active).await;
+            if let Some(sid) = self.cooling_roast(device_id) {
+                self.store_point(&point, RoastFilter::Completed(&sid)).await;
             }
         }
 
@@ -592,6 +601,77 @@ fn control_extras(payload: &serde_json::Value, channels: &[&str]) -> Option<Stri
         }
     }
     (!m.is_empty()).then(|| serde_json::Value::Object(m).to_string())
+}
+
+/// Which roast a sample is stored for: the one running on the roaster, or a completed one
+/// whose cooling is still recorded.
+enum RoastFilter<'a> {
+    Active,
+    Completed(&'a str),
+}
+
+/// One sample as the store writes it, before the roast is picked.
+struct StoredPoint<'a> {
+    now: u64,
+    now_s: f64,
+    payload: &'a str,
+    extras: &'a Option<String>,
+    device_id: &'a str,
+}
+
+/// A sample stored for a roast of the roaster, the tail saying which roast: the id, the
+/// time, the elapsed seconds from the roast's start, the sample's fields, the extras, the
+/// roaster, then the tail's own values.
+macro_rules! store_sample {
+    ($which:literal) => {
+        concat!(
+            "INSERT INTO session_telemetry (id, session_id, timestamp, elapsed_seconds, bean_temp, env_temp, rate_of_rise, heater, fan, setpoint, extras)
+             SELECT ?, s.id, ?,
+                    CASE WHEN s.start_time IS NOT NULL
+                         THEN ROUND(CAST(? AS REAL) - (julianday(s.start_time) - 2440587.5) * 86400.0, 3)
+                         ELSE 0.0
+                    END,
+                    json_extract(?, '$.beanTemp'),
+                    json_extract(?, '$.envTemp'),
+                    json_extract(?, '$.rateOfRise'),
+                    json_extract(?, '$.heater'),
+                    json_extract(?, '$.fan'),
+                    json_extract(?, '$.setpoint'),
+                    ?
+             FROM roast_sessions s
+             WHERE s.device_id = ? AND ",
+            $which
+        )
+    };
+}
+
+impl TelemetryService {
+    async fn store_point(&self, p: &StoredPoint<'_>, filter: RoastFilter<'_>) {
+        let sql = match filter {
+            RoastFilter::Active => store_sample!("s.status = 'active'"),
+            // Completed only: while the roast still runs the statement above stores it.
+            RoastFilter::Completed(_) => store_sample!("s.status = 'completed' AND s.id = ?"),
+        };
+        let point_id = Uuid::new_v4().to_string();
+        let mut q = sqlx::query(sql)
+            .bind(&point_id)
+            .bind(p.now as i64)
+            .bind(p.now_s)
+            .bind(p.payload)
+            .bind(p.payload)
+            .bind(p.payload)
+            .bind(p.payload)
+            .bind(p.payload)
+            .bind(p.payload)
+            .bind(p.extras)
+            .bind(p.device_id);
+        if let RoastFilter::Completed(sid) = filter {
+            q = q.bind(sid);
+        }
+        if let Err(e) = q.execute(&self.db).await {
+            tracing::warn!(device_id = %p.device_id, error = %e, "Failed to insert session telemetry");
+        }
+    }
 }
 
 #[cfg(test)]

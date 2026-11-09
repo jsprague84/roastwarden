@@ -24,6 +24,8 @@ struct SequenceView {
     config: SequenceConfig,
     /// The roaster is cooling after DROP (the fan stops at `cool_end_bt_c`)
     cooling: bool,
+    /// The roast being cooled: its samples are stored until COOL END, Complete or not
+    cooling_roast_id: Option<String>,
 }
 
 async fn view(state: &AppState, device_id: &str) -> Response {
@@ -31,6 +33,7 @@ async fn view(state: &AppState, device_id: &str) -> Response {
         device_id: device_id.to_string(),
         config: state.sequence.config(device_id).await,
         cooling: state.sequence.cooling(device_id).await,
+        cooling_roast_id: state.sequence.cooling_roast(device_id).await,
     })
     .into_response()
 }

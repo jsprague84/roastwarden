@@ -236,7 +236,8 @@ card with one main button for where the roast is.
    down with a Cancel.
 6. **Complete roast**, then enter the roasted weight: the card shows the summary (weight
    loss, development, anything outside what the profile expects) and **Review roast** opens
-   it in History.
+   it in History. No need to wait for the fan: completed while the roaster still cools, the
+   roast keeps recording until COOL END ("Cooling is still recorded" under Saved).
 
 **Cancel** (on the card before Complete) stops the drive and heater, cools if hot, and
 deletes the roast. **STOP** cuts the heater at once on the selected roaster.
