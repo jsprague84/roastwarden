@@ -15,6 +15,8 @@ matching section (`docs/DEVELOPMENT.md`, "Releases").
 - reqwest 0.13: the server's and the CLI's HTTPS calls (supplier pages, shared profiles,
   notifications, push) verify certificates against the system's roots instead of a bundled
   list, with ring as the one TLS provider in the build as before.
+- tower-http 0.7: the dashboard's files are served with strong ETags, so a browser's
+  revalidation gets a 304 instead of the file again.
 
 ### Fixed
 

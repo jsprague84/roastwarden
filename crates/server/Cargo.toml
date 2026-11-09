@@ -39,7 +39,7 @@ dotenvy = "0.15"
 rumqttc = { version = "0.25", default-features = false }
 prometheus = { version = "0.14", default-features = false }
 sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "macros", "sqlite", "chrono", "json"] }
-tower-http = { version = "0.6", features = ["fs", "set-header", "request-id"] }
+tower-http = { version = "0.7", features = ["fs", "set-header", "request-id"] }
 
 roastwarden-mqtt = { path = "../mqtt" }
 roastwarden-core = { path = "../core", features = ["openapi"] }
