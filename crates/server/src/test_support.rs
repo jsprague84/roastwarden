@@ -140,6 +140,7 @@ impl Harness {
     }
 
     async fn with(label_renderer: crate::labels::Renderer, reads_open: bool) -> Self {
+        crate::install_crypto_provider();
         Self::build(label_renderer, reads_open, None).await
     }
 

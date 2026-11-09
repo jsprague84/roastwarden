@@ -66,8 +66,16 @@ const OLD_SERVER_STATUS_TOPIC: &str = "rustroast/server/status";
 /// The server as `roastwarden-server` runs it: MQTT, the database (with a staged restore put
 /// in place first), every service, the HTTP app and the Modbus server, configured from the
 /// environment, until SIGINT or SIGTERM.
+/// ring as the process's one TLS crypto provider: reqwest's `rustls-no-provider` and the IPP
+/// pinning build on it, and the MQTT client installs the same, so one rustls is in the build
+/// and no aws-lc. Idempotent: a second call does nothing.
+pub fn install_crypto_provider() {
+    let _ = rustls::crypto::ring::default_provider().install_default();
+}
+
 pub async fn run(shutdown: impl std::future::Future<Output = ()> + Send + 'static) {
     routes::about::mark_started();
+    install_crypto_provider();
 
     let db_path = std::env::var("ROASTWARDEN_DB_PATH")
         .unwrap_or_else(|_| "./data/roastwarden.db".to_string());

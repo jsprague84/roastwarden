@@ -12,6 +12,9 @@ matching section (`docs/DEVELOPMENT.md`, "Releases").
 - sqlx 0.9: every query built at run time is marked as audited (`AssertSqlSafe`), with only
   column names and fragments from the code in it and every value bound as before; the stored
   types' encoders follow the new argument buffer. No schema or behaviour change.
+- reqwest 0.13: the server's and the CLI's HTTPS calls (supplier pages, shared profiles,
+  notifications, push) verify certificates against the system's roots instead of a bundled
+  list, with ring as the one TLS provider in the build as before.
 
 ### Fixed
 

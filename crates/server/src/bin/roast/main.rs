@@ -45,6 +45,7 @@ async fn main() -> ExitCode {
     }
     let cli = Cli::parse();
     let out = Out::new(cli.json, cli.text);
+    roastwarden_server::install_crypto_provider();
     // Never the owner key from ROASTWARDEN_API_KEY on its own: inside the container that would
     // let anything that can `docker exec` act as the owner by accident (an agent under test did).
     // A flag or the environment first, then what `roast login` saved, then this machine.
