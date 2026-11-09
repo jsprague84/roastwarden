@@ -7,6 +7,17 @@ matching section (`docs/DEVELOPMENT.md`, "Releases").
 
 ## [Unreleased]
 
+## [0.42.2] - 2026-11-08
+
+A fix for the built-in MQTT broker on a busy computer.
+
+### Fixed
+
+- The built-in broker lets a roaster in however busy the computer is. It refused every new
+  connection while the load was high (a load average over 80 or the CPU over 90 %), so a roaster
+  reconnecting mid-roast, on a Raspberry Pi busy rendering a report, could have been turned away
+  until the load fell.
+
 ## [0.42.1] - 2026-11-08
 
 A fix for a new install's first sign-in.
@@ -49,6 +60,7 @@ API and the `roast` commands, and says so here when it does.
 - The API's descriptions of the gain schedule, the autotune runs and a supplier's bag id name
   the public docs.
 
-[Unreleased]: https://github.com/jsprague84/roastwarden/compare/v0.42.1...main
+[Unreleased]: https://github.com/jsprague84/roastwarden/compare/v0.42.2...main
+[0.42.2]: https://github.com/jsprague84/roastwarden/compare/v0.42.1...v0.42.2
 [0.42.1]: https://github.com/jsprague84/roastwarden/compare/v0.42.0...v0.42.1
 [0.42.0]: https://github.com/jsprague84/roastwarden/releases/tag/v0.42.0

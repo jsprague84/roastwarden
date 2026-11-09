@@ -4252,7 +4252,7 @@ dependencies = [
 
 [[package]]
 name = "roastwarden-autotune"
-version = "0.42.1"
+version = "0.42.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -4261,7 +4261,7 @@ dependencies = [
 
 [[package]]
 name = "roastwarden-core"
-version = "0.42.1"
+version = "0.42.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -4270,7 +4270,7 @@ dependencies = [
 
 [[package]]
 name = "roastwarden-mqtt"
-version = "0.42.1"
+version = "0.42.2"
 dependencies = [
  "hostname",
  "rumqttc",
@@ -4281,7 +4281,7 @@ dependencies = [
 
 [[package]]
 name = "roastwarden-server"
-version = "0.42.1"
+version = "0.42.2"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -4343,7 +4343,7 @@ dependencies = [
 
 [[package]]
 name = "roastwarden-ws-smoke"
-version = "0.42.1"
+version = "0.42.2"
 dependencies = [
  "futures-util",
  "tokio",
