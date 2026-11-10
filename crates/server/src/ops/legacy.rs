@@ -13,9 +13,13 @@ const OLD_BACKUP: &str = "rustroast-";
 const NEW_BACKUP: &str = "roastwarden-";
 
 /// Every `RUSTROAST_<name>` set without its `ROASTWARDEN_<name>` is read under the new name.
-/// Call it first, before anything reads the environment or starts a thread. Returns the old
-/// names it read, for a warning once logging is up.
-pub fn adopt_env() -> Vec<String> {
+/// Returns the old names it read, for a warning once logging is up.
+///
+/// # Safety
+///
+/// It writes the process's environment, which nothing else may read or write meanwhile: call
+/// it first in `main`, while the process has one thread (before the async runtime is built).
+pub unsafe fn adopt_env() -> Vec<String> {
     let mut adopted = Vec::new();
     for (key, value) in std::env::vars_os() {
         let Some(key) = key.to_str() else { continue };
@@ -24,7 +28,8 @@ pub fn adopt_env() -> Vec<String> {
         };
         let new = format!("{NEW_ENV}{rest}");
         if std::env::var_os(&new).is_none() {
-            std::env::set_var(&new, value);
+            // SAFETY: the caller's promise, no other thread exists yet
+            unsafe { std::env::set_var(&new, value) };
             adopted.push(key.to_string());
         }
     }

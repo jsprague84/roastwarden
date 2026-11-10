@@ -37,10 +37,9 @@ use commands::{
 use out::{code, Failure, Out};
 
 fn main() -> ExitCode {
-    // RUSTROAST_URL and RUSTROAST_TOKEN from before the rename still work, with a note. Adopted
-    // here, before the runtime starts its threads: the environment is written while nothing
-    // else can read it.
-    let adopted = roastwarden_server::legacy::adopt_env();
+    // RUSTROAST_URL and RUSTROAST_TOKEN from before the rename still work, with a note
+    // SAFETY: the process has one thread, the runtime is built below
+    let adopted = unsafe { roastwarden_server::legacy::adopt_env() };
     if let Some(w) = roastwarden_server::legacy::env_warning(&adopted) {
         eprintln!("roast: {w}");
     }

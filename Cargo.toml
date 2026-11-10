@@ -6,7 +6,7 @@ members = [
   "crates/server",
   "crates/ws-smoke",
 ]
-resolver = "2"
+resolver = "3"
 
 # Every crate: AGPL-3.0-or-later (LICENSE; CONTRIBUTING.md for contributions)
 [workspace.package]
