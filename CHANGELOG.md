@@ -26,6 +26,7 @@ matching section (`docs/DEVELOPMENT.md`, "Releases").
   the release's own binaries. The data folder keeps its owner (the same user id).
 - The dashboard is built with Node 26, the current long-term release (the image, CI and the
   development shell). Node is a build tool only: nothing in the running server uses it.
+- Rust edition 2024 for every crate (resolver 3, rustfmt's 2024 style). No behaviour change.
 
 ### Fixed
 
