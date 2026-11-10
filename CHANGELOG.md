@@ -19,12 +19,26 @@ matching section (`docs/DEVELOPMENT.md`, "Releases").
   revalidation gets a 304 instead of the file again.
 - sha2 0.11, hkdf 0.13 and aes-gcm 0.11 (the push messages' encryption, the token and login
   hashes, receipts' and label assets' checksums): the same bytes as before, one hex helper.
+- base64 0.23, getrandom 0.4, mdns-sd 0.21.7 (finding roasters on the network: its daemon is
+  woken without a loopback socket) and the dashboard's cbor-x 1.6.9. No behaviour change.
+- The image runs on Debian 13 (trixie) instead of 12. Its programs are still built on
+  Debian 12, so a `roast` copied out of the image runs wherever glibc is 2.36 or newer, like
+  the release's own binaries. The data folder keeps its owner (the same user id).
 
 ### Fixed
 
 - Complete while the roaster cools no longer cuts the roast's trend at DROP: the samples go
   on the roast until COOL END, which is marked on it, and the Roast page says so under Saved
   ("Cooling is still recorded"). The statistics still run CHARGE to DROP.
+
+### Security
+
+- RUSTSEC-2026-0459 (the SQLite built into the server, before 3.54.0, can return stale memory
+  from a database opened beside a crafted `-wal` file) is not fixed yet: sqlx 0.9.0, the
+  latest, cannot take the fixed SQLite. The server opens only its own database and its own
+  single-file backups, and a staged restore sets the old `-wal` aside first. If you restore a
+  database that someone else gave you with `roast restore <file>`, delete a `-wal` file that
+  came beside it first.
 
 ## [0.42.4] - 2026-11-08
 

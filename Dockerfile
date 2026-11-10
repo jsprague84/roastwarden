@@ -46,6 +46,10 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
 # ============================================
 # Pinned: a toolchain change is a deliberate commit. On the build platform,
 # with the aarch64 cross linker and target for an arm64 image.
+# Built on Debian bookworm though the image runs on trixie: a binary needs the glibc it was
+# built against or a newer one, and `roast` is also copied out of the image to the machine an
+# agent runs on (docs/agents.md), which may be older than the image. Built here it asks for
+# glibc 2.36, like the release's binaries.
 FROM --platform=$BUILDPLATFORM rust:1.99-bookworm AS base
 
 RUN apt-get update \
@@ -60,7 +64,7 @@ ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc \
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
     cargo install cargo-chef --locked && \
-    cargo install sccache --version ^0.8 --locked
+    cargo install sccache --version ^0.19 --locked
 
 # Configure sccache
 ENV RUSTC_WRAPPER=sccache
@@ -128,7 +132,7 @@ RUN sccache --show-stats || true
 # ============================================
 # The same Debian release as the runtime, so its passwd and group files fit either platform's
 # image. The roastwarden user is the same system uid as before (a data volume keeps its owner).
-FROM --platform=$BUILDPLATFORM debian:bookworm-slim AS accounts
+FROM --platform=$BUILDPLATFORM debian:trixie-slim AS accounts
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
@@ -138,7 +142,7 @@ RUN apt-get update \
 # ============================================
 # Runtime: Minimal production image
 # ============================================
-FROM debian:bookworm-slim AS runtime-base
+FROM debian:trixie-slim AS runtime-base
 
 # Only copies: no command runs on the target platform
 COPY --from=accounts /etc/passwd /etc/group /etc/
