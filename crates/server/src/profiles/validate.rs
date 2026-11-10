@@ -175,14 +175,13 @@ pub(crate) fn validate_profile_input(
         if p.time_seconds < 0 || !p.target_temp.is_finite() {
             return Err(bad(format!("invalid point at {} s", p.time_seconds)));
         }
-        if let Some(h) = p.heater_pct {
-            if !(0..=100).contains(&h) {
+        if let Some(h) = p.heater_pct
+            && !(0..=100).contains(&h) {
                 return Err(bad(format!(
                     "heater_pct {h} at {} s is outside 0..=100",
                     p.time_seconds
                 )));
             }
-        }
     }
     if let Some(Some(c)) = &req.curves {
         c.validate().map_err(bad)?;

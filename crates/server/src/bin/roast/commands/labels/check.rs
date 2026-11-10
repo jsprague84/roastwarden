@@ -295,11 +295,10 @@ fn check_text(r: &Value) -> String {
     if !missing.is_empty() {
         lines.push(format!("fields with a value but not printed: {missing}"));
     }
-    if let Some(p) = r["params"].as_object().or(rep["params"].as_object()) {
-        if !p.is_empty() {
+    if let Some(p) = r["params"].as_object().or(rep["params"].as_object())
+        && !p.is_empty() {
             lines.push(format!("params: {}", Value::Object(p.clone())));
         }
-    }
     if let Some(png) = r["png"].as_str() {
         lines.push(format!("png: {png}"));
     }

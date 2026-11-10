@@ -365,8 +365,8 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             continue;
         }
 
-        if legacy_db {
-            if let Some(marker) = &m.legacy_marker {
+        if legacy_db
+            && let Some(marker) = &m.legacy_marker {
                 let present = match marker {
                     Marker::Table(t) => table_exists(pool, t).await?,
                     Marker::Column(t, c) => column_exists(pool, t, c).await?,
@@ -377,7 +377,6 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::Error> {
                     continue;
                 }
             }
-        }
 
         info!(migration = m.name, "applying migration");
         let mut tx = pool.begin().await?;

@@ -367,31 +367,28 @@ pub fn curve(p: &ProfileWithPoints) -> Option<Curve> {
             TriggerKind::Time => e.at_seconds.map(|s| s as f32),
             TriggerKind::Bt => e.at_bt.and_then(|b| time_at_bt(b as f32)),
         };
-        if let Some(t) = t {
-            if !marks.iter().any(|m| m.0 == word) {
+        if let Some(t) = t
+            && !marks.iter().any(|m| m.0 == word) {
                 marks.push((word, t, temp_at(t)));
             }
-        }
     }
     let end = bt.last().map(|q| q.0);
     let mut first_crack = marks.iter().find(|m| m.0 == "First crack").map(|m| m.1);
-    if first_crack.is_none() {
-        if let Some(fc) = p.profile.target_first_crack {
+    if first_crack.is_none()
+        && let Some(fc) = p.profile.target_first_crack {
             first_crack = Some(fc as f32);
             marks.push(("First crack", fc as f32, temp_at(fc as f32)));
         }
-    }
     let drop = marks
         .iter()
         .find(|m| m.0 == "Drop")
         .map(|m| m.1)
         .or(p.profile.target_total_time.map(|t| t as f32))
         .or(end);
-    if !marks.iter().any(|m| m.0 == "Drop") {
-        if let Some(d) = drop {
+    if !marks.iter().any(|m| m.0 == "Drop")
+        && let Some(d) = drop {
             marks.push(("Drop", d, temp_at(d)));
         }
-    }
     marks.sort_by(|a, b| a.1.total_cmp(&b.1));
     Some(Curve {
         drop_temp: drop.and_then(temp_at),
@@ -481,15 +478,14 @@ pub fn html(
         if let Some(dr) = c.drop {
             parts.push(format!("Roast time {}", clock(f64::from(dr))));
         }
-        if let (Some(fc), Some(dr)) = (c.first_crack, c.drop) {
-            if dr > fc && dr > 0.0 {
+        if let (Some(fc), Some(dr)) = (c.first_crack, c.drop)
+            && dr > fc && dr > 0.0 {
                 parts.push(format!(
                     "development {} ({:.0} %)",
                     clock(f64::from(dr - fc)),
                     (dr - fc) / dr * 100.0
                 ));
             }
-        }
         if let Some(t) = c.drop_temp {
             let t = f64::from(t);
             parts.push(format!("drop at {t:.0} °C ({:.0} °F)", f_of(t)));

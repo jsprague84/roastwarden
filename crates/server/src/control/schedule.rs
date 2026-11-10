@@ -393,11 +393,10 @@ impl GainScheduler {
     pub async fn fan_changed(&self, device_id: &str, fan_pct: f64) -> Option<Gains> {
         self.note_fan(device_id, fan_pct).await;
         let g = self.gains_for(device_id, fan_pct).await?;
-        if let Some((prev, at)) = self.last_sent.lock().await.get(device_id) {
-            if !differs(*prev, g) && at.elapsed() < RESEND_AFTER {
+        if let Some((prev, at)) = self.last_sent.lock().await.get(device_id)
+            && !differs(*prev, g) && at.elapsed() < RESEND_AFTER {
                 return None;
             }
-        }
         self.send(device_id, g).await.then_some(g)
     }
 

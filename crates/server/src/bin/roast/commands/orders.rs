@@ -356,11 +356,10 @@ fn money(v: &Value, currency: &Value) -> String {
 /// An order by its id or its number (and supplier).
 async fn find(api: &Api, r: &OrderRef) -> Result<Value, Failure> {
     let key = r.order.trim();
-    if key.len() == 36 && key.chars().filter(|c| *c == '-').count() == 4 {
-        if let Ok(o) = api.get(&format!("/api/orders/{}", enc(key))).await {
+    if key.len() == 36 && key.chars().filter(|c| *c == '-').count() == 4
+        && let Ok(o) = api.get(&format!("/api/orders/{}", enc(key))).await {
             return Ok(o);
         }
-    }
     let mut path = format!("/api/orders?status=all&number={}", enc(key));
     if let Some(s) = &r.supplier {
         let _ = write!(path, "&supplier={}", enc(s));
@@ -399,11 +398,10 @@ async fn find(api: &Api, r: &OrderRef) -> Result<Value, Failure> {
 
 fn receipt_id(o: &Value, which: &str) -> Result<String, Failure> {
     let list = o["receipts"].as_array().cloned().unwrap_or_default();
-    if let Ok(n) = which.trim().parse::<usize>() {
-        if let Some(r) = n.checked_sub(1).and_then(|i| list.get(i)) {
+    if let Ok(n) = which.trim().parse::<usize>()
+        && let Some(r) = n.checked_sub(1).and_then(|i| list.get(i)) {
             return Ok(r["id"].as_str().unwrap_or_default().to_string());
         }
-    }
     list.iter()
         .find(|r| r["id"].as_str() == Some(which.trim()))
         .map(|r| r["id"].as_str().unwrap_or_default().to_string())
@@ -432,11 +430,10 @@ fn receipt_line(r: &Value) -> String {
 
 /// "shipping=notice.eml" → ("shipping", notice.eml); a bare path is the confirmation.
 fn receipt_arg(s: &str) -> (String, PathBuf) {
-    if let Some((k, f)) = s.split_once('=') {
-        if matches!(k, "confirmation" | "shipping" | "invoice" | "other") {
+    if let Some((k, f)) = s.split_once('=')
+        && matches!(k, "confirmation" | "shipping" | "invoice" | "other") {
             return (k.to_string(), PathBuf::from(f));
         }
-    }
     ("confirmation".into(), PathBuf::from(s))
 }
 
@@ -453,15 +450,14 @@ fn message_id(bytes: &[u8]) -> Option<String> {
         if l.trim().is_empty() {
             break;
         }
-        if let Some((k, v)) = l.split_once(':') {
-            if k.trim().eq_ignore_ascii_case("message-id") {
+        if let Some((k, v)) = l.split_once(':')
+            && k.trim().eq_ignore_ascii_case("message-id") {
                 let mut v = v.trim().to_string();
                 while lines.peek().is_some_and(|n| n.starts_with([' ', '\t'])) {
                     v.push_str(lines.next().unwrap_or("").trim());
                 }
                 return Some(v).filter(|v| !v.is_empty());
             }
-        }
     }
     None
 }

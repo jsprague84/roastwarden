@@ -73,11 +73,10 @@ impl Printer {
         if !SENDS.contains(&self.send.as_str()) {
             return Err(format!("send is one of {}", SENDS.join(", ")));
         }
-        if let Some(c) = &self.color {
-            if !COLORS.contains(&c.as_str()) {
+        if let Some(c) = &self.color
+            && !COLORS.contains(&c.as_str()) {
                 return Err(format!("color is {} (or none)", COLORS.join(" or ")));
             }
-        }
         if let Some(f) = &self.fingerprint {
             let hex = f.replace(':', "");
             if !(hex.len() == 64 && hex.chars().all(|c| c.is_ascii_hexdigit())) {

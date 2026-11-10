@@ -63,8 +63,8 @@ impl Engine {
 
         // CHARGE marked (or moved) after the run started: the time base
         // re-anchors and whatever fired before the new CHARGE fires again.
-        if let Some(prev) = self.charge {
-            if (prev - charge).abs() > 0.5 {
+        if let Some(prev) = self.charge
+            && (prev - charge).abs() > 0.5 {
                 self.tp = TpTracker::default();
                 self.drop_rt.reset();
                 let rearmed = self.rearm_before(charge);
@@ -79,7 +79,6 @@ impl Engine {
                     )),
                 );
             }
-        }
         self.charge = Some(charge);
 
         self.tp.update(live_t, inp.bt);
@@ -340,11 +339,10 @@ impl Engine {
             (_, LoopAt::Server) if !heater_paused => match sp {
                 Some(sp) => {
                     let f = ff.unwrap_or(0.0);
-                    if !self.pid.started() {
-                        if let Some(b) = bt {
+                    if !self.pid.started()
+                        && let Some(b) = bt {
                             self.pid.reset(sp, b, heater_now.unwrap_or(f), f);
                         }
-                    }
                     let out = self.pid.compute(sp, bt, dt, f);
                     self.pid_out = Some(out);
                     Some(out.round())
@@ -353,11 +351,10 @@ impl Engine {
             },
             _ => None,
         };
-        if let Some(c) = self.channels.get_mut(&Channel::Heater) {
-            if !c.paused {
+        if let Some(c) = self.channels.get_mut(&Channel::Heater)
+            && !c.paused {
                 c.target = heater;
             }
-        }
     }
 
     /// A channel's profile value: the latest fired event for an

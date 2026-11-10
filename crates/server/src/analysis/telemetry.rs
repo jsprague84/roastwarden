@@ -170,11 +170,10 @@ const ROR_HISTORY_SECS: f64 = 180.0;
 impl RorTracker {
     pub fn push(&mut self, t: f64, bean_temp: f64) {
         // Ignore out-of-order or duplicate timestamps.
-        if let Some(&(last_t, _)) = self.samples.back() {
-            if t <= last_t {
+        if let Some(&(last_t, _)) = self.samples.back()
+            && t <= last_t {
                 return;
             }
-        }
         self.samples.push_back((t, bean_temp));
         while let Some(&(t0, _)) = self.samples.front() {
             if t - t0 > ROR_HISTORY_SECS {
@@ -400,23 +399,18 @@ impl TelemetryService {
         )
         .fetch_optional(&self.db)
         .await
-        {
-            if let Ok(w) = v.parse::<f64>() {
-                if (5.0..=120.0).contains(&w) {
+            && let Ok(w) = v.parse::<f64>()
+                && (5.0..=120.0).contains(&w) {
                     cfg.window_secs = w;
                 }
-            }
-        }
         if let Ok(Some(v)) = sqlx::query_scalar::<_, String>(
             "SELECT value FROM settings WHERE key = 'ror_smoothing_algorithm'",
         )
         .fetch_optional(&self.db)
         .await
-        {
-            if let Ok(a) = v.parse::<RorAlgorithm>() {
+            && let Ok(a) = v.parse::<RorAlgorithm>() {
                 cfg.algorithm = a;
             }
-        }
         tracing::info!(window_secs = cfg.window_secs, algorithm = ?cfg.algorithm, "RoR settings loaded");
         self.set_ror_config(cfg);
     }

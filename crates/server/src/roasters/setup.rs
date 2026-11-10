@@ -1242,11 +1242,9 @@ mod tests {
         let got = tokio::time::timeout(std::time::Duration::from_secs(2), async {
             loop {
                 if let Ok(roastwarden_mqtt::MqttEvent::Publish { topic, payload }) = rx.recv().await
-                {
-                    if topic.ends_with("/drum") {
+                    && topic.ends_with("/drum") {
                         return (topic, String::from_utf8(payload).unwrap());
                     }
-                }
             }
         })
         .await

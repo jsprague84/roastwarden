@@ -103,11 +103,10 @@ pub async fn resolve(state: &AppState, id: Option<&str>) -> Result<Resolved, Res
 /// Ask a printer what it can do, and keep its answer
 pub async fn ask(state: &AppState, r: &Resolved) -> anyhow::Result<PrinterInfo> {
     let info = print::info(&r.target).await?;
-    if let Some(id) = &r.id {
-        if let Ok(v) = serde_json::to_value(&info) {
+    if let Some(id) = &r.id
+        && let Ok(v) = serde_json::to_value(&info) {
             let _ = printers::set_info(&state.db, id, &v).await;
         }
-    }
     Ok(info)
 }
 

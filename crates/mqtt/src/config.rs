@@ -51,47 +51,40 @@ impl MqttConfig {
     pub fn from_env() -> Self {
         let mut cfg = MqttConfig::default();
 
-        if let Ok(v) = env::var("MQTT_BROKER_HOST") {
-            if !v.is_empty() {
+        if let Ok(v) = env::var("MQTT_BROKER_HOST")
+            && !v.is_empty() {
                 cfg.host = v;
             }
-        }
-        if let Ok(v) = env::var("MQTT_BROKER_PORT") {
-            if let Ok(p) = v.parse::<u16>() {
+        if let Ok(v) = env::var("MQTT_BROKER_PORT")
+            && let Ok(p) = v.parse::<u16>() {
                 cfg.port = p;
             }
-        }
-        if let Ok(v) = env::var("MQTT_CLIENT_ID") {
-            if !v.is_empty() {
+        if let Ok(v) = env::var("MQTT_CLIENT_ID")
+            && !v.is_empty() {
                 cfg.client_id = v;
             }
-        }
-        if let Ok(v) = env::var("MQTT_USERNAME") {
-            if !v.is_empty() {
+        if let Ok(v) = env::var("MQTT_USERNAME")
+            && !v.is_empty() {
                 cfg.username = Some(v);
             }
-        }
-        if let Ok(v) = env::var("MQTT_PASSWORD") {
-            if !v.is_empty() {
+        if let Ok(v) = env::var("MQTT_PASSWORD")
+            && !v.is_empty() {
                 cfg.password = Some(v);
             }
-        }
-        if let Ok(v) = env::var("MQTT_KEEP_ALIVE_SECS") {
-            if let Ok(s) = v.parse::<u16>() {
+        if let Ok(v) = env::var("MQTT_KEEP_ALIVE_SECS")
+            && let Ok(s) = v.parse::<u16>() {
                 cfg.keep_alive_secs = s;
             }
-        }
         if let Ok(v) = env::var("MQTT_TLS") {
             cfg.tls = matches!(
                 v.trim().to_ascii_lowercase().as_str(),
                 "1" | "true" | "yes" | "on"
             );
         }
-        if let Ok(v) = env::var("MQTT_CA_CERT") {
-            if !v.is_empty() {
+        if let Ok(v) = env::var("MQTT_CA_CERT")
+            && !v.is_empty() {
                 cfg.ca_cert_path = Some(v);
             }
-        }
 
         cfg
     }

@@ -195,11 +195,10 @@ fn remove_leftovers(dir: &Path) {
     for entry in entries.flatten() {
         let name = entry.file_name();
         let Some(name) = name.to_str() else { continue };
-        if name.starts_with(&format!(".{PREFIX}")) && name.ends_with(".tmp") {
-            if let Err(e) = std::fs::remove_file(entry.path()) {
+        if name.starts_with(&format!(".{PREFIX}")) && name.ends_with(".tmp")
+            && let Err(e) = std::fs::remove_file(entry.path()) {
                 warn!(file = name, error = %e, "could not remove a half-written backup");
             }
-        }
     }
 }
 

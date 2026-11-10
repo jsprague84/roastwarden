@@ -331,11 +331,10 @@ fn summarise_body(path: &str, headers: &HeaderMap, bytes: &[u8]) -> Option<Strin
         Ok(mut v) => {
             mask_secrets(&mut v);
             let setting = path.strip_prefix("/api/settings/");
-            if setting.is_some_and(crate::auth::settings::is_secret) {
-                if let Some(val) = v.get_mut("value").filter(|val| !val.is_null()) {
+            if setting.is_some_and(crate::auth::settings::is_secret)
+                && let Some(val) = v.get_mut("value").filter(|val| !val.is_null()) {
                     *val = serde_json::Value::String("***".into());
                 }
-            }
             Some(truncate(&v.to_string(), BODY_MAX))
         }
         Err(_) => {

@@ -536,13 +536,12 @@ async fn add_machine(api: &Api, out: &Out, a: AddArgs) -> Result<u8, Failure> {
         ));
     }
     let protocol = plan["protocol"].as_str().unwrap_or_default().to_string();
-    if let Some(t) = &a.transport {
-        if *t != protocol {
+    if let Some(t) = &a.transport
+        && *t != protocol {
             return Err(usage(format!(
                 "--transport {t}: this machine's Artisan file speaks {protocol}"
             )));
         }
-    }
     let mut config = plan["config"].clone();
     let c = config
         .as_object_mut()

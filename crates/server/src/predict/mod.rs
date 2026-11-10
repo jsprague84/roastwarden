@@ -415,11 +415,10 @@ impl PredictService {
             got.sort();
             // A roast whose telemetry is too short is left out of a fit, so the fit's list
             // can differ from the candidates: refit only when the candidates change.
-            if want != got {
-                if let Err(e) = self.fit_now(&d).await {
+            if want != got
+                && let Err(e) = self.fit_now(&d).await {
                     tracing::warn!(error = %e, device_id = d, "prediction: fit failed");
                 }
-            }
             self.checked.lock().await.insert(d, want);
         }
         Ok(())
@@ -927,8 +926,8 @@ fn drop_target(
         };
         return Some((target, format!("auto DROP {}", a.describe())));
     }
-    if let (Some(total), Some(fc)) = (p.target_total_time, p.target_first_crack) {
-        if total > fc {
+    if let (Some(total), Some(fc)) = (p.target_total_time, p.target_first_crack)
+        && total > fc {
             let dev = f64::from(total - fc);
             return Some((
                 DropTarget::Development(dev),
@@ -938,7 +937,6 @@ fn drop_target(
                 ),
             ));
         }
-    }
     p.target_end_temp.map(|c| {
         (
             DropTarget::Bt(f64::from(c)),

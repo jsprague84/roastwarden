@@ -455,15 +455,14 @@ impl TuneService {
             if let Some(why) = end {
                 break why;
             }
-            if let Some(u) = send {
-                if self
+            if let Some(u) = send
+                && self
                     .send(&device_id, DeviceCommand::Heater { percent: u })
                     .await
                     .is_ok()
                 {
                     run.lock().await.last_sent = Some((u, Instant::now()));
                 }
-            }
             self.refresh_lease(&device_id, &run).await;
         };
         self.finish(&device_id, &run, &reason).await;

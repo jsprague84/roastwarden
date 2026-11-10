@@ -919,11 +919,10 @@ async fn an_mqtt_device_with_its_own_topics_and_fields() {
     assert!(r.status.is_success(), "{:?}", r.json());
     let got = tokio::time::timeout(Duration::from_secs(2), async {
         loop {
-            if let Ok(roastwarden_mqtt::MqttEvent::Publish { topic, payload }) = rx.recv().await {
-                if topic.starts_with("cmnd/") {
+            if let Ok(roastwarden_mqtt::MqttEvent::Publish { topic, payload }) = rx.recv().await
+                && topic.starts_with("cmnd/") {
                     return (topic, String::from_utf8(payload).unwrap());
                 }
-            }
         }
     })
     .await

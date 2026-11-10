@@ -1055,11 +1055,10 @@ impl MqttRoute {
     pub fn topics(&self) -> Vec<String> {
         let mut t = vec![self.telemetry_topic.clone()];
         for f in self.ingest.iter().flat_map(|i| &i.fields) {
-            if let Some(ft) = &f.topic {
-                if !t.contains(ft) {
+            if let Some(ft) = &f.topic
+                && !t.contains(ft) {
                     t.push(ft.clone());
                 }
-            }
         }
         t
     }

@@ -289,11 +289,10 @@ impl PyParser<'_> {
         if let Some(hex) = text.strip_prefix("0x").or_else(|| text.strip_prefix("0X")) {
             return Ok(json!(i64::from_str_radix(hex, 16)?));
         }
-        if !text.contains(['.', 'e', 'E']) {
-            if let Ok(i) = text.parse::<i64>() {
+        if !text.contains(['.', 'e', 'E'])
+            && let Ok(i) = text.parse::<i64>() {
                 return Ok(json!(i));
             }
-        }
         let f: f64 = text
             .parse()
             .map_err(|_| anyhow!("invalid number '{text}' at byte {start}"))?;

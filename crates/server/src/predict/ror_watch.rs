@@ -227,8 +227,8 @@ fn seen(inp: &WatchInput, obs: &[Obs], now: Option<f64>) -> Vec<RorWarning> {
     };
 
     // Crash: the highest RoR in the last minute, 8 °C/min or more above now.
-    if let Some(peak) = recent(CRASH_WINDOW_S).max_by(|a, b| a.ror.total_cmp(&b.ror)) {
-        if crashes(peak.ror, now) {
+    if let Some(peak) = recent(CRASH_WINDOW_S).max_by(|a, b| a.ror.total_cmp(&b.ror))
+        && crashes(peak.ror, now) {
             out.push(warn(
                 RorWarningKind::Crash,
                 peak.t,
@@ -239,7 +239,6 @@ fn seen(inp: &WatchInput, obs: &[Obs], now: Option<f64>) -> Vec<RorWarning> {
                 ),
             ));
         }
-    }
 
     // Flick: after first crack, RoR held 2 °C/min above its lowest since, for 20 s.
     let since_fc: Vec<&Obs> = obs
@@ -398,11 +397,10 @@ fn causes(inp: &WatchInput, b: &dyn Fn(usize) -> f64, k: usize) -> Vec<String> {
     if (fk - f0).abs() >= 5.0 {
         c.push(format!("the fan goes from {f0:.0} to {fk:.0} %"));
     }
-    if let Some(fc) = inp.fc_bt.filter(|_| inp.fc_marked.is_none()) {
-        if inp.bt_now < fc && b(k) >= fc {
+    if let Some(fc) = inp.fc_bt.filter(|_| inp.fc_marked.is_none())
+        && inp.bt_now < fc && b(k) >= fc {
             c.push(format!("BT passes first crack's {fc:.1} °C"));
         }
-    }
     c
 }
 

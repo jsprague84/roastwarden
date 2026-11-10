@@ -120,13 +120,12 @@ pub fn normalize(
     fault_cups: i64,
 ) -> Result<Vec<(&'static str, f32)>, ProfileInputError> {
     let bad = |m: String| ProfileInputError(m);
-    if let Some(f) = framework {
-        if !f.eq_ignore_ascii_case("sca") {
+    if let Some(f) = framework
+        && !f.eq_ignore_ascii_case("sca") {
             return Err(bad(format!(
                 "scoring framework '{f}': only the classic SCA form (sca) is recorded; CVA scores are not converted"
             )));
         }
-    }
     let mut out: Vec<(&'static str, f32)> = Vec::with_capacity(attributes.len());
     for (name, score) in attributes {
         let k = key(name).ok_or_else(|| bad(unknown(name)))?;

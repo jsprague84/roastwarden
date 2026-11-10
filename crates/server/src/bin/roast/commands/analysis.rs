@@ -223,13 +223,12 @@ pub fn guide_lines(g: &Value) -> String {
         let text = l["text"].as_str().unwrap_or("");
         let hint = if l["kind"] == "hint" { "(hint) " } else { "" };
         out.push(format!("  - {hint}{text}"));
-        if l["action"] == "auto_drop_development" {
-            if let Some(p) = g["profile_id"].as_str() {
+        if l["action"] == "auto_drop_development"
+            && let Some(p) = g["profile_id"].as_str() {
                 out.push(format!(
                     "    to switch: roast profile edit {p} --auto-drop development"
                 ));
             }
-        }
     }
     if let Some(t) = g["tasting"].as_str() {
         out.push(format!("  {t}"));

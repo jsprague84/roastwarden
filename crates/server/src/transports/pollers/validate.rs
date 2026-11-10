@@ -293,22 +293,20 @@ pub(crate) fn check_register_map(entries: &[CreateRegisterMapEntry]) -> Result<(
                 e.register_type
             )));
         }
-        if let Some(u) = e.unit_id {
-            if !(1..=247).contains(&u) {
+        if let Some(u) = e.unit_id
+            && !(1..=247).contains(&u) {
                 return Err(at(format!(
                     "slave {u}: a Modbus slave address is 1 to 247 (leave it out for the \
                      connection's)"
                 )));
             }
-        }
-        if let Some(order) = e.byte_order.as_deref().map(str::trim) {
-            if !order.is_empty() && !BYTE_ORDERS.iter().any(|o| o.eq_ignore_ascii_case(order)) {
+        if let Some(order) = e.byte_order.as_deref().map(str::trim)
+            && !order.is_empty() && !BYTE_ORDERS.iter().any(|o| o.eq_ignore_ascii_case(order)) {
                 return Err(at(format!(
                     "byte order '{order}' is not one of {}",
                     BYTE_ORDERS.join(", ")
                 )));
             }
-        }
         match e.scale_factor {
             Some(s) if !s.is_finite() || s == 0.0 => {
                 return Err(at(format!(

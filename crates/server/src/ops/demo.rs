@@ -214,11 +214,10 @@ pub async fn retire(state: &AppState, roaster: &str) {
         .stop_for_device(roaster, "the demo visitor left")
         .await;
     state.tune.stop(roaster, "the demo visitor left").await;
-    if let Ok(Some(s)) = crate::roasts::sessions::get_active_session(&state.db, roaster).await {
-        if let Err(e) = crate::roasts::sessions::complete_session(&state.db, &s.id).await {
+    if let Ok(Some(s)) = crate::roasts::sessions::get_active_session(&state.db, roaster).await
+        && let Err(e) = crate::roasts::sessions::complete_session(&state.db, &s.id).await {
             tracing::warn!(error = %e, %roaster, "demo: could not end an idle visitor's roast");
         }
-    }
     state.virtual_roaster.remove_visitor(roaster).await;
     match crate::roasters::registry::get_device_by_device_id(&state.db, roaster).await {
         Ok(Some(d)) => {

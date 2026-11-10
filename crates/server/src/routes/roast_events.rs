@@ -70,9 +70,9 @@ async fn api_create_roast_event(
     if matches!(
         req.event_type,
         RoastEventType::Charge | RoastEventType::Drop
-    ) {
-        if let Ok(events) = crate::roasts::events::get_roast_events(&state.db, &session_id).await {
-            if events.iter().any(|e| e.event_type == req.event_type) {
+    )
+        && let Ok(events) = crate::roasts::events::get_roast_events(&state.db, &session_id).await
+            && events.iter().any(|e| e.event_type == req.event_type) {
                 let name = req.event_type.to_string().to_uppercase();
                 let mut res = (
                     StatusCode::CONFLICT,
@@ -83,8 +83,6 @@ async fn api_create_roast_event(
                     .insert(crate::http::errors::ErrorCode("ALREADY_MARKED"));
                 return res;
             }
-        }
-    }
     match crate::roasts::events::create_roast_event(&state.db, &session_id, req).await {
         Ok(event) => {
             state.alarms.invalidate_events(&session_id).await;

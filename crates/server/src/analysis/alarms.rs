@@ -828,11 +828,10 @@ impl AlarmService {
     /// The session profile's BT now: the running replay's aligned target,
     /// else the profile curve at the time since CHARGE.
     async fn profile_bt_now(&self, watch: &mut SessionWatch, elapsed: f64) -> Option<f64> {
-        if let Some(st) = self.deps.replay.state(&watch.session.id).await {
-            if st.active {
+        if let Some(st) = self.deps.replay.state(&watch.session.id).await
+            && st.active {
                 return st.view.target_now;
             }
-        }
         self.load_profile(watch).await;
         let curve = watch.profile_bt.as_ref()?;
         let charge = watch

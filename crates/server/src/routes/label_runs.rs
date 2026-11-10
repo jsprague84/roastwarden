@@ -1088,8 +1088,8 @@ async fn reprint_label_run(
         Ok(s) => s,
         Err(r) => return r,
     };
-    if let Some(p) = &ask.labels {
-        if let Some(bad) = p.iter().find(|n| **n == 0 || **n > run.run.labels as usize) {
+    if let Some(p) = &ask.labels
+        && let Some(bad) = p.iter().find(|n| **n == 0 || **n > run.run.labels as usize) {
             return status(
                 StatusCode::BAD_REQUEST,
                 format!(
@@ -1098,7 +1098,6 @@ async fn reprint_label_run(
                 ),
             );
         }
-    }
     let printer = match labels::printers::default(&state.db).await {
         Ok(d) => run.run.printer_id.clone().or(d.map(|p| p.id)),
         Err(e) => return failed(e),

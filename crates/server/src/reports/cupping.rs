@@ -260,8 +260,8 @@ pub fn build(roasts: &[Roasted], ask: &Ask, o: &Options) -> Result<Value, Report
                 strip[j].push(json!({ "mark": mark, "v": s }));
             }
         }
-        if let Some(f) = c.cupping.final_score {
-            if best.as_ref().is_none_or(|(b, _)| f > *b) {
+        if let Some(f) = c.cupping.final_score
+            && best.as_ref().is_none_or(|(b, _)| f > *b) {
                 best = Some((
                     f,
                     format!(
@@ -271,7 +271,6 @@ pub fn build(roasts: &[Roasted], ask: &Ask, o: &Options) -> Result<Value, Report
                     ),
                 ));
             }
-        }
         let on = roasted_on(&r.session, o);
         let cupped_on = o.local(c.cupping.created_at).date_naive();
         let cups: Vec<String> = ["uniformity", "clean_cup", "sweetness"]

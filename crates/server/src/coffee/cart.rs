@@ -155,11 +155,10 @@ pub fn build(
                     total += p * each;
                 }
                 currency = currency.or(z.currency.clone()).or(w.currency.clone());
-                if let (Some(now), Some(seen)) = (z.price, w.price) {
-                    if (now - seen).abs() >= 0.005 && !shop.by_the_pound {
+                if let (Some(now), Some(seen)) = (z.price, w.price)
+                    && (now - seen).abs() >= 0.005 && !shop.by_the_pound {
                         line.note = Some(format!("{seen:.2} when listed, {now:.2} now"));
                     }
-                }
             }
         }
         lines.push(line);

@@ -97,11 +97,10 @@ pub async fn share(api: &Api, out: &Out, cmd: ShareCmd) -> Result<u8, Failure> {
                     let mut l = api
                         .get(&format!("/api/sessions/{}/share", enc(&id)))
                         .await?;
-                    if !all {
-                        if let Some(a) = l.as_array_mut() {
+                    if !all
+                        && let Some(a) = l.as_array_mut() {
                             a.retain(|x| x["revoked_at"].is_null());
                         }
-                    }
                     l
                 }
                 None => api.get(&format!("/api/share?all={all}")).await?,

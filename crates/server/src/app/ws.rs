@@ -114,14 +114,13 @@ async fn debug_ws_loop(state: AppState, mut socket: WebSocket) {
                 match ws_msg {
                     Some(Ok(Message::Text(text))) => {
                         // Handle ping messages from client
-                        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&text) {
-                            if parsed.get("type").and_then(|v| v.as_str()) == Some("ping") {
+                        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&text)
+                            && parsed.get("type").and_then(|v| v.as_str()) == Some("ping") {
                                 let pong = serde_json::json!({"type": "pong"});
                                 if socket.send(Message::Text(pong.to_string().into())).await.is_err() {
                                     break;
                                 }
                             }
-                        }
                     }
                     Some(Ok(Message::Close(_))) | None => {
                         tracing::info!("Debug WebSocket client disconnected gracefully");

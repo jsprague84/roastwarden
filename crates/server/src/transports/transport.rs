@@ -842,11 +842,9 @@ impl TransportRegistry {
             .lock()
             .ok()
             .and_then(|m| m.get(device_id).copied())
-        {
-            if at.elapsed() < HEATER_OFF_GRACE {
+            && at.elapsed() < HEATER_OFF_GRACE {
                 return false;
             }
-        }
         let Some(s) = self.telemetry.latest_sample(device_id) else {
             return false;
         };
@@ -964,11 +962,10 @@ impl TransportRegistry {
             DeviceCommand::Heater { percent } => *percent <= 0.0,
             _ => false,
         };
-        if heater_off {
-            if let Ok(mut m) = self.heater_off_sent.lock() {
+        if heater_off
+            && let Ok(mut m) = self.heater_off_sent.lock() {
                 m.insert(device_id.to_string(), Instant::now());
             }
-        }
         let cmd = &shaped;
         let live = self.ordered_live(device_id).await;
         let mut last_err: Option<TransportError> = None;

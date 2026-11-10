@@ -329,8 +329,8 @@ impl Link {
                         format!("silent for {} s (no keepalive)", SILENT.as_secs()),
                     )),
                 };
-                if let Ok(k) = &m {
-                    if k.header.kind == MSG_COMMAND && k.header.sub == SUB_KEEPALIVE {
+                if let Ok(k) = &m
+                    && k.header.kind == MSG_COMMAND && k.header.sub == SUB_KEEPALIVE {
                         let mut w = keepalive_w.lock().await;
                         let h = Header {
                             len: 0,
@@ -346,7 +346,6 @@ impl Link {
                         }
                         continue;
                     }
-                }
                 let end = m.is_err();
                 if tx.send(m).await.is_err() || end {
                     return;

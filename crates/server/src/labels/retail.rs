@@ -71,14 +71,13 @@ impl Bag {
 /// built-in id replaces it)
 pub async fn bags(db: &sqlx::SqlitePool) -> Vec<Bag> {
     let mut all = builtin_bags();
-    if let Some(own) = crate::auth::settings::get(db, "label_bags").await {
-        if let Ok(list) = serde_json::from_str::<Vec<Bag>>(&own) {
+    if let Some(own) = crate::auth::settings::get(db, "label_bags").await
+        && let Ok(list) = serde_json::from_str::<Vec<Bag>>(&own) {
             for b in list.into_iter().filter(|b| b.check().is_ok()) {
                 all.retain(|x| x.id != b.id);
                 all.push(b);
             }
         }
-    }
     all
 }
 
@@ -211,11 +210,10 @@ fn numbers(text: &str, unit: &str) -> Vec<f64> {
                     .chars()
                     .next()
                     .is_none_or(|c| !c.is_alphabetic());
-            if unit_follows {
-                if let Ok(v) = num.trim_end_matches('.').parse::<f64>() {
+            if unit_follows
+                && let Ok(v) = num.trim_end_matches('.').parse::<f64>() {
                     out.push(v);
                 }
-            }
         } else {
             i += 1;
         }
@@ -294,15 +292,14 @@ pub fn check(report: &Report, bag: &Bag, brand: &Value) -> Retail {
                     format!("\"{}\": give the weight in ounces (or pounds) and in grams: the Fair Packaging and Labeling Act asks for both", l.text),
                 ));
             }
-            if let (Some(o), Some(g)) = (ounces, grams) {
-                if o > g / 28.349_523_125 + 0.005 {
+            if let (Some(o), Some(g)) = (ounces, grams)
+                && o > g / 28.349_523_125 + 0.005 {
                     fine = false;
                     issues.push(issue(
                         "net",
                         format!("\"{}\": {o} oz is more than {g} g holds ({:.2} oz): a label may not round up", l.text, g / 28.349_523_125),
                     ));
                 }
-            }
             let bottom = if report.round { 0.66 } else { 0.70 } * report.h;
             if l.y + 0.05 < bottom {
                 fine = false;

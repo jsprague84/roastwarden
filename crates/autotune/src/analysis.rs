@@ -283,8 +283,8 @@ pub fn analyse(rec: Record, summary: &RelaySummary, dt: f64) -> Analysis {
             a.berner_tau = berner_tau(rho, gamma);
         }
     }
-    if let Some(r) = best.residual_ratio {
-        if r > 2.0 {
+    if let Some(r) = best.residual_ratio
+        && r > 2.0 {
             warn(
                 "poor_fit",
                 format!(
@@ -292,9 +292,8 @@ pub fn analyse(rec: Record, summary: &RelaySummary, dt: f64) -> Analysis {
                 ),
             );
         }
-    }
-    if let Some(h) = best.holdout_rmse {
-        if h > 3.0 * best.fit.rmse.max(summary.noise.unwrap_or(0.0)) {
+    if let Some(h) = best.holdout_rmse
+        && h > 3.0 * best.fit.rmse.max(summary.noise.unwrap_or(0.0)) {
             warn(
                 "holdout",
                 format!(
@@ -303,7 +302,6 @@ pub fn analyse(rec: Record, summary: &RelaySummary, dt: f64) -> Analysis {
                 ),
             );
         }
-    }
 
     // What to design on.
     let m = best.fit.model;
@@ -365,8 +363,8 @@ pub fn analyse(rec: Record, summary: &RelaySummary, dt: f64) -> Analysis {
     }
     // A non-drifting bench process reads within about ±0.5 %/min over a 4-minute test (and a
     // little negative: the first cycles still settle), so only a clear trend is flagged.
-    if let Some(d) = a.bias_drift_per_min {
-        if d.abs() > 1.5 {
+    if let Some(d) = a.bias_drift_per_min
+        && d.abs() > 1.5 {
             warn(
                 "drift",
                 format!(
@@ -374,7 +372,6 @@ pub fn analyse(rec: Record, summary: &RelaySummary, dt: f64) -> Analysis {
                 ),
             );
         }
-    }
 
     // The designs: SIMC at each stop, AMIGO, and the ultimate-point rules for comparison.
     for tc in TAU_C_STOPS {

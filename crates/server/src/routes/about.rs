@@ -153,11 +153,10 @@ pub enum SourceRef {
 impl SourceRef {
     /// The ref for a build: its release's tag when it is that release, else its commit.
     pub fn of(revision: &str, build: &Build) -> Self {
-        if let (Some(release), Some(0)) = (&build.release, build.commits_since_release) {
-            if release == env!("CARGO_PKG_VERSION") {
+        if let (Some(release), Some(0)) = (&build.release, build.commits_since_release)
+            && release == env!("CARGO_PKG_VERSION") {
                 return Self::Tag(format!("v{release}"));
             }
-        }
         if revision.len() >= 7 && revision.chars().all(|c| c.is_ascii_hexdigit()) {
             Self::Commit(revision.to_string())
         } else {

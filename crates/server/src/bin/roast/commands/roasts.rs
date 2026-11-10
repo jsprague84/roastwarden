@@ -54,8 +54,8 @@ pub async fn show(api: &Api, out: &Out, a: ShowArgs) -> Result<u8, Failure> {
     } = a;
     let id = enc(&roast_id(api, &roast, roaster.as_deref()).await?);
     let mut one = api.get(&format!("/api/sessions/{id}")).await?;
-    if !telemetry {
-        if let Some(o) = one.as_object_mut() {
+    if !telemetry
+        && let Some(o) = one.as_object_mut() {
             let samples = o
                 .get("telemetry")
                 .and_then(Value::as_array)
@@ -63,20 +63,17 @@ pub async fn show(api: &Api, out: &Out, a: ShowArgs) -> Result<u8, Failure> {
             o.remove("telemetry");
             o.insert("samples".into(), json!(samples));
         }
-    }
     let events = api.get(&format!("/api/sessions/{id}/events")).await?;
     one["events"] = events;
     // Known when the roast has a bean with a priced purchase before it (else `null`).
-    if let Ok(cost) = api.get(&format!("/api/sessions/{id}/cost")).await {
-        if !cost.is_null() {
+    if let Ok(cost) = api.get(&format!("/api/sessions/{id}/cost")).await
+        && !cost.is_null() {
             one["cost"] = cost;
         }
-    }
-    if let Ok(c) = api.get(&format!("/api/sessions/{id}/cupping")).await {
-        if !c.is_null() {
+    if let Ok(c) = api.get(&format!("/api/sessions/{id}/cupping")).await
+        && !c.is_null() {
             one["cupping"] = c;
         }
-    }
     out.emit(&one, roast_text);
     Ok(code::OK)
 }

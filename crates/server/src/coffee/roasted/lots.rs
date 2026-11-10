@@ -444,11 +444,10 @@ impl RoastedService {
         };
         let today = zone.date(now);
         let mut l = lot(row, &w, today, zone);
-        if let Some(cid) = self.combine_of(session_id).await? {
-            if let Some((c, _)) = self.combined_parts(&cid, &w, today, zone).await? {
+        if let Some(cid) = self.combine_of(session_id).await?
+            && let Some((c, _)) = self.combined_parts(&cid, &w, today, zone).await? {
                 l.combined = Some(c);
             }
-        }
         let mut moves: Vec<RoastedMove> = sqlx::query_as(AssertSqlSafe(format!(
             "SELECT {MOVE_COLUMNS} FROM roasted_moves WHERE session_id = ? ORDER BY at, created_at"
         )))

@@ -455,8 +455,8 @@ pub(crate) async fn prepare(
         });
     }
     // The bean's own label fills what the request leaves out
-    if let Some(bean) = &bean_id {
-        if let Ok(Some(own)) = store::bean_label(&state.db, bean).await {
+    if let Some(bean) = &bean_id
+        && let Ok(Some(own)) = store::bean_label(&state.db, bean).await {
             let own_design = ask.source.is_none() && ask.design.is_none() && own.design.is_some();
             if own_design {
                 ask.design.clone_from(&own.design);
@@ -468,7 +468,6 @@ pub(crate) async fn prepare(
                 ask.brand.clone_from(&own.brand);
             }
         }
-    }
     if ask.brand.is_none() {
         ask.brand = crate::auth::settings::get(&state.db, "label_brand").await;
     }

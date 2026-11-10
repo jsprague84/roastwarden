@@ -243,11 +243,10 @@ pub async fn list(api: &Api, out: &Out, archived: bool, low: bool) -> Result<u8,
         "/api/beans"
     };
     let mut list = api.get(path).await?;
-    if low {
-        if let Some(items) = list.as_array_mut() {
+    if low
+        && let Some(items) = list.as_array_mut() {
             items.retain(|b| b["low"] == json!(true));
         }
-    }
     let beans: Vec<BeanRow> = api::decode(list.clone())?;
     if out.json {
         out.emit(&for_finding(list, &["created_at", "updated_at"]), |_| {

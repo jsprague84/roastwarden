@@ -454,11 +454,9 @@ pub async fn builtin_manifests(r: &Renderer) -> &'static HashMap<String, Value> 
                 report: Some(report),
                 ..
             }) = check(r, job, None).await
-            {
-                if let Some(m) = report.manifest {
+                && let Some(m) = report.manifest {
                     out.insert(id.to_string(), m);
                 }
-            }
         }
     }
     // Two first calls at once both make it; the first one kept wins

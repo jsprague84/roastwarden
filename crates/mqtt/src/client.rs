@@ -302,14 +302,13 @@ async fn run_eventloop(
                     }
                 }
                 // Announce presence (retained) so the last will has something to clear
-                if let Some(status) = &config.status {
-                    if let Err(err) = client
+                if let Some(status) = &config.status
+                    && let Err(err) = client
                         .publish(&status.topic, QoS::AtLeastOnce, true, status.online.clone())
                         .await
                     {
                         warn!(?err, "Failed to publish server status");
                     }
-                }
                 drop(client); // Release the client lock
                 drop(subs); // Release the read lock
 

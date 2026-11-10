@@ -592,15 +592,14 @@ pub fn next(a: &After) -> Vec<GuideLine> {
     let had_loss_line = loss_line.is_some();
     out.extend(dev_line);
     out.extend(loss_line);
-    if wet_hulled && !had_loss_line {
-        if let Some(loss) = r.loss_pct {
+    if wet_hulled && !had_loss_line
+        && let Some(loss) = r.loss_pct {
             out.push(line(
                 "a6",
                 format!("Weight loss {loss:.1} %{wet_note}."),
                 "rule 11 (derived)",
             ));
         }
-    }
 
     // A5
     if let Some(m) = fc.filter(|_| r.dropped && r.total_s > 0.0) {

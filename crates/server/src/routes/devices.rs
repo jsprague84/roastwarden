@@ -291,8 +291,8 @@ async fn put_setup(
     // control on is the owner's yes: the auth layer holds it for approval and makes the call
     // again as the token once approved (docs/roaster-setup.md, "Tokens and the setup"). This
     // refuses the call should it come here unapproved.
-    if let Some(axum::Extension(crate::auth::Actor::Token(_))) = &actor {
-        if b.control != Control::Off && approved.is_none() {
+    if let Some(axum::Extension(crate::auth::Actor::Token(_))) = &actor
+        && b.control != Control::Off && approved.is_none() {
             let mut r = (
                 StatusCode::FORBIDDEN,
                 format!(
@@ -305,7 +305,6 @@ async fn put_setup(
                 .insert(crate::http::errors::ErrorCode("OWNER_ONLY"));
             return r;
         }
-    }
     let (setup, kind_changed) = match state.transports.setups().set(&device_id, b).await {
         Ok(r) => r,
         Err(SetupError::Invalid(m)) => return (StatusCode::BAD_REQUEST, m).into_response(),
@@ -569,8 +568,8 @@ async fn update_connection(
         .await?
         .ok_or_else(|| AppError::not_found("Connection"))?;
     // The mask an answer showed keeps the saved password.
-    if let Some(config) = req.config.as_mut() {
-        if config.get("password").and_then(|p| p.as_str()) == Some(PASSWORD_MASK) {
+    if let Some(config) = req.config.as_mut()
+        && config.get("password").and_then(|p| p.as_str()) == Some(PASSWORD_MASK) {
             match existing.config.get("password").filter(|p| p.is_string()) {
                 Some(saved) => config["password"] = saved.clone(),
                 None => {
@@ -581,7 +580,6 @@ async fn update_connection(
                 }
             }
         }
-    }
     if let Some(config) = &req.config {
         crate::transports::pollers::check_connection_config(&existing.protocol, config)
             .map_err(AppError::bad_request)?;
@@ -948,15 +946,14 @@ async fn test_modbus_connection(
     req: &TestConnectionRequest,
 ) -> Json<TestConnectionResponse> {
     let mut map = Vec::new();
-    if let Some(device_id) = &req.device_id {
-        if let Ok(Some(dev)) =
+    if let Some(device_id) = &req.device_id
+        && let Ok(Some(dev)) =
             crate::roasters::registry::get_device_by_device_id(&state.db, device_id).await
         {
             map = crate::roasters::registry::get_register_map(&state.db, &dev.device.id)
                 .await
                 .unwrap_or_default();
         }
-    }
     let start = Instant::now();
     let result = tokio::time::timeout(
         std::time::Duration::from_secs(8),

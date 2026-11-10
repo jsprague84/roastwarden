@@ -486,11 +486,10 @@ pub async fn images_named(db: &SqlitePool, texts: &[&str]) -> Result<BTreeMap<St
             .await?;
     let mut out = BTreeMap::new();
     for (name,) in names {
-        if texts.iter().any(|t| t.contains(&name)) {
-            if let Some((_, data)) = asset_data(db, &name).await? {
+        if texts.iter().any(|t| t.contains(&name))
+            && let Some((_, data)) = asset_data(db, &name).await? {
                 out.insert(name, ByteBuf::from(data));
             }
-        }
     }
     Ok(out)
 }

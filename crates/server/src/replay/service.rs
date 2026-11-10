@@ -766,14 +766,13 @@ impl ReplayService {
                 .await
                 .ok()
                 .flatten();
-            if let Some(g) = raw.and_then(|r| serde_json::from_str::<PidGains>(&r).ok()) {
-                if [g.kp, g.ki, g.kd]
+            if let Some(g) = raw.and_then(|r| serde_json::from_str::<PidGains>(&r).ok())
+                && [g.kp, g.ki, g.kd]
                     .iter()
                     .all(|v| v.is_finite() && *v >= 0.0)
                 {
                     return g;
                 }
-            }
         }
         PidGains::default()
     }
@@ -989,13 +988,12 @@ impl ReplayService {
             .run_inner(session_id)
             .await
             .ok_or(ReplayError::NotRunning)?;
-        if let Some(l) = req.lookahead_seconds {
-            if !(l.is_finite() && (0.0..=300.0).contains(&l)) {
+        if let Some(l) = req.lookahead_seconds
+            && !(l.is_finite() && (0.0..=300.0).contains(&l)) {
                 return Err(ReplayError::Invalid(
                     "lookahead_seconds must be 0..300".into(),
                 ));
             }
-        }
         let (device_id, cfg) = {
             let g = inner.lock().await;
             (g.meta.device_id.clone(), g.engine.config().clone())
@@ -1020,11 +1018,10 @@ impl ReplayService {
             {
                 entries.push(e);
             }
-            if let Some(on) = req.auto_drop {
-                if let Some(e) = g.engine.set_auto_drop(on).map_err(ReplayError::Invalid)? {
+            if let Some(on) = req.auto_drop
+                && let Some(e) = g.engine.set_auto_drop(on).map_err(ReplayError::Invalid)? {
                     entries.push(e);
                 }
-            }
             (g.snapshot(), g.engine.config().ghost)
         };
         let snapshot = if engaging {

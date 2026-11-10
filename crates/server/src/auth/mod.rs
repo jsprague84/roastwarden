@@ -714,13 +714,12 @@ pub async fn require_api_key(
         }
         let now = std::time::Instant::now();
         // A request from a demo visitor keeps their simulated roaster (demo.rs)
-        if auth.demo {
-            if let Some(own) = crate::ops::demo::own_roaster(req.headers()) {
+        if auth.demo
+            && let Some(own) = crate::ops::demo::own_roaster(req.headers()) {
                 auth.visitors.touch(&own, now);
             }
-        }
-        if credential.is_some() {
-            if let Some(secs) = auth.failures.wait(&client, now) {
+        if credential.is_some()
+            && let Some(secs) = auth.failures.wait(&client, now) {
                 let mut res = refuse(
                     StatusCode::TOO_MANY_REQUESTS,
                     "TOO_MANY_FAILURES",
@@ -733,7 +732,6 @@ pub async fn require_api_key(
                     .insert(header::RETRY_AFTER, header::HeaderValue::from(secs));
                 return res;
             }
-        }
         let refused = |status, code, msg, actor| {
             auth.failures.fail(&client, now);
             refuse(status, code, msg, actor)

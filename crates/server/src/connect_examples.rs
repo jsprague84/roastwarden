@@ -252,11 +252,10 @@ async fn the_starter_example() {
                         false, body.into_bytes()).await;
                 }
                 ev = rx.recv() => {
-                    if let Ok(roastwarden_mqtt::MqttEvent::Publish { topic, .. }) = ev {
-                        if topic.starts_with(&format!("{p}/control/")) {
+                    if let Ok(roastwarden_mqtt::MqttEvent::Publish { topic, .. }) = ev
+                        && topic.starts_with(&format!("{p}/control/")) {
                             got.lock().unwrap().push(topic);
                         }
-                    }
                 }
             }
         }

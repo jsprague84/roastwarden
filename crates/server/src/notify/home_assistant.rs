@@ -544,14 +544,13 @@ impl HomeAssistant {
             .link
             .as_ref()
             .is_some_and(|l| cfg.enabled && l.broker == cfg.broker);
-        if !keep {
-            if let Some(link) = inner.link.take() {
+        if !keep
+            && let Some(link) = inner.link.take() {
                 withdraw_all(&link.mqtt, &mut inner.published).await;
                 if link.broker.is_some() {
                     link.mqtt.close().await;
                 }
             }
-        }
 
         let mut status = Status {
             enabled: cfg.enabled,
@@ -1083,11 +1082,10 @@ mod tests {
         fn drain(rx: &mut tokio::sync::broadcast::Receiver<MqttEvent>) -> Vec<(String, Vec<u8>)> {
             let mut out = Vec::new();
             while let Ok(e) = rx.try_recv() {
-                if let MqttEvent::Publish { topic, payload } = e {
-                    if topic.starts_with("homeassistant/") || topic.starts_with("roastwarden/ha/") {
+                if let MqttEvent::Publish { topic, payload } = e
+                    && (topic.starts_with("homeassistant/") || topic.starts_with("roastwarden/ha/")) {
                         out.push((topic, payload));
                     }
-                }
             }
             out
         }

@@ -953,11 +953,10 @@ pub async fn profile_shares(
             let mut l = api
                 .get(&format!("/api/profiles/{}/share", enc(&id)))
                 .await?;
-            if !all {
-                if let Some(a) = l.as_array_mut() {
+            if !all
+                && let Some(a) = l.as_array_mut() {
                     a.retain(|x| x["revoked_at"].is_null());
                 }
-            }
             l
         }
         None => api.get(&format!("/api/profile-shares?all={all}")).await?,

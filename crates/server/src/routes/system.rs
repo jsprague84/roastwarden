@@ -214,8 +214,8 @@ async fn api_demo_roaster(
             idle_minutes: demo::IDLE.as_secs() / 60,
         },
         demo::Claim::Own { new } => {
-            if new || !running {
-                if let Err(e) = demo::provision(&state, &roaster).await {
+            if (new || !running)
+                && let Err(e) = demo::provision(&state, &roaster).await {
                     tracing::error!(error = %e, %roaster, "demo: could not make a visitor's roaster");
                     visitors.release(&roaster);
                     return (
@@ -224,7 +224,6 @@ async fn api_demo_roaster(
                     )
                         .into_response();
                 }
-            }
             DemoRoaster {
                 device_id: roaster,
                 shared: false,
@@ -342,12 +341,11 @@ async fn api_login(
 #[utoipa::path(post, path = "/api/auth/logout", tag = "system",
     responses((status = 204, description = "Signed out; `Set-Cookie` removes `rr_login`")))]
 async fn api_logout(State(state): State<AppState>, headers: HeaderMap) -> Response {
-    if let Some(secret) = logins::presented(&headers) {
-        if let Err(e) = logins::end(&state.db, secret).await {
+    if let Some(secret) = logins::presented(&headers)
+        && let Err(e) = logins::end(&state.db, secret).await {
             tracing::error!(error = %e, "could not end a login");
             return (StatusCode::INTERNAL_SERVER_ERROR, "could not sign out").into_response();
         }
-    }
     let mut res = StatusCode::NO_CONTENT.into_response();
     res.headers_mut()
         .append(header::SET_COOKIE, logins::cleared(logins::https(&headers)));

@@ -221,23 +221,20 @@ impl BeanRequest {
     }
 
     pub(super) fn check_details(&self) -> Result<()> {
-        if let Some(Some(sc)) = self.score {
-            if !sc.is_finite() || !(0.0..=100.0).contains(&sc) {
+        if let Some(Some(sc)) = self.score
+            && (!sc.is_finite() || !(0.0..=100.0).contains(&sc)) {
                 return Err(bad("a score is from 0 to 100"));
             }
-        }
-        if let Some(Some(n)) = &self.label_notes {
-            if n.trim().chars().count() > 120 {
+        if let Some(Some(n)) = &self.label_notes
+            && n.trim().chars().count() > 120 {
                 return Err(bad(
                     "label notes are a few tasting words, at most 120 characters (\"chocolate · coconut · apple\")",
                 ));
             }
-        }
-        if let Some(Some(n)) = &self.short_name {
-            if n.trim().chars().count() > 40 {
+        if let Some(Some(n)) = &self.short_name
+            && n.trim().chars().count() > 40 {
                 return Err(bad("a short name is at most 40 characters"));
             }
-        }
         if let Some(Some(u)) = &self.url {
             let u = u.trim();
             let web = u.is_empty() || u.starts_with("https://") || u.starts_with("http://");

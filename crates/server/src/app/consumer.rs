@@ -166,8 +166,8 @@ pub(crate) async fn mqtt_consumer_loop(
                                 .process_telemetry(&device_id, &val, device_status.as_ref())
                                 .await;
                         }
-                    } else if kind == "status" {
-                        if let Ok(val) = serde_json::from_slice::<serde_json::Value>(&payload) {
+                    } else if kind == "status"
+                        && let Ok(val) = serde_json::from_slice::<serde_json::Value>(&payload) {
                             metrics
                                 .status_last_seen
                                 .with_label_values(&[&device_id])
@@ -199,7 +199,6 @@ pub(crate) async fn mqtt_consumer_loop(
                                 .map(std::string::ToString::to_string);
                             entry.rssi = val.get("rssi").and_then(serde_json::Value::as_i64);
                         }
-                    }
                 }
             }
             Ok(roastwarden_mqtt::MqttEvent::PubAck(_)) => { /* ack observed */ }

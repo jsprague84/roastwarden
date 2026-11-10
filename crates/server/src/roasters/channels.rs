@@ -120,11 +120,10 @@ pub fn validate(channels: &mut [Channel]) -> Result<(), String> {
         if ch.is_temp() || ch.is_pct() {
             ch.max = None;
         }
-        if let Some(m) = ch.max {
-            if !(m.is_finite() && m > 0.0) {
+        if let Some(m) = ch.max
+            && !(m.is_finite() && m > 0.0) {
                 return Err(format!("channel {n}: max must be a number above 0"));
             }
-        }
     }
     for (i, a) in channels.iter().enumerate() {
         if channels[..i].iter().any(|b| b.key == a.key) {

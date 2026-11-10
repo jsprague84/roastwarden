@@ -322,11 +322,10 @@ pub fn build_profile_alog(p: &ProfileWithPoints) -> Result<Value> {
     let mut computed = Map::new();
     let t0 = timex[charge_idx as usize];
     let mut put = |code: &str, idx: Option<i64>| {
-        if let Some(i) = idx.map(|i| i as usize) {
-            if let (Some(t), Some(bt)) = (timex.get(i), temp2.get(i).filter(|v| **v > -1.0)) {
+        if let Some(i) = idx.map(|i| i as usize)
+            && let (Some(t), Some(bt)) = (timex.get(i), temp2.get(i).filter(|v| **v > -1.0)) {
                 computed_entries(&mut computed, code, t - t0, *bt);
             }
-        }
     };
     put("CHARGE", Some(charge_idx));
     put("TP", tp_idx);
