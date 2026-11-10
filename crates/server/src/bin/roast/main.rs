@@ -36,14 +36,24 @@ use commands::{
 };
 use out::{code, Failure, Out};
 
-#[tokio::main]
-async fn main() -> ExitCode {
-    // RUSTROAST_URL and RUSTROAST_TOKEN from before the rename still work, with a note
+fn main() -> ExitCode {
+    // RUSTROAST_URL and RUSTROAST_TOKEN from before the rename still work, with a note. Adopted
+    // here, before the runtime starts its threads: the environment is written while nothing
+    // else can read it.
     let adopted = roastwarden_server::legacy::adopt_env();
     if let Some(w) = roastwarden_server::legacy::env_warning(&adopted) {
         eprintln!("roast: {w}");
     }
     let cli = Cli::parse();
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .expect("the async runtime")
+        .block_on(roast(cli))
+}
+
+/// The command run: the local ones here, the rest through [`run`].
+async fn roast(cli: Cli) -> ExitCode {
     let out = Out::new(cli.json, cli.text);
     roastwarden_server::install_crypto_provider();
     // Never the owner key from ROASTWARDEN_API_KEY on its own: inside the container that would
