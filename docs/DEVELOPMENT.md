@@ -7,10 +7,10 @@ crates and the server's configuration are in `README.md`, the dashboard's sectio
 ## Toolchain
 
 The flake's dev shell has everything: `nix develop` (or `direnv allow`) gives cargo, clippy,
-rustfmt, cargo-audit, cargo-deny, cargo-about and cargo-machete (Rust 1.99), Node 22, sqlite and
+rustfmt, cargo-audit, cargo-deny, cargo-about and cargo-machete (Rust 1.99), Node 26, sqlite and
 mosquitto. Run one-off commands as `nix develop -c <cmd>`; nothing expects a global Rust or
 Node. Without Nix: the Rust release `rust-toolchain.toml` names (rustup installs it by itself)
-and Node 22.
+and Node 26 (the dashboard builds from Node 22.17 on).
 
 `rust-toolchain.toml` pins Rust 1.99.1 for everything rustup runs: the release image and CI (the
 dev shell's Rust comes from the flake). It names the full version because the images install

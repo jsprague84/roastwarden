@@ -24,6 +24,8 @@ matching section (`docs/DEVELOPMENT.md`, "Releases").
 - The image runs on Debian 13 (trixie) instead of 12. Its programs are still built on
   Debian 12, so a `roast` copied out of the image runs wherever glibc is 2.36 or newer, like
   the release's own binaries. The data folder keeps its owner (the same user id).
+- The dashboard is built with Node 26, the current long-term release (the image, CI and the
+  development shell). Node is a build tool only: nothing in the running server uses it.
 
 ### Fixed
 

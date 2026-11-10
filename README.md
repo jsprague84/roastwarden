@@ -141,7 +141,7 @@ Quick start
 Development shell (NixOS or any machine with Nix; `direnv allow` loads it automatically):
 
 ```sh
-nix develop            # cargo, clippy, rustfmt, node 22, sqlite, mosquitto
+nix develop            # cargo, clippy, rustfmt, node 26, sqlite, mosquitto
 cargo run -p roastwarden-server
 cd apps/dashboard && npm ci && npm run dev   # dashboard on :5173, API on :8080
 ```
@@ -151,7 +151,7 @@ runs a simulated one with no broker; with the dashboard built (`npm run build`) 
 it on :8080 (`docs/DEVELOPMENT.md`, "Run locally").
 
 Without Nix: Rust (the release `rust-toolchain.toml` names; rustup installs it by itself) and
-Node 22. Labels and reports need no extra tools: Typst is built in.
+Node 26 (the dashboard builds from Node 22.17 on). Labels and reports need no extra tools: Typst is built in.
 
 Install on any Linux computer, a Raspberry Pi or a NAS that runs Docker, step by step for
 someone new to Linux and Docker (a guide per option): [`docs/INSTALL.md`](docs/INSTALL.md). The installer (`scripts/install.sh`, served as

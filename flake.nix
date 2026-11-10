@@ -1,7 +1,7 @@
 {
   description = "Roastwarden development shell (Rust server + SvelteKit dashboard)";
 
-  # nixos-unstable at a rev with rustc 1.99, node 22.23 and cargo-audit 0.22. The firmware
+  # nixos-unstable at a rev with rustc 1.99, node 26.12 and cargo-audit 0.22. The firmware
   # repository (Esp32_FluidBedCoffeeRoaster) stays on e72e4f29: PlatformIO's venv in
   # ~/.platformio is built against that rev's Python and fails to load on this one.
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/02c087f3fe673c9e317f206a627cb6b910336dbe";
@@ -44,7 +44,7 @@
           cargo-machete # unused dependencies, as CI's Lint job (0.9.2)
 
           # Dashboard
-          nodejs_22
+          nodejs_26
 
           # roastwarden.com's build: the versions the site's build uses
           zola # 0.23.6, the newest release
