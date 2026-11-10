@@ -25,11 +25,11 @@
 //! without `device_id` receives live samples from every device and no
 //! catch-up. See `docs/websocket-v2.md`.
 
+use axum::Json;
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{Path, Query, State, WebSocketUpgrade};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::Json;
 use futures_util::{SinkExt, StreamExt};
 use roastwarden_core::Sample;
 use serde::{Deserialize, Serialize};

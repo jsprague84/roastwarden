@@ -8,14 +8,14 @@ use uuid::Uuid;
 
 use crate::ops::zone::Zone;
 
-use super::lots::{combined_ref, lot, split, LotRow, LOT_SELECT};
-use super::moves::{clean, insert_move, plan_move, MOVE_COLUMNS};
+use super::lots::{LOT_SELECT, LotRow, combined_ref, lot, split};
+use super::moves::{MOVE_COLUMNS, clean, insert_move, plan_move};
 use super::types::{
     CombineRequest, CombinedLot, CombinedMove, CombinedRef, Form, MoveShare, RoastedLot,
     RoastedMove, RoastedMoveRequest,
 };
 use super::windows::Windows;
-use super::{bad, RoastedService, EMPTY_G};
+use super::{EMPTY_G, RoastedService, bad};
 
 impl RoastedService {
     /// A move on a combined lot: planned against what its roasts have left together, then

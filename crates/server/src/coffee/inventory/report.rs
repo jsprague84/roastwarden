@@ -10,7 +10,7 @@ use crate::coffee::costs::{self, Ledger, MoveIn, RoastCost};
 
 use super::stock::move_in;
 use super::types::{CostReport, MonthCosts, StockMove};
-use super::{cost_settings, InventoryService};
+use super::{InventoryService, cost_settings};
 
 impl InventoryService {
     /// What a roast's green coffee cost; `None` without a bean, a green weight or a priced

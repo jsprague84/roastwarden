@@ -7,12 +7,12 @@ use std::path::PathBuf;
 use base64::Engine as _;
 use clap::Args;
 use reqwest::Method;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use super::{body, design_arg, Fill};
+use super::{Fill, body, design_arg};
 use crate::api::Api;
 use crate::commands::roasts::roast_id;
-use crate::out::{code, Failure, Out};
+use crate::out::{Failure, Out, code};
 
 #[derive(Args, Debug)]
 pub struct CheckArgs {
@@ -296,9 +296,10 @@ fn check_text(r: &Value) -> String {
         lines.push(format!("fields with a value but not printed: {missing}"));
     }
     if let Some(p) = r["params"].as_object().or(rep["params"].as_object())
-        && !p.is_empty() {
-            lines.push(format!("params: {}", Value::Object(p.clone())));
-        }
+        && !p.is_empty()
+    {
+        lines.push(format!("params: {}", Value::Object(p.clone())));
+    }
     if let Some(png) = r["png"].as_str() {
         lines.push(format!("png: {png}"));
     }

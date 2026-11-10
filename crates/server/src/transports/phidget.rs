@@ -25,11 +25,11 @@ use std::fmt::Write as _;
 use std::time::{Duration, Instant};
 
 use base64::Engine;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::TcpStream;
+use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
@@ -330,22 +330,24 @@ impl Link {
                     )),
                 };
                 if let Ok(k) = &m
-                    && k.header.kind == MSG_COMMAND && k.header.sub == SUB_KEEPALIVE {
-                        let mut w = keepalive_w.lock().await;
-                        let h = Header {
-                            len: 0,
-                            flags: FLAG_REPLY,
-                            reqseq: w.next_seq(),
-                            repseq: k.header.reqseq,
-                            kind: MSG_COMMAND,
-                            sub: SUB_KEEPALIVE,
-                        };
-                        if write_message(&mut w.w, h, "").await.is_err() {
-                            let _ = tx.send(m).await;
-                            return;
-                        }
-                        continue;
+                    && k.header.kind == MSG_COMMAND
+                    && k.header.sub == SUB_KEEPALIVE
+                {
+                    let mut w = keepalive_w.lock().await;
+                    let h = Header {
+                        len: 0,
+                        flags: FLAG_REPLY,
+                        reqseq: w.next_seq(),
+                        repseq: k.header.reqseq,
+                        kind: MSG_COMMAND,
+                        sub: SUB_KEEPALIVE,
+                    };
+                    if write_message(&mut w.w, h, "").await.is_err() {
+                        let _ = tx.send(m).await;
+                        return;
                     }
+                    continue;
+                }
                 let end = m.is_err();
                 if tx.send(m).await.is_err() || end {
                     return;
@@ -1083,7 +1085,7 @@ pub(crate) async fn probe(config: &Value) -> Result<Probe, LinkError> {
                 readings: Map::new(),
                 problem: Some(e),
                 warnings: Vec::new(),
-            })
+            });
         }
     };
     let warnings = open_inputs(&mut link, &setup, &board).await?;
@@ -1146,11 +1148,11 @@ pub mod mock {
     //! keepalive. The readings come from [`Board::temps`]; what the client set is recorded.
 
     use super::{
-        json, mpsc, proof, read_message, write_message, Duration, HashMap, Header, Instant,
-        JoinHandle, Message, OwnedWriteHalf, TcpStream, Value, BP_DATA_INTERVAL, BP_ERROR_EVENT,
-        BP_SET_STATUS, BP_TEMPERATURE_CHANGE, FLAG_REPLY, IDENT, MSG_COMMAND, MSG_CONNECT,
-        MSG_DEVICE, SUB_ATTACH, SUB_AUTH_S0, SUB_BRIDGE, SUB_CHANNEL, SUB_HANDSHAKE_C0,
-        SUB_HANDSHAKE_S0, SUB_KEEPALIVE, SUB_OPEN, SUB_REPLY,
+        BP_DATA_INTERVAL, BP_ERROR_EVENT, BP_SET_STATUS, BP_TEMPERATURE_CHANGE, Duration,
+        FLAG_REPLY, HashMap, Header, IDENT, Instant, JoinHandle, MSG_COMMAND, MSG_CONNECT,
+        MSG_DEVICE, Message, OwnedWriteHalf, SUB_ATTACH, SUB_AUTH_S0, SUB_BRIDGE, SUB_CHANNEL,
+        SUB_HANDSHAKE_C0, SUB_HANDSHAKE_S0, SUB_KEEPALIVE, SUB_OPEN, SUB_REPLY, TcpStream, Value,
+        json, mpsc, proof, read_message, write_message,
     };
     use std::sync::{Arc, Mutex};
     use tokio::net::TcpListener;
@@ -1456,7 +1458,7 @@ pub mod mock {
 
 #[cfg(test)]
 mod tests {
-    use super::mock::{serve, MockBoard};
+    use super::mock::{MockBoard, serve};
     use super::*;
 
     #[test]
@@ -1479,9 +1481,11 @@ mod tests {
         assert_eq!(Header::decode(&b).unwrap(), h);
         let mut bad = b;
         bad[0] = 0;
-        assert!(Header::decode(&bad)
-            .unwrap_err()
-            .contains("not a Phidget22 server"));
+        assert!(
+            Header::decode(&bad)
+                .unwrap_err()
+                .contains("not a Phidget22 server")
+        );
     }
 
     #[test]
@@ -1625,9 +1629,10 @@ mod tests {
         // No new reading: the newest stands until it is stale.
         let s = r.sample(t0 + Duration::from_secs(2), Duration::from_secs(3));
         assert_eq!(s.get("ch0"), Some(&json!(204.0)));
-        assert!(r
-            .sample(t0 + Duration::from_secs(4), Duration::from_secs(3))
-            .is_empty());
+        assert!(
+            r.sample(t0 + Duration::from_secs(4), Duration::from_secs(3))
+                .is_empty()
+        );
         // An error event (open circuit) leaves the input out until it reads again.
         r.take(
             &event(0, BP_TEMPERATURE_CHANGE, json!({ "0": { "v": 210.0 } })),
@@ -1715,7 +1720,7 @@ mod tests {
     /// check, its mapping previewed; its password never shown and kept through an edit.
     #[tokio::test]
     async fn a_phidget_roaster_is_read_end_to_end() {
-        use crate::test_support::{eventually, Harness};
+        use crate::test_support::{Harness, eventually};
         let srv = serve(
             MockBoard::vint_tmp1101(620_011, 1),
             "pw",
@@ -1857,10 +1862,12 @@ mod tests {
             )
             .await;
         assert_eq!(t.json()["success"], json!(true), "{:#}", t.json());
-        assert!(t.json()["message"]
-            .as_str()
-            .unwrap()
-            .contains("TMP1101 #620011 port 1"));
+        assert!(
+            t.json()["message"]
+                .as_str()
+                .unwrap()
+                .contains("TMP1101 #620011 port 1")
+        );
     }
 
     /// Against a real Phidget22 network server (Phidgets' own, in Docker, or a board's):
@@ -1962,8 +1969,9 @@ mod tests {
         let cfg = json!({ "host": "127.0.0.1", "port": srv.port, "serial_number": 9 });
         let p = probe(&cfg).await.unwrap();
         assert!(p.chosen.is_none());
-        assert!(p
-            .summary("x")
-            .contains("no temperature board with serial number 9"));
+        assert!(
+            p.summary("x")
+                .contains("no temperature board with serial number 9")
+        );
     }
 }

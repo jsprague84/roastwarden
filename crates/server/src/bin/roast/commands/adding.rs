@@ -6,10 +6,10 @@
 
 use clap::Args;
 use reqwest::Method;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
-use crate::api::{enc, Api};
-use crate::out::{code, Failure, Out};
+use crate::api::{Api, enc};
+use crate::out::{Failure, Out, code};
 
 #[derive(Args, Debug)]
 pub struct AddArgs {
@@ -537,11 +537,12 @@ async fn add_machine(api: &Api, out: &Out, a: AddArgs) -> Result<u8, Failure> {
     }
     let protocol = plan["protocol"].as_str().unwrap_or_default().to_string();
     if let Some(t) = &a.transport
-        && *t != protocol {
-            return Err(usage(format!(
-                "--transport {t}: this machine's Artisan file speaks {protocol}"
-            )));
-        }
+        && *t != protocol
+    {
+        return Err(usage(format!(
+            "--transport {t}: this machine's Artisan file speaks {protocol}"
+        )));
+    }
     let mut config = plan["config"].clone();
     let c = config
         .as_object_mut()
@@ -1157,7 +1158,7 @@ async fn connection(
                     return Err(Failure::new(
                         "NOT_FOUND",
                         format!("{device_id} has no connection on: add one (roast roaster add)"),
-                    ))
+                    ));
                 }
                 _ => {
                     let ids: Vec<String> = enabled
@@ -1432,10 +1433,12 @@ mod tests {
     #[test]
     fn a_phidget_takes_its_server_and_board() {
         let mut a = add_args("phidget22");
-        assert!(connection_config(&a)
-            .unwrap_err()
-            .message
-            .contains("--host"));
+        assert!(
+            connection_config(&a)
+                .unwrap_err()
+                .message
+                .contains("--host")
+        );
         a.host = Some("sbc.local".into());
         a.port = Some("5662".into());
         a.serial_number = Some(370_001);
@@ -1449,10 +1452,12 @@ mod tests {
         let mut m = add_args("modbus_tcp");
         m.host = Some("h".into());
         m.thermocouple = Some("K".into());
-        assert!(connection_config(&m)
-            .unwrap_err()
-            .message
-            .contains("phidget22"));
+        assert!(
+            connection_config(&m)
+                .unwrap_err()
+                .message
+                .contains("phidget22")
+        );
     }
 
     #[test]
@@ -1497,10 +1502,12 @@ mod tests {
         assert_eq!(e["unit_id"], 2);
         assert_eq!(e["name"], "et@2");
         assert!(register_entry("holding:4096@0:int16:et").is_err());
-        assert!(register_entry("input:0:float32:bt")
-            .unwrap()
-            .get("unit_id")
-            .is_none());
+        assert!(
+            register_entry("input:0:float32:bt")
+                .unwrap()
+                .get("unit_id")
+                .is_none()
+        );
     }
 
     #[test]

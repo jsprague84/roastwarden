@@ -4,10 +4,10 @@ use std::time::Duration;
 
 use clap::{Args, Subcommand};
 use reqwest::Method;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use crate::api::{enc, Api};
-use crate::out::{code, Failure, Out};
+use crate::api::{Api, enc};
+use crate::out::{Failure, Out, code};
 use roastwarden_server::modules::{ALL as MODULES, PRESETS};
 
 #[derive(Subcommand, Debug)]

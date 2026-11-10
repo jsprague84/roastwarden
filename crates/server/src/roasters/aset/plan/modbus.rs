@@ -8,9 +8,9 @@ use crate::roasters::types::{
     CreateRegisterMapEntry, ModbusDataType, ModbusRegisterType, Protocol,
 };
 
-use super::inputs::{extra_curves, Etypes, Input, Reads, EXTRAS_MODBUS};
+use super::inputs::{EXTRAS_MODBUS, Etypes, Input, Reads, extra_curves};
 use super::sliders::{sliders, slot};
-use super::{finish, parse_write, poll_ms, serial_config, unique, Plan};
+use super::{Plan, finish, parse_write, poll_ms, serial_config, unique};
 use crate::roasters::aset::ini::Ini;
 
 /// A Modbus machine (Artisan device 29): its inputs as a register map with roles, its sliders as

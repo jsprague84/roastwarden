@@ -12,7 +12,7 @@
 //! A login lasts [`LIFETIME_DAYS`] from its last renewal; a request at least
 //! [`RENEW_AFTER_SECS`] after the last one renews it (and sends the cookie again).
 
-use axum::http::{header, HeaderMap, HeaderValue};
+use axum::http::{HeaderMap, HeaderValue, header};
 use serde::Serialize;
 use sqlx::SqlitePool;
 use std::fmt::Write as _;
@@ -609,10 +609,12 @@ mod tests {
         // Signing out ends it
         let r = send("POST", "/api/auth/logout", &[c()], None).await;
         assert_eq!(r.status(), StatusCode::NO_CONTENT);
-        assert!(r.headers()[header::SET_COOKIE]
-            .to_str()
-            .unwrap()
-            .contains("Max-Age=0"));
+        assert!(
+            r.headers()[header::SET_COOKIE]
+                .to_str()
+                .unwrap()
+                .contains("Max-Age=0")
+        );
         let r = send("GET", "/api/sessions", &[c()], None).await;
         assert_eq!(r.status(), StatusCode::UNAUTHORIZED);
         assert!(

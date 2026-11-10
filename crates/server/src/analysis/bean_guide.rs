@@ -17,7 +17,7 @@ use crate::analysis::{self, RoastAnalysis};
 use crate::coffee::inventory::{Bean, InventoryService};
 use crate::predict::live::FcHistory;
 use crate::profiles::types::{ProfileWithPoints, RoastProfile};
-use crate::replay::auto_drop::{trigger_value, DropBy};
+use crate::replay::auto_drop::{DropBy, trigger_value};
 use crate::reports::{self, ReportError};
 use crate::roasts::types::SessionStatus;
 
@@ -592,14 +592,16 @@ pub fn next(a: &After) -> Vec<GuideLine> {
     let had_loss_line = loss_line.is_some();
     out.extend(dev_line);
     out.extend(loss_line);
-    if wet_hulled && !had_loss_line
-        && let Some(loss) = r.loss_pct {
-            out.push(line(
-                "a6",
-                format!("Weight loss {loss:.1} %{wet_note}."),
-                "rule 11 (derived)",
-            ));
-        }
+    if wet_hulled
+        && !had_loss_line
+        && let Some(loss) = r.loss_pct
+    {
+        out.push(line(
+            "a6",
+            format!("Weight loss {loss:.1} %{wet_note}."),
+            "rule 11 (derived)",
+        ));
+    }
 
     // A5
     if let Some(m) = fc.filter(|_| r.dropped && r.total_s > 0.0) {
@@ -722,7 +724,7 @@ pub async fn guide(
                     return Err(ReportError::Bad(format!(
                         "roast {id} is not of {}",
                         bean.name
-                    )))
+                    )));
                 }
                 Some((id, _, dev, prof)) => Some((id, dev, prof)),
             }
@@ -1045,9 +1047,11 @@ mod tests {
             fc: Some(history(195.9)),
         });
         assert_eq!(keys(&lines), ["b1", "b2", "b6"]);
-        assert!(lines[0]
-            .text
-            .starts_with("Start from your espresso profile (Fluid bed — Light espresso)"));
+        assert!(
+            lines[0]
+                .text
+                .starts_with("Start from your espresso profile (Fluid bed — Light espresso)")
+        );
         let fc = fc.unwrap();
         assert_eq!(fc.window_c, 3.0);
         // 190 → 198 over 420–480 s: 195.9 at 464 s, 0.133 °C/s → ± 22.5 s, to 5 s
@@ -1126,38 +1130,44 @@ mod tests {
         let mut b = bean("Brazil", Some("Washed"));
         b.density_g_l = Some(640.0);
         let reads = BeanReads::of(&b);
-        assert!(keys(
-            &before(&Before {
-                reads: &reads,
-                profile: None,
-                fc: None
-            })
-            .0
-        )
-        .contains(&"b5"));
+        assert!(
+            keys(
+                &before(&Before {
+                    reads: &reads,
+                    profile: None,
+                    fc: None
+                })
+                .0
+            )
+            .contains(&"b5")
+        );
         b.density_g_l = Some(700.0);
         b.moisture_pct = Some(12.5);
         let reads = BeanReads::of(&b);
-        assert!(keys(
-            &before(&Before {
-                reads: &reads,
-                profile: None,
-                fc: None
-            })
-            .0
-        )
-        .contains(&"b5"));
+        assert!(
+            keys(
+                &before(&Before {
+                    reads: &reads,
+                    profile: None,
+                    fc: None
+                })
+                .0
+            )
+            .contains(&"b5")
+        );
         b.moisture_pct = Some(10.5);
         let reads = BeanReads::of(&b);
-        assert!(!keys(
-            &before(&Before {
-                reads: &reads,
-                profile: None,
-                fc: None
-            })
-            .0
-        )
-        .contains(&"b5"));
+        assert!(
+            !keys(
+                &before(&Before {
+                    reads: &reads,
+                    profile: None,
+                    fc: None
+                })
+                .0
+            )
+            .contains(&"b5")
+        );
     }
 
     #[test]

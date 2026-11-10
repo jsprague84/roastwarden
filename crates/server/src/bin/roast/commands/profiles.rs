@@ -4,10 +4,10 @@ use std::path::PathBuf;
 
 use clap::Subcommand;
 
-use crate::api::{self, enc, Api};
+use crate::api::{self, Api, enc};
 use crate::cli::Wait;
 use crate::commands::records;
-use crate::out::{code, for_finding, Failure, Out};
+use crate::out::{Failure, Out, code, for_finding};
 use crate::text::ProfileRow;
 
 #[derive(Subcommand, Debug)]

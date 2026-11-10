@@ -5,12 +5,12 @@ use std::fmt::Write as _;
 
 use clap::{Args, Subcommand};
 use reqwest::Method;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use crate::api::{enc, Api};
+use crate::api::{Api, enc};
 use crate::commands::labels::tz;
 use crate::commands::roasts::roast_id;
-use crate::out::{code, Failure, Out};
+use crate::out::{Failure, Out, code};
 
 #[derive(Args, Debug)]
 #[command(args_conflicts_with_subcommands = true, subcommand_negates_reqs = true)]
@@ -97,10 +97,9 @@ pub async fn share(api: &Api, out: &Out, cmd: ShareCmd) -> Result<u8, Failure> {
                     let mut l = api
                         .get(&format!("/api/sessions/{}/share", enc(&id)))
                         .await?;
-                    if !all
-                        && let Some(a) = l.as_array_mut() {
-                            a.retain(|x| x["revoked_at"].is_null());
-                        }
+                    if !all && let Some(a) = l.as_array_mut() {
+                        a.retain(|x| x["revoked_at"].is_null());
+                    }
                     l
                 }
                 None => api.get(&format!("/api/share?all={all}")).await?,

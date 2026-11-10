@@ -12,7 +12,7 @@ use std::fmt::Write as _;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use axum::http::{header, HeaderMap, HeaderValue};
+use axum::http::{HeaderMap, HeaderValue, header};
 use sha2::{Digest, Sha256};
 
 use crate::app::state::AppState;
@@ -215,9 +215,10 @@ pub async fn retire(state: &AppState, roaster: &str) {
         .await;
     state.tune.stop(roaster, "the demo visitor left").await;
     if let Ok(Some(s)) = crate::roasts::sessions::get_active_session(&state.db, roaster).await
-        && let Err(e) = crate::roasts::sessions::complete_session(&state.db, &s.id).await {
-            tracing::warn!(error = %e, %roaster, "demo: could not end an idle visitor's roast");
-        }
+        && let Err(e) = crate::roasts::sessions::complete_session(&state.db, &s.id).await
+    {
+        tracing::warn!(error = %e, %roaster, "demo: could not end an idle visitor's roast");
+    }
     state.virtual_roaster.remove_visitor(roaster).await;
     match crate::roasters::registry::get_device_by_device_id(&state.db, roaster).await {
         Ok(Some(d)) => {

@@ -3,12 +3,12 @@
 //! RoR of both on one chart, heater and fan under it, the phases stacked on one time scale,
 //! every number side by side with B − A, and how closely B's BT followed A's.
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sqlx::SqlitePool;
 
 use super::chart::{self, Point};
 use super::roast::{self, Input as RoastInput};
-use super::{clock, hm, meta, n1, short_date, Options, ReportError, DASH};
+use super::{DASH, Options, ReportError, clock, hm, meta, n1, short_date};
 use crate::analysis::{self, Comparison, Row};
 use crate::roasts::types::{RoastEventType, SessionTelemetry};
 
@@ -40,7 +40,7 @@ pub async fn gather(
         [a, b] if a == b => {
             return Err(ReportError::Bad(
                 "the two roasts are the same roast: name two".into(),
-            ))
+            ));
         }
         [a, b] => (a.clone(), b.clone()),
         [b] => {
@@ -89,15 +89,15 @@ pub async fn gather(
                 _ => {
                     return Err(ReportError::NotFound(
                         "fewer than two finished roasts to compare".into(),
-                    ))
+                    ));
                 }
             }
         }
         _ => {
             return Err(ReportError::Bad(format!(
-            "a compare report is of two roasts, A and B (got {}); `roast compare` lines up more",
-            ids.len()
-        )))
+                "a compare report is of two roasts, A and B (got {}); `roast compare` lines up more",
+                ids.len()
+            )));
         }
     };
     Ok(Input {
@@ -508,7 +508,7 @@ pub(crate) mod tests {
     use super::*;
     use crate::labels::Renderer;
     use crate::reports::roast::tests::{fixture, options};
-    use crate::reports::{kind, render, Format, Paper, Units};
+    use crate::reports::{Format, Paper, Units, kind, render};
 
     /// Batch #5 as A, and B a copy charged 4 °C hotter that cracks 10 s later and drops 6 s
     /// later at 0.6 °C more, with 0.4 g more out

@@ -61,11 +61,7 @@ pub fn axis(lo: f64, hi: f64, n: usize, label: impl Fn(f64) -> String) -> Axis {
 pub fn plain(v: f64) -> String {
     let s = format!("{v:.3}");
     let s = s.trim_end_matches('0').trim_end_matches('.');
-    if s == "-0" {
-        "0".into()
-    } else {
-        s.to_string()
-    }
+    if s == "-0" { "0".into() } else { s.to_string() }
 }
 
 /// Largest-Triangle-Three-Buckets (Steinarsson 2013): at most `n` points that keep the shape.

@@ -2,10 +2,10 @@
 //! undo (`docs/autotune-2.md`, "Stored gains and undo").
 
 use axum::{
+    Json,
     extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -13,7 +13,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::control::tuning::{self, AutotuneRunView, Gains, NewPidChange, PidChange};
 use crate::http::errors::ErrorBody;
-use crate::{app::dispatch::dispatch, app::dispatch::PublishOpts, app::state::AppState};
+use crate::{app::dispatch::PublishOpts, app::dispatch::dispatch, app::state::AppState};
 use roastwarden_core::DeviceCommand;
 
 pub fn routes() -> OpenApiRouter<AppState> {
@@ -200,7 +200,7 @@ async fn run_design(
                 StatusCode::CONFLICT,
                 "the run has no analysis (a firmware run?)",
             )
-                .into_response()
+                .into_response();
         }
         Ok(None) => return (StatusCode::NOT_FOUND, "autotune run not found").into_response(),
         Err(e) => return db_error(e),
@@ -240,7 +240,7 @@ async fn analyse_run(
                 StatusCode::CONFLICT,
                 "the run keeps no record (a firmware run)",
             )
-                .into_response()
+                .into_response();
         }
         Err(e) => return db_error(e),
     };

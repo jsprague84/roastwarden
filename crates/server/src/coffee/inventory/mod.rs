@@ -19,12 +19,12 @@ mod tests;
 mod types;
 
 pub use beans::bean_link;
-pub(crate) use stock::{insert_move, NewMove};
-pub(crate) use types::{clean, currency_code, money, purchase_time};
+pub(crate) use stock::{NewMove, insert_move};
 pub use types::{
     Bean, BeanDeleted, BeanDetail, BeanRequest, CostReport, MoveRequest, OrderRecorded,
     OrderRequest, PlanRequest, PlannedRoast, PurchaseFields, StockMove, StockRequest,
 };
+pub(crate) use types::{clean, currency_code, money, purchase_time};
 
 /// Bad input: the handlers answer 400 with the reason.
 #[derive(Debug)]

@@ -2,10 +2,10 @@
 //! saving a roast as a profile, a profile's roasts, and Artisan import and export.
 
 use axum::{
-    extract::{Path, Query, State},
-    http::{header::CONTENT_TYPE, StatusCode},
-    response::{IntoResponse, Response},
     Json,
+    extract::{Path, Query, State},
+    http::{StatusCode, header::CONTENT_TYPE},
+    response::{IntoResponse, Response},
 };
 use serde::Deserialize;
 use utoipa::IntoParams;

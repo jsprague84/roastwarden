@@ -13,7 +13,7 @@ use std::sync::OnceLock;
 
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use typst::diag::{FileError, FileResult, SourceDiagnostic};
 use typst::foundations::{Bytes, Datetime, Dict, IntoValue, Label};
 use typst::introspection::{Introspector, MetadataElem};
@@ -558,7 +558,7 @@ fn made(world: &Sandbox, req: &Request, doc: &PagedDocument, warnings: Vec<Diag>
                 return Reply::Failed {
                     errors: diags(world, &e),
                     warnings,
-                }
+                };
             }
         },
         Output::Svg => typst_svg::svg(page, &typst_svg::SvgOptions::default()).into_bytes(),
@@ -632,8 +632,8 @@ fn diags(world: &Sandbox, list: &[SourceDiagnostic]) -> Vec<Diag> {
                 file: place.as_ref().map(|p| p.0.clone()),
                 line: place.as_ref().map(|p| p.1 + 1),
                 column: place.as_ref().map(|p| p.2 + 1),
-                from: place.as_ref().and_then(|p| p.3 .0),
-                to: place.as_ref().and_then(|p| p.3 .1),
+                from: place.as_ref().and_then(|p| p.3.0),
+                to: place.as_ref().and_then(|p| p.3.1),
                 message: d.message.to_string(),
                 hints: d.hints.iter().map(|h| h.v.to_string()).collect(),
             }
@@ -686,7 +686,7 @@ fn raster_doc(
     setup: &super::raster::Setup,
     auto_colour: bool,
 ) -> Vec<u8> {
-    use super::raster::{add_page, begin, Colour, Page};
+    use super::raster::{Colour, Page, add_page, begin};
     let n = doc.pages().len() as u32;
     let mut out = begin(format, n);
     let opts = typst_render::RenderOptions {

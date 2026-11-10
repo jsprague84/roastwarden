@@ -6,8 +6,8 @@ use serde_json::json;
 use crate::roasters::setup::{Kind, Outputs};
 use crate::roasters::types::Protocol;
 
-use super::inputs::{Etypes, EXTRAS_MQTT};
-use super::{channel_fields, finish, Plan};
+use super::inputs::{EXTRAS_MQTT, Etypes};
+use super::{Plan, channel_fields, finish};
 use crate::roasters::aset::ini::Ini;
 
 /// A machine on MQTT (Artisan device 201): an ingest mapping from the channels' paths, read from

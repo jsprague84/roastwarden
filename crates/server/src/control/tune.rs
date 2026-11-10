@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use chrono::{DateTime, Utc};
-use roastwarden_autotune::analysis::{analyse, Analysis, Quality};
+use roastwarden_autotune::analysis::{Analysis, Quality, analyse};
 use roastwarden_autotune::fit::Record;
 use roastwarden_autotune::relay::{Phase, Relay, RelayConfig, RelaySummary};
 use serde::{Deserialize, Serialize};
@@ -460,9 +460,9 @@ impl TuneService {
                     .send(&device_id, DeviceCommand::Heater { percent: u })
                     .await
                     .is_ok()
-                {
-                    run.lock().await.last_sent = Some((u, Instant::now()));
-                }
+            {
+                run.lock().await.last_sent = Some((u, Instant::now()));
+            }
             self.refresh_lease(&device_id, &run).await;
         };
         self.finish(&device_id, &run, &reason).await;
@@ -698,8 +698,8 @@ fn to_run(
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use roastwarden_autotune::bench::{Bench, BenchConfig};
     use roastwarden_autotune::Model;
+    use roastwarden_autotune::bench::{Bench, BenchConfig};
     use std::collections::BTreeMap;
 
     fn sample(

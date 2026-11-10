@@ -668,21 +668,23 @@ pub fn analyse(i: &Input) -> Analysed {
         })
         .collect();
     if let (Some(h), Some(low)) = (control.late_heater, ror.late_min)
-        && h >= 90.0 {
-            notes.push(format!(
+        && h >= 90.0
+    {
+        notes.push(format!(
                 "Little heater left late: {h:.0} % over the last minute, RoR down to {:.1} °C/min at {}",
                 low.value,
                 clock(low.t)
             ));
-        }
+    }
     if let Some(p) = profile.as_ref().and_then(|p| p.early_peak)
-        && p.value >= 5.0 {
-            notes.push(format!(
-                "BT ran {:.1} °C above the profile at {} after CHARGE",
-                p.value,
-                clock(p.t)
-            ));
-        }
+        && p.value >= 5.0
+    {
+        notes.push(format!(
+            "BT ran {:.1} °C above the profile at {} after CHARGE",
+            p.value,
+            clock(p.t)
+        ));
+    }
 
     // Declared channels at CHARGE, first crack and DROP: the nearest sample within 5 s
     let channels = i

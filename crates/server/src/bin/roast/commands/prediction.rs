@@ -5,10 +5,10 @@ use std::fmt::Write as _;
 use std::time::Duration;
 
 use reqwest::Method;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use crate::api::{enc, Api};
-use crate::out::{code, Failure, Out};
+use crate::api::{Api, enc};
+use crate::out::{Failure, Out, code};
 
 /// A drive's auto DROP for `roast live` (`docs/replay.md`, "Auto DROP"): what it goes by, its
 /// state, the seconds to DROP, and the call that cancels it (the person at the roaster cancels

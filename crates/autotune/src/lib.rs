@@ -14,8 +14,8 @@ pub mod model;
 pub mod relay;
 pub mod robust;
 
-pub use model::{Model, C64};
-pub use robust::{evaluate, Pid, Robustness};
+pub use model::{C64, Model};
+pub use robust::{Pid, Robustness, evaluate};
 
 /// Serde for figures that can be infinite (a gain margin when the phase never reaches −180°,
 /// a profile interval with no upper end): JSON has no infinity, so they are written as `null`

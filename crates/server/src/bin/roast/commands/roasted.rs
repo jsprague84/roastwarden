@@ -3,11 +3,11 @@
 
 use clap::{Args, Subcommand};
 use reqwest::Method;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::fmt::Write as _;
 
-use crate::api::{enc, Api};
-use crate::out::{code, Failure, Out};
+use crate::api::{Api, enc};
+use crate::out::{Failure, Out, code};
 
 #[derive(Args, Debug)]
 #[command(args_conflicts_with_subcommands = true)]
@@ -225,11 +225,7 @@ async fn lot_id(api: &Api, reference: &str, roaster: Option<&str>) -> Result<Str
             .filter(|l| roaster.is_none_or(|r| l["device_id"] == r))
             .filter(|l| {
                 let n = l["name"].as_str().unwrap_or("").to_lowercase();
-                if exact {
-                    n == want
-                } else {
-                    n.contains(&want)
-                }
+                if exact { n == want } else { n.contains(&want) }
             })
             .collect()
     };

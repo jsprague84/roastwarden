@@ -102,9 +102,11 @@ mod tests {
             ["reports", "labels"]
         );
         assert_eq!(parse("").unwrap(), ALL);
-        assert!(parse(r#"["reports","stats"]"#)
-            .unwrap_err()
-            .contains("not a module"));
+        assert!(
+            parse(r#"["reports","stats"]"#)
+                .unwrap_err()
+                .contains("not a module")
+        );
         assert!(parse("reports").is_err());
         assert!(crate::auth::settings::check_value(SETTING, r#"["cupping"]"#).is_ok());
         assert!(crate::auth::settings::check_value(SETTING, r#"["cups"]"#).is_err());

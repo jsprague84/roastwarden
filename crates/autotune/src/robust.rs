@@ -8,7 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::{Model, C64};
+use crate::model::{C64, Model};
 
 /// Parallel PID gains in process units (input per output; `ki` per second, `kd` in seconds).
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]

@@ -3,7 +3,7 @@
 //! `{"error": {code, message, hint, …}}`; and exit codes an agent can branch on.
 
 use serde::Serialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::io::IsTerminal;
 
 /// Exit codes.
@@ -241,9 +241,11 @@ mod tests {
 
     #[test]
     fn the_real_hardware_hint_says_not_to_work_around_it() {
-        assert!(Failure::new("REAL_HARDWARE", "x")
-            .hint()
-            .contains("Do not work around it"));
+        assert!(
+            Failure::new("REAL_HARDWARE", "x")
+                .hint()
+                .contains("Do not work around it")
+        );
     }
 
     #[test]

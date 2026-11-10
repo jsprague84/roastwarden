@@ -4,8 +4,8 @@
 use roastwarden_core::ControlMode;
 use serde::{Deserialize, Serialize};
 
-use super::pid::PidGains;
 use super::MIN_DRIVE_FAN_PCT;
+use super::pid::PidGains;
 use crate::control::fan_assist::FanAssistConfig;
 use crate::replay::auto_drop::AutoDrop;
 use crate::roasts::types::RoastEventType;

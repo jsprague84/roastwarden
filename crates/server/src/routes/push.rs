@@ -2,10 +2,10 @@
 //! alarm notifications, and a test notification.
 
 use axum::{
+    Json,
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
-    Json,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;

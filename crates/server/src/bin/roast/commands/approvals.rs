@@ -6,9 +6,9 @@ use std::time::Duration;
 use reqwest::Method;
 use serde_json::Value;
 
-use crate::api::{self, enc, Api};
+use crate::api::{self, Api, enc};
 use crate::cli::Wait;
-use crate::out::{code, Failure, Out};
+use crate::out::{Failure, Out, code};
 
 /// The answer of a call Roastwarden may hold for the owner's approval (202). Without --wait the
 /// held request is printed and the exit code says a human must act; with it, roast waits for

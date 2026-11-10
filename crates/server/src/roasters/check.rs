@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use roastwarden_core::{DeviceCommand, Sample};
 use serde::Serialize;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 use utoipa::ToSchema;
 
 use crate::app::state::AppState;
@@ -512,7 +512,7 @@ pub fn may_write(
         Some(bt) if bt >= COLD_C => {
             return Err(refused(format!(
                 "BT is {bt:.1} °C: the write check runs only on a cold roaster (below {COLD_C} °C)"
-            )))
+            )));
         }
         _ => {}
     }
@@ -831,7 +831,7 @@ mod tests {
     /// missing path said, a bad mapping's 400, a stranger's connection 404, any token may try.
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn the_newest_raw_message_and_the_preview() {
-        use crate::test_support::{call, eventually, Harness};
+        use crate::test_support::{Harness, call, eventually};
         use axum::http::StatusCode;
         use rumqttc::QoS;
         let h = Harness::new().await;
@@ -916,10 +916,12 @@ mod tests {
         assert_eq!(field("bt")["value"], 213.0);
         assert_eq!(field("bt")["field"], "beanTemp");
         assert_eq!(field("fan")["value"], 40.0);
-        assert!(field("et")["problem"]
-            .as_str()
-            .unwrap()
-            .contains("probe.x is not in the message"));
+        assert!(
+            field("et")["problem"]
+                .as_str()
+                .unwrap()
+                .contains("probe.x is not in the message")
+        );
         assert_eq!(p["sample"]["beanTemp"], 213.0);
         // A bad mapping is the save's 400
         let p = preview(json!({ "fields": {} }), None).await;
@@ -947,7 +949,7 @@ mod tests {
     /// may not; a roaster with control off is refused.
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn the_write_check_on_the_virtual_roaster() {
-        use crate::test_support::{call, eventually, Harness};
+        use crate::test_support::{Harness, call, eventually};
         use axum::http::StatusCode;
         let h = Harness::new().await;
         h.owner(
@@ -1021,7 +1023,7 @@ mod tests {
     /// A roaster that never echoes: the heater times out and STOP is still sent.
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn the_write_check_ends_with_stop_on_a_timeout() {
-        use crate::test_support::{eventually, Harness};
+        use crate::test_support::{Harness, eventually};
         let h = Harness::new().await;
         let put = h
             .owner(
@@ -1118,10 +1120,12 @@ mod tests {
         let logger = setup(Control::Manual, Kind::Logger.outputs());
         assert!(may_write("r", &logger, Some(&cold), now, false, false).is_err());
         let hot = sample(now - 500, Some(80.0), Some(85.0), Some(0.0));
-        assert!(may_write("r", &full, Some(&hot), now, false, false)
-            .unwrap_err()
-            .message
-            .contains("cold"));
+        assert!(
+            may_write("r", &full, Some(&hot), now, false, false)
+                .unwrap_err()
+                .message
+                .contains("cold")
+        );
         let mut auto = cold.clone();
         auto.mode = Some(1);
         assert!(may_write("r", &full, Some(&auto), now, false, false).is_err());

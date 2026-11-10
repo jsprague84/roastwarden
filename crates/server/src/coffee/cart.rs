@@ -11,7 +11,7 @@ use std::time::Duration;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use crate::coffee::import::{store_busy, CartShop, Draft, Importer, Size};
+use crate::coffee::import::{CartShop, Draft, Importer, Size, store_busy};
 use crate::coffee::orders::supplier_key;
 use crate::coffee::wanted::{Wanted, WantedService};
 
@@ -156,9 +156,11 @@ pub fn build(
                 }
                 currency = currency.or(z.currency.clone()).or(w.currency.clone());
                 if let (Some(now), Some(seen)) = (z.price, w.price)
-                    && (now - seen).abs() >= 0.005 && !shop.by_the_pound {
-                        line.note = Some(format!("{seen:.2} when listed, {now:.2} now"));
-                    }
+                    && (now - seen).abs() >= 0.005
+                    && !shop.by_the_pound
+                {
+                    line.note = Some(format!("{seen:.2} when listed, {now:.2} now"));
+                }
             }
         }
         lines.push(line);
@@ -437,10 +439,11 @@ mod tests {
         assert!(cart.lines[2].note.as_deref().unwrap().contains("sold out"));
         // The price moved since it was listed
         assert!(cart.lines[0].note.as_deref().unwrap().contains("now"));
-        assert!(cart
-            .warnings
-            .iter()
-            .any(|w| w.contains("replaces the cart")));
+        assert!(
+            cart.warnings
+                .iter()
+                .any(|w| w.contains("replaces the cart"))
+        );
 
         // No permalink in the profile: Shopify's older /cart/ link
         let cart = build(&shop, None, &[(&b, Some(two.clone()), false)]);
@@ -449,10 +452,11 @@ mod tests {
             cart.url.as_deref(),
             Some(format!("https://www.sweetmarias.com/cart/{v2}:1").as_str())
         );
-        assert!(cart
-            .warnings
-            .iter()
-            .any(|w| w.contains("Not read from the store again")));
+        assert!(
+            cart.warnings
+                .iter()
+                .any(|w| w.contains("Not read from the store again"))
+        );
     }
 
     #[test]

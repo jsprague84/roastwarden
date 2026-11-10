@@ -2,7 +2,7 @@
 //! Switching it on and off, the broker and its password go through `PUT /api/settings`
 //! (`ha_*`; the password is a secret, never read back).
 
-use axum::{extract::State, response::IntoResponse, Json};
+use axum::{Json, extract::State, response::IntoResponse};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::app::state::AppState;

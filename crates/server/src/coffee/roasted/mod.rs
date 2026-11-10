@@ -26,7 +26,7 @@ mod tests;
 mod types;
 mod windows;
 
-pub use moves::{label_lot, packed_by_run, MOVE_COLUMNS};
+pub use moves::{MOVE_COLUMNS, label_lot, packed_by_run};
 pub use types::{
     CombineRequest, CombinedLot, CombinedRef, Form, LotState, RoastedLot, RoastedMove,
     RoastedMoveRequest, RoastedStock,

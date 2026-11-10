@@ -28,8 +28,8 @@ use tokio::sync::Mutex;
 use crate::analysis::telemetry::TelemetryService;
 use crate::control::tuning::Gains;
 use crate::transports::transport::{SendOptions, TransportRegistry};
-use roastwarden_autotune::design::Rule;
 use roastwarden_autotune::Model;
+use roastwarden_autotune::design::Rule;
 use roastwarden_core::DeviceCommand;
 use roastwarden_core::Sample;
 
@@ -394,9 +394,11 @@ impl GainScheduler {
         self.note_fan(device_id, fan_pct).await;
         let g = self.gains_for(device_id, fan_pct).await?;
         if let Some((prev, at)) = self.last_sent.lock().await.get(device_id)
-            && !differs(*prev, g) && at.elapsed() < RESEND_AFTER {
-                return None;
-            }
+            && !differs(*prev, g)
+            && at.elapsed() < RESEND_AFTER
+        {
+            return None;
+        }
         self.send(device_id, g).await.then_some(g)
     }
 
@@ -560,12 +562,14 @@ mod tests {
 
         s.enabled = false;
         assert!(s.gains_at(90.0).is_none());
-        assert!(GainSchedule {
-            enabled: true,
-            rows: vec![]
-        }
-        .gains_at(90.0)
-        .is_none());
+        assert!(
+            GainSchedule {
+                enabled: true,
+                rows: vec![]
+            }
+            .gains_at(90.0)
+            .is_none()
+        );
     }
 
     #[test]
@@ -655,7 +659,7 @@ mod tests {
 
     #[test]
     fn rows_with_models_design_the_gains_between_them() {
-        use roastwarden_autotune::design::{gains, Rule};
+        use roastwarden_autotune::design::{Rule, gains};
         let at = |fan: f64, kv: f64, l: f64| {
             let m = Model::itd(kv, l);
             let g = crate::control::tuning::device_gains(&gains(Rule::Simc, &m, 1.5, 1.0).unwrap());
@@ -781,7 +785,7 @@ mod tests {
     /// the server sends the stored ones back.
     #[tokio::test]
     async fn a_rebooted_roaster_gets_the_held_gains_back() {
-        use crate::test_support::{eventually, Harness};
+        use crate::test_support::{Harness, eventually};
         use serde_json::json;
         let h = Harness::new().await;
         let vr = crate::sim::virtual_roaster::DEVICE_ID;

@@ -26,7 +26,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use serde_bytes::ByteBuf;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sqlx::SqlitePool;
 
 mod designs;
@@ -36,18 +36,18 @@ mod sheets;
 #[cfg(test)]
 mod tests;
 
-pub use designs::{builtin_design, font_families, slug, valid_id, DesignSource, Folder};
+pub use designs::{DesignSource, Folder, builtin_design, font_families, slug, valid_id};
 use facts::hide_fields;
 use sheets::builtin_sheets;
 
 pub use engine::{Diag, Report};
 pub use facts::{
-    facts, label_data, net_weight, rest_days, weight_text, Ask, BlendPart, LotFacts, RestDays,
-    FIELDS,
+    Ask, BlendPart, FIELDS, LotFacts, RestDays, facts, label_data, net_weight, rest_days,
+    weight_text,
 };
 pub use notes::{notes_for, suggest_notes};
 pub use sandbox::Renderer;
-pub use sheets::{check_offsets, check_sheets, offsets, sheets, Offset, Sheet};
+pub use sheets::{Offset, Sheet, check_offsets, check_sheets, offsets, sheets};
 
 /// The designs that ship: (id, name, source)
 const BUILTIN_DESIGNS: [(&str, &str, &str); 6] = [
@@ -398,11 +398,12 @@ pub async fn bean_sample(db: &SqlitePool, bean_id: &str) -> anyhow::Result<Optio
         .filter(|s| !s.is_empty())
         .collect::<Vec<_>>()
         .join(" · ");
-    l["name"] = json!(b
-        .short_name
-        .clone()
-        .filter(|s| !s.trim().is_empty())
-        .unwrap_or_else(|| b.name.clone()));
+    l["name"] = json!(
+        b.short_name
+            .clone()
+            .filter(|s| !s.trim().is_empty())
+            .unwrap_or_else(|| b.name.clone())
+    );
     l["full_name"] = json!(b.name);
     l["origin"] = json!((!origin.is_empty()).then_some(origin));
     l["variety"] = json!(b.variety);
@@ -454,9 +455,10 @@ pub async fn builtin_manifests(r: &Renderer) -> &'static HashMap<String, Value> 
                 report: Some(report),
                 ..
             }) = check(r, job, None).await
-                && let Some(m) = report.manifest {
-                    out.insert(id.to_string(), m);
-                }
+                && let Some(m) = report.manifest
+            {
+                out.insert(id.to_string(), m);
+            }
         }
     }
     // Two first calls at once both make it; the first one kept wins

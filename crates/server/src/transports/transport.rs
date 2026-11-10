@@ -16,11 +16,11 @@ use sqlx::SqlitePool;
 
 use crate::analysis::telemetry::TelemetryService;
 use crate::roasters::setup::{Control, Limits, Refusal, Setups};
-use crate::transports::ingest::{in_device_units, Commands, MqttRouter, Role, Units};
+use crate::transports::ingest::{Commands, MqttRouter, Role, Units, in_device_units};
 use std::collections::HashMap;
 use std::fmt;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
@@ -28,7 +28,7 @@ use prometheus::IntCounter;
 use roastwarden_core::{ControlMode, DeviceCommand};
 use roastwarden_mqtt::{MqttEvent, MqttService};
 use rumqttc::QoS;
-use tokio::sync::{mpsc, oneshot, RwLock};
+use tokio::sync::{RwLock, mpsc, oneshot};
 
 use crate::roasters::types::{ModbusDataType, ModbusRegisterMap, ModbusRegisterType, Protocol};
 
@@ -233,7 +233,7 @@ impl CommandSink for MqttSink {
                     Ok(Ok(MqttEvent::PubAck(_))) => return Ok(()),
                     Ok(Ok(_)) => {}
                     Ok(Err(_)) | Err(_) => {
-                        return Err(TransportError::Timeout { transport: "mqtt" })
+                        return Err(TransportError::Timeout { transport: "mqtt" });
                     }
                 }
             }
@@ -400,13 +400,13 @@ impl CommandSink for ModbusSink {
                     return Err(TransportError::Send {
                         transport,
                         detail: e,
-                    })
+                    });
                 }
                 Ok(Err(_)) => {
                     return Err(TransportError::Send {
                         transport,
                         detail: "poller dropped request".into(),
-                    })
+                    });
                 }
                 Err(_) => return Err(TransportError::Timeout { transport }),
             }
@@ -842,9 +842,10 @@ impl TransportRegistry {
             .lock()
             .ok()
             .and_then(|m| m.get(device_id).copied())
-            && at.elapsed() < HEATER_OFF_GRACE {
-                return false;
-            }
+            && at.elapsed() < HEATER_OFF_GRACE
+        {
+            return false;
+        }
         let Some(s) = self.telemetry.latest_sample(device_id) else {
             return false;
         };
@@ -962,10 +963,9 @@ impl TransportRegistry {
             DeviceCommand::Heater { percent } => *percent <= 0.0,
             _ => false,
         };
-        if heater_off
-            && let Ok(mut m) = self.heater_off_sent.lock() {
-                m.insert(device_id.to_string(), Instant::now());
-            }
+        if heater_off && let Ok(mut m) = self.heater_off_sent.lock() {
+            m.insert(device_id.to_string(), Instant::now());
+        }
         let cmd = &shaped;
         let live = self.ordered_live(device_id).await;
         let mut last_err: Option<TransportError> = None;

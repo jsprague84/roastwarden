@@ -5,12 +5,12 @@
 
 use std::collections::BTreeMap;
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sqlx::SqlitePool;
 
 use super::expect;
 use super::{
-    clock, clock_opt, day_month, grams, long_date, meta, short_date, Options, ReportError, DASH,
+    DASH, Options, ReportError, clock, clock_opt, day_month, grams, long_date, meta, short_date,
 };
 use crate::coffee::inventory::{InventoryService, PlannedRoast};
 use crate::profiles::history::ProfileHistoryRoast;
@@ -263,7 +263,7 @@ mod tests {
     use super::*;
     use crate::labels::Renderer;
     use crate::reports::roast::tests::{fixture, options};
-    use crate::reports::{kind, render, Format, Paper, Units};
+    use crate::reports::{Format, Paper, Units, kind, render};
 
     fn planned(name: &str, g: f32, stock: f32) -> Planned {
         let now = chrono::Utc::now();

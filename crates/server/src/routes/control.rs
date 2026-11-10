@@ -3,10 +3,10 @@
 //! transport registry; a manual change takes its channel from a running profile drive.
 
 use axum::{
+    Json,
     extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -15,7 +15,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::openapi::CommandResponses;
 use crate::replay::engine::Channel;
 use crate::{
-    app::dispatch::dispatch, app::dispatch::PublishOpts, app::state::AppState, control::tuning,
+    app::dispatch::PublishOpts, app::dispatch::dispatch, app::state::AppState, control::tuning,
 };
 use roastwarden_core::{ControlMode, DeviceCommand};
 

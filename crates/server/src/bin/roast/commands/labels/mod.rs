@@ -11,14 +11,14 @@ use std::time::Duration;
 
 use clap::{Args, Subcommand};
 use reqwest::Method;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
-use crate::api::{enc, Api, Upload};
+use crate::api::{Api, Upload, enc};
 use crate::cli::Wait;
 use crate::commands::approvals::held_or_done;
 use crate::commands::records::save_file;
 use crate::commands::roasts::roast_id;
-use crate::out::{code, Failure, Out};
+use crate::out::{Failure, Out, code};
 use crate::text::parse_weight;
 
 mod check;
@@ -26,9 +26,9 @@ mod designs;
 mod printers;
 mod runs;
 
-use designs::{asset, brand, design, AssetCmd, BrandCmd, DesignCmd};
-use printers::{printer, PrinterCmd};
-use runs::{reprint, run, runs, sheets, ReprintArgs, RunArgs, RunsCmd};
+use designs::{AssetCmd, BrandCmd, DesignCmd, asset, brand, design};
+use printers::{PrinterCmd, printer};
+use runs::{ReprintArgs, RunArgs, RunsCmd, reprint, run, runs, sheets};
 
 #[derive(Args, Debug)]
 #[command(args_conflicts_with_subcommands = true, subcommand_negates_reqs = true)]

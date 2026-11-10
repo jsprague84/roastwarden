@@ -17,10 +17,10 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use serde::Serialize;
 use sqlx::SqlitePool;
-use tokio::sync::{broadcast, Mutex};
+use tokio::sync::{Mutex, broadcast};
 
 use crate::analysis::alarms::AlarmEvent;
 use crate::auth::settings;
@@ -696,7 +696,7 @@ impl Notifier {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::{body::Bytes, extract::State, http::HeaderMap, routing::any, Router};
+    use axum::{Router, body::Bytes, extract::State, http::HeaderMap, routing::any};
 
     #[test]
     fn matrix_send_url_encodes_the_room_and_keeps_a_base_path() {
@@ -713,11 +713,13 @@ mod tests {
             homeserver: "https://example.org/matrix".into(),
             ..room
         };
-        assert!(behind_a_path
-            .send_url("x")
-            .unwrap()
-            .as_str()
-            .starts_with("https://example.org/matrix/_matrix/client/v3/rooms/"));
+        assert!(
+            behind_a_path
+                .send_url("x")
+                .unwrap()
+                .as_str()
+                .starts_with("https://example.org/matrix/_matrix/client/v3/rooms/")
+        );
         // a room version 12 id (no server part) goes into the path as it is
         let v12 = MatrixRoom {
             homeserver: "https://matrix.example.org".into(),
@@ -935,14 +937,16 @@ mod tests {
 
         let m = by("/mx");
         assert_eq!(m.0, "PUT");
-        assert!(m
-            .1
-            .starts_with("/mx/_matrix/client/v3/rooms/!r:example.org/send/m.room.message/rr-"));
+        assert!(
+            m.1.starts_with("/mx/_matrix/client/v3/rooms/!r:example.org/send/m.room.message/rr-")
+        );
         assert_eq!(m.2["authorization"], "Bearer mtok");
-        assert!(json(&m.3)["formatted_body"]
-            .as_str()
-            .unwrap()
-            .contains("&lt;b&gt;"));
+        assert!(
+            json(&m.3)["formatted_body"]
+                .as_str()
+                .unwrap()
+                .contains("&lt;b&gt;")
+        );
 
         let w = by("/hook");
         assert_eq!(json(&w.3)["type"], "roast_alarm");

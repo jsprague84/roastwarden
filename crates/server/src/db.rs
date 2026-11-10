@@ -365,18 +365,17 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             continue;
         }
 
-        if legacy_db
-            && let Some(marker) = &m.legacy_marker {
-                let present = match marker {
-                    Marker::Table(t) => table_exists(pool, t).await?,
-                    Marker::Column(t, c) => column_exists(pool, t, c).await?,
-                };
-                if present {
-                    debug!(migration = m.name, "already present, recording as applied");
-                    record(pool, m.name).await?;
-                    continue;
-                }
+        if legacy_db && let Some(marker) = &m.legacy_marker {
+            let present = match marker {
+                Marker::Table(t) => table_exists(pool, t).await?,
+                Marker::Column(t, c) => column_exists(pool, t, c).await?,
+            };
+            if present {
+                debug!(migration = m.name, "already present, recording as applied");
+                record(pool, m.name).await?;
+                continue;
             }
+        }
 
         info!(migration = m.name, "applying migration");
         let mut tx = pool.begin().await?;
@@ -668,18 +667,22 @@ mod tests {
             }
         }
         assert!(table_exists(&pool, "roast_sessions").await.unwrap());
-        assert!(!trigger_exists(&pool, "update_roast_sessions_updated_at")
-            .await
-            .unwrap());
+        assert!(
+            !trigger_exists(&pool, "update_roast_sessions_updated_at")
+                .await
+                .unwrap()
+        );
         // Seed data from 001 is already there; it must not be duplicated.
         let seeds = "SELECT COUNT(*) FROM roast_profiles WHERE id LIKE 'default-%'";
         let profiles_before: i64 = sqlx::query_scalar(seeds).fetch_one(&pool).await.unwrap();
 
         run_migrations(&pool).await.unwrap();
 
-        assert!(trigger_exists(&pool, "update_roast_sessions_updated_at")
-            .await
-            .unwrap());
+        assert!(
+            trigger_exists(&pool, "update_roast_sessions_updated_at")
+                .await
+                .unwrap()
+        );
         assert!(table_exists(&pool, "settings").await.unwrap());
         let profiles_after: i64 = sqlx::query_scalar(seeds).fetch_one(&pool).await.unwrap();
         assert_eq!(profiles_before, profiles_after);

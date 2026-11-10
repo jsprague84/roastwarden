@@ -1,8 +1,8 @@
 //! The service on the whole server: a drive cut by a restart resumes, auto DROP drops.
 
 mod restart_tests {
-    use crate::test_support::{eventually, Harness};
-    use serde_json::{json, Value};
+    use crate::test_support::{Harness, eventually};
+    use serde_json::{Value, json};
     use std::time::Duration;
 
     const VR: &str = crate::sim::virtual_roaster::DEVICE_ID;
@@ -120,8 +120,8 @@ mod restart_tests {
 }
 
 mod auto_drop_tests {
-    use crate::test_support::{eventually, Harness};
-    use serde_json::{json, Value};
+    use crate::test_support::{Harness, eventually};
+    use serde_json::{Value, json};
     use std::time::Duration;
 
     const VR: &str = crate::sim::virtual_roaster::DEVICE_ID;

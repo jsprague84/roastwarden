@@ -13,7 +13,7 @@ use std::time::{Duration, Instant};
 
 use chrono::{DateTime, Utc};
 use sqlx::{Row, SqlitePool};
-use tokio::sync::{broadcast, Mutex};
+use tokio::sync::{Mutex, broadcast};
 use tokio::task::JoinHandle;
 
 use super::engine::{
@@ -557,7 +557,7 @@ impl ReplayService {
             Some(_) => {
                 return Err(ReplayError::Invalid(
                     "lookahead_seconds must be 0..300".into(),
-                ))
+                ));
             }
             None if mode == ReplayMode::FeedforwardPid => 0.0,
             None => {
@@ -583,7 +583,7 @@ impl ReplayService {
             Some(_) => {
                 return Err(ReplayError::Invalid(
                     "resume_at_profile_seconds must be 0 or more".into(),
-                ))
+                ));
             }
             None => None,
         };
@@ -770,9 +770,9 @@ impl ReplayService {
                 && [g.kp, g.ki, g.kd]
                     .iter()
                     .all(|v| v.is_finite() && *v >= 0.0)
-                {
-                    return g;
-                }
+            {
+                return g;
+            }
         }
         PidGains::default()
     }
@@ -989,11 +989,12 @@ impl ReplayService {
             .await
             .ok_or(ReplayError::NotRunning)?;
         if let Some(l) = req.lookahead_seconds
-            && !(l.is_finite() && (0.0..=300.0).contains(&l)) {
-                return Err(ReplayError::Invalid(
-                    "lookahead_seconds must be 0..300".into(),
-                ));
-            }
+            && !(l.is_finite() && (0.0..=300.0).contains(&l))
+        {
+            return Err(ReplayError::Invalid(
+                "lookahead_seconds must be 0..300".into(),
+            ));
+        }
         let (device_id, cfg) = {
             let g = inner.lock().await;
             (g.meta.device_id.clone(), g.engine.config().clone())
@@ -1019,9 +1020,10 @@ impl ReplayService {
                 entries.push(e);
             }
             if let Some(on) = req.auto_drop
-                && let Some(e) = g.engine.set_auto_drop(on).map_err(ReplayError::Invalid)? {
-                    entries.push(e);
-                }
+                && let Some(e) = g.engine.set_auto_drop(on).map_err(ReplayError::Invalid)?
+            {
+                entries.push(e);
+            }
             (g.snapshot(), g.engine.config().ghost)
         };
         let snapshot = if engaging {

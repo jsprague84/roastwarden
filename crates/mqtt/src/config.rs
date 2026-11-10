@@ -52,29 +52,35 @@ impl MqttConfig {
         let mut cfg = MqttConfig::default();
 
         if let Ok(v) = env::var("MQTT_BROKER_HOST")
-            && !v.is_empty() {
-                cfg.host = v;
-            }
+            && !v.is_empty()
+        {
+            cfg.host = v;
+        }
         if let Ok(v) = env::var("MQTT_BROKER_PORT")
-            && let Ok(p) = v.parse::<u16>() {
-                cfg.port = p;
-            }
+            && let Ok(p) = v.parse::<u16>()
+        {
+            cfg.port = p;
+        }
         if let Ok(v) = env::var("MQTT_CLIENT_ID")
-            && !v.is_empty() {
-                cfg.client_id = v;
-            }
+            && !v.is_empty()
+        {
+            cfg.client_id = v;
+        }
         if let Ok(v) = env::var("MQTT_USERNAME")
-            && !v.is_empty() {
-                cfg.username = Some(v);
-            }
+            && !v.is_empty()
+        {
+            cfg.username = Some(v);
+        }
         if let Ok(v) = env::var("MQTT_PASSWORD")
-            && !v.is_empty() {
-                cfg.password = Some(v);
-            }
+            && !v.is_empty()
+        {
+            cfg.password = Some(v);
+        }
         if let Ok(v) = env::var("MQTT_KEEP_ALIVE_SECS")
-            && let Ok(s) = v.parse::<u16>() {
-                cfg.keep_alive_secs = s;
-            }
+            && let Ok(s) = v.parse::<u16>()
+        {
+            cfg.keep_alive_secs = s;
+        }
         if let Ok(v) = env::var("MQTT_TLS") {
             cfg.tls = matches!(
                 v.trim().to_ascii_lowercase().as_str(),
@@ -82,9 +88,10 @@ impl MqttConfig {
             );
         }
         if let Ok(v) = env::var("MQTT_CA_CERT")
-            && !v.is_empty() {
-                cfg.ca_cert_path = Some(v);
-            }
+            && !v.is_empty()
+        {
+            cfg.ca_cert_path = Some(v);
+        }
 
         cfg
     }

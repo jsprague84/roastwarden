@@ -8,12 +8,11 @@ use uuid::Uuid;
 
 use crate::ops::zone::Zone;
 
-use super::types::{percents, Form, RoastedLot, RoastedMoveRequest};
-use super::{bad, RoastedService, BAGS_MAX, EMPTY_G};
+use super::types::{Form, RoastedLot, RoastedMoveRequest, percents};
+use super::{BAGS_MAX, EMPTY_G, RoastedService, bad};
 
 /// The columns of a [`RoastedMove`]
-pub const MOVE_COLUMNS: &str =
-    "id, session_id, at, delta_g, kind, recipient, note, bags, bag_g, form, grind, label_run, \
+pub const MOVE_COLUMNS: &str = "id, session_id, at, delta_g, kind, recipient, note, bags, bag_g, form, grind, label_run, \
      combine_move";
 
 /// The roasts a label run has taken bags off already.
@@ -184,7 +183,7 @@ pub(super) fn plan_move(
                 _ => {
                     return Err(bad(
                         "this roast is for espresso or filter: say the grams instead of doses",
-                    ))
+                    ));
                 }
             };
             positive(d, "doses")? * dose as f32

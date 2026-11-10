@@ -5,10 +5,10 @@
 //! routed in `lib.rs`, outside `/api/`.
 
 use axum::{
-    extract::{Path, Query, State},
-    http::{header, HeaderMap, HeaderValue, StatusCode},
-    response::{IntoResponse, Response},
     Extension, Json,
+    extract::{Path, Query, State},
+    http::{HeaderMap, HeaderValue, StatusCode, header},
+    response::{IntoResponse, Response},
 };
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};

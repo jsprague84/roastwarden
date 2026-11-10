@@ -9,7 +9,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::fit::{least_squares, Record};
+use crate::fit::{Record, least_squares};
 use crate::model::C64;
 
 /// A point of the frequency response.
@@ -144,7 +144,7 @@ pub fn berner_tau(rho: f64, gamma: f64) -> Option<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{simulate, Input, Model};
+    use crate::model::{Input, Model, simulate};
 
     #[test]
     fn harmonics_of_a_simulated_square_wave_response() {

@@ -10,7 +10,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use axum::{body::Bytes, extract::State, routing::post, Router};
+use axum::{Router, body::Bytes, extract::State, routing::post};
 use ipp::attribute::IppAttribute;
 use ipp::model::{DelimiterTag, IppVersion, Operation, StatusCode};
 use ipp::parser::IppParser;
@@ -774,10 +774,12 @@ async fn printers_take_pdf_or_raster_and_ipps_needs_the_pinned_certificate() {
     {
         let p = raster.lock().unwrap();
         assert!(p.heads[0].starts_with(b"RaS2"), "{:?}", &p.heads[0][..8]);
-        assert!(p.jobs[0]
-            .0
-            .join(" ")
-            .contains("document-format=image/pwg-raster"));
+        assert!(
+            p.jobs[0]
+                .0
+                .join(" ")
+                .contains("document-format=image/pwg-raster")
+        );
     }
     let r = h
         .owner(

@@ -121,11 +121,12 @@ pub fn normalize(
 ) -> Result<Vec<(&'static str, f32)>, ProfileInputError> {
     let bad = |m: String| ProfileInputError(m);
     if let Some(f) = framework
-        && !f.eq_ignore_ascii_case("sca") {
-            return Err(bad(format!(
-                "scoring framework '{f}': only the classic SCA form (sca) is recorded; CVA scores are not converted"
-            )));
-        }
+        && !f.eq_ignore_ascii_case("sca")
+    {
+        return Err(bad(format!(
+            "scoring framework '{f}': only the classic SCA form (sca) is recorded; CVA scores are not converted"
+        )));
+    }
     let mut out: Vec<(&'static str, f32)> = Vec::with_capacity(attributes.len());
     for (name, score) in attributes {
         let k = key(name).ok_or_else(|| bad(unknown(name)))?;
@@ -354,10 +355,12 @@ mod tests {
         assert!(no(&[("aroma", 7.0), ("fragrance", 7.0)], 0, 0).contains("twice"));
         assert!(no(&[], 6, 0).contains("taint_cups 6"));
         assert!(no(&[], 3, 3).contains("6 cups with defects"));
-        assert!(normalize(Some("cva"), &[], 0, 0)
-            .unwrap_err()
-            .0
-            .contains("not converted"));
+        assert!(
+            normalize(Some("cva"), &[], 0, 0)
+                .unwrap_err()
+                .0
+                .contains("not converted")
+        );
         // The extremes the form allows pass
         assert!(normalize(None, &all(0.0, 0.0), 5, 0).is_ok());
         assert!(normalize(None, &all(10.0, 10.0), 0, 5).is_ok());

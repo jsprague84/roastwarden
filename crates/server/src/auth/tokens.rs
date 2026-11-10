@@ -540,11 +540,7 @@ const NOT_FOR_TOKENS: &[(&str, &str)] = &[
 ];
 
 fn get_like(method: &str) -> &str {
-    if method == "HEAD" {
-        "GET"
-    } else {
-        method
-    }
+    if method == "HEAD" { "GET" } else { method }
 }
 
 fn named(rules: &[(&str, &str)], method: &str, path: &str) -> bool {

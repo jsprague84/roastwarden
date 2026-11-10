@@ -18,14 +18,14 @@ use crate::roasters::types::{
 };
 use crate::transports::ingest::Role;
 use crate::transports::transport::{
-    in_fahrenheit, is_writable, role_of, ModbusSink, ModbusWrite, ModbusWriteRequest,
+    ModbusSink, ModbusWrite, ModbusWriteRequest, in_fahrenheit, is_writable, role_of,
 };
 use crate::transports::types::{
     ModbusFraming, ModbusRtuConnectionConfig, ModbusTcpConnectionConfig, SerialParity,
 };
 
 use super::validate::check_connection_config;
-use super::{Tracked, MIN_POLL_MS};
+use super::{MIN_POLL_MS, Tracked};
 
 /// Where a Modbus device is and how a request reaches it.
 pub(super) enum ModbusLink {

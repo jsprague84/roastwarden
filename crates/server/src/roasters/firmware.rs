@@ -10,7 +10,7 @@
 use std::fmt::Write as _;
 use std::io::Write as _;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -201,7 +201,9 @@ pub fn build(req: &FirmwareRequest, devices: &[(String, String)], port: u16) -> 
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-')
     {
-        bail!("server_address: an IP address or a host name (192.168.1.50), without http:// or a port");
+        bail!(
+            "server_address: an IP address or a host name (192.168.1.50), without http:// or a port"
+        );
     }
     let password = given(req.password.as_deref())
         .map(str::to_string)
@@ -475,7 +477,7 @@ fn readme(req: &FirmwareRequest, id: &str, missing: &[&str]) -> String {
 }
 
 fn zip(files: &[(String, String)]) -> Result<Vec<u8>> {
-    use zip::{write::SimpleFileOptions, CompressionMethod, DateTime};
+    use zip::{CompressionMethod, DateTime, write::SimpleFileOptions};
     let now = chrono::Local::now().naive_local();
     let stamp = {
         use chrono::{Datelike, Timelike};

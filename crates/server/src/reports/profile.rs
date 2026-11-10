@@ -3,12 +3,12 @@
 //! Ranking report), their BT overlaid on the profile's, and a dot strip each for first
 //! crack, drop, DTR and loss.
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sqlx::SqlitePool;
 
 use super::chart::{self, Point};
-use super::coffee::{line, roast_row, RoastLine};
-use super::{clock, clock_opt, grams, meta, n1, Options, ReportError, DASH};
+use super::coffee::{RoastLine, line, roast_row};
+use super::{DASH, Options, ReportError, clock, clock_opt, grams, meta, n1};
 use crate::profiles::types::ProfileWithPoints;
 use crate::roasts::types::RoastSession;
 
@@ -365,7 +365,7 @@ mod tests {
     use crate::labels::Renderer;
     use crate::reports::coffee::tests::lines;
     use crate::reports::roast::tests::{fixture, options};
-    use crate::reports::{kind, render, Format, Paper, Units};
+    use crate::reports::{Format, Paper, Units, kind, render};
 
     #[tokio::test]
     async fn a_profile_ranks_its_roasts_and_averages_them() {
@@ -386,11 +386,13 @@ mod tests {
         assert_eq!(series[2]["newest"], true);
         assert_eq!(d["strips"].as_array().unwrap().len(), 4);
         assert_eq!(d["strips"][0]["dots"][0]["mark"], "5");
-        assert!(d["facts"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|f| f["label"] == "Drop" && f["value"] == "10:05 at 210 °C"));
+        assert!(
+            d["facts"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|f| f["label"] == "Drop" && f["value"] == "10:05 at 210 °C")
+        );
 
         let r = Renderer::in_process();
         let pdf = render(&r, kind("profile").unwrap(), d.clone(), Format::Pdf, 1, 96)

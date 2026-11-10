@@ -1,10 +1,10 @@
 use std::time::Instant;
 
 use axum::{
+    Json,
     extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde::Deserialize;
 use tracing::{error, info, warn};
@@ -16,9 +16,9 @@ use crate::http::errors::ErrorBody;
 use crate::roasters::types::{
     CreateConnectionRequest, CreateDeviceProfileRequest, CreateDeviceRequest,
     CreateRegisterMapEntry, Device, DeviceConnection, DeviceProfile, DeviceStatus,
-    DeviceWithConnections, ModbusRegisterMap, Protocol, TestConnectionRequest,
+    DeviceWithConnections, ModbusRegisterMap, PASSWORD_MASK, Protocol, TestConnectionRequest,
     TestConnectionResponse, UpdateConnectionRequest, UpdateDeviceProfileRequest,
-    UpdateDeviceRequest, PASSWORD_MASK,
+    UpdateDeviceRequest,
 };
 use crate::transports::types::WebSocketConnectionConfig;
 
@@ -292,19 +292,21 @@ async fn put_setup(
     // again as the token once approved (docs/roaster-setup.md, "Tokens and the setup"). This
     // refuses the call should it come here unapproved.
     if let Some(axum::Extension(crate::auth::Actor::Token(_))) = &actor
-        && b.control != Control::Off && approved.is_none() {
-            let mut r = (
-                StatusCode::FORBIDDEN,
-                format!(
-                    "a token switching {device_id}'s control on needs the owner's approval; \
+        && b.control != Control::Off
+        && approved.is_none()
+    {
+        let mut r = (
+            StatusCode::FORBIDDEN,
+            format!(
+                "a token switching {device_id}'s control on needs the owner's approval; \
                      the owner sets control under Roasters → {device_id} → Setup"
-                ),
-            )
-                .into_response();
-            r.extensions_mut()
-                .insert(crate::http::errors::ErrorCode("OWNER_ONLY"));
-            return r;
-        }
+            ),
+        )
+            .into_response();
+        r.extensions_mut()
+            .insert(crate::http::errors::ErrorCode("OWNER_ONLY"));
+        return r;
+    }
     let (setup, kind_changed) = match state.transports.setups().set(&device_id, b).await {
         Ok(r) => r,
         Err(SetupError::Invalid(m)) => return (StatusCode::BAD_REQUEST, m).into_response(),
@@ -569,17 +571,18 @@ async fn update_connection(
         .ok_or_else(|| AppError::not_found("Connection"))?;
     // The mask an answer showed keeps the saved password.
     if let Some(config) = req.config.as_mut()
-        && config.get("password").and_then(|p| p.as_str()) == Some(PASSWORD_MASK) {
-            match existing.config.get("password").filter(|p| p.is_string()) {
-                Some(saved) => config["password"] = saved.clone(),
-                None => {
-                    return Err(AppError::bad_request(format!(
-                        "password: '{PASSWORD_MASK}' stands for a saved password, and this \
+        && config.get("password").and_then(|p| p.as_str()) == Some(PASSWORD_MASK)
+    {
+        match existing.config.get("password").filter(|p| p.is_string()) {
+            Some(saved) => config["password"] = saved.clone(),
+            None => {
+                return Err(AppError::bad_request(format!(
+                    "password: '{PASSWORD_MASK}' stands for a saved password, and this \
                          connection has none: type the password"
-                    )))
-                }
+                )));
             }
         }
+    }
     if let Some(config) = &req.config {
         crate::transports::pollers::check_connection_config(&existing.protocol, config)
             .map_err(AppError::bad_request)?;
@@ -744,7 +747,7 @@ async fn test_phidget_connection(
                          Phidget connection of this roaster has one: type the password"
                     ),
                     latency_ms: None,
-                })
+                });
             }
         }
     }
@@ -949,11 +952,11 @@ async fn test_modbus_connection(
     if let Some(device_id) = &req.device_id
         && let Ok(Some(dev)) =
             crate::roasters::registry::get_device_by_device_id(&state.db, device_id).await
-        {
-            map = crate::roasters::registry::get_register_map(&state.db, &dev.device.id)
-                .await
-                .unwrap_or_default();
-        }
+    {
+        map = crate::roasters::registry::get_register_map(&state.db, &dev.device.id)
+            .await
+            .unwrap_or_default();
+    }
     let start = Instant::now();
     let result = tokio::time::timeout(
         std::time::Duration::from_secs(8),

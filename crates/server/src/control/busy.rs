@@ -174,7 +174,7 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn a_hot_real_roaster_holds_a_deploy_the_virtual_one_never_does() {
-        use crate::test_support::{eventually, Harness};
+        use crate::test_support::{Harness, eventually};
         use serde_json::json;
         let h = Harness::new().await;
         let busy = || async { h.owner("GET", "/api/busy", None).await.json() };

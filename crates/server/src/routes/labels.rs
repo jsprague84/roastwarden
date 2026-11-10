@@ -4,22 +4,22 @@
 //! report, a small PNG) and a render of a design's source that is not saved.
 
 use axum::{
-    extract::{Path, Query, State},
-    http::{header, HeaderMap, StatusCode},
-    response::{IntoResponse, Response},
     Extension, Json,
+    extract::{Path, Query, State},
+    http::{HeaderMap, StatusCode, header},
+    response::{IntoResponse, Response},
 };
 use base64::Engine as _;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::label_runs::{build, keep_run, send_run, PrintAsk, Printed, RunAsk, RunItemAsk};
+use super::label_runs::{PrintAsk, Printed, RunAsk, RunItemAsk, build, keep_run, send_run};
 use crate::app::state::AppState;
 use crate::auth::Actor;
 use crate::http::errors::ErrorBody;
-use crate::labels::{self, store, Diag, LabelError, Offset, Output, Report, RestDays, Sheet};
+use crate::labels::{self, Diag, LabelError, Offset, Output, Report, RestDays, Sheet, store};
 
 /// The largest design source a request may carry
 pub(crate) const MAX_SOURCE: usize = 256 << 10;
@@ -279,13 +279,13 @@ async fn design_for(state: &AppState, reference: &str) -> Result<labels::DesignS
                 version: Some(d.shown),
                 source: d.source,
                 files: std::collections::BTreeMap::new(),
-            })
+            });
         }
         Ok(None) if version.is_some() => {
             return Err(not_found(format!(
                 "no version {} of {id:?} (GET /api/label-designs/{id})",
                 version.unwrap_or_default()
-            )))
+            )));
         }
         Ok(None) => {}
         Err(e) => {
@@ -456,18 +456,19 @@ pub(crate) async fn prepare(
     }
     // The bean's own label fills what the request leaves out
     if let Some(bean) = &bean_id
-        && let Ok(Some(own)) = store::bean_label(&state.db, bean).await {
-            let own_design = ask.source.is_none() && ask.design.is_none() && own.design.is_some();
-            if own_design {
-                ask.design.clone_from(&own.design);
-                let mut params = own.params.clone();
-                params.extend(std::mem::take(&mut ask.params));
-                ask.params = params;
-            }
-            if ask.brand.is_none() {
-                ask.brand.clone_from(&own.brand);
-            }
+        && let Ok(Some(own)) = store::bean_label(&state.db, bean).await
+    {
+        let own_design = ask.source.is_none() && ask.design.is_none() && own.design.is_some();
+        if own_design {
+            ask.design.clone_from(&own.design);
+            let mut params = own.params.clone();
+            params.extend(std::mem::take(&mut ask.params));
+            ask.params = params;
         }
+        if ask.brand.is_none() {
+            ask.brand.clone_from(&own.brand);
+        }
+    }
     if ask.brand.is_none() {
         ask.brand = crate::auth::settings::get(&state.db, "label_brand").await;
     }
@@ -667,47 +668,46 @@ async fn qr_for(
         }
         "share" => {
             let base = crate::auth::approvals::link_base(&state.db, headers).await;
-            let code = match &ask.roast {
-                None => labels::share::SAMPLE_CODE.to_string(),
-                Some(id) => match labels::share::active(&state.db, id).await {
-                    Ok(Some(link)) => link.code,
-                    Ok(None) if purpose == Purpose::Preview => {
-                        labels::share::SAMPLE_CODE.to_string()
-                    }
-                    Ok(None) if may_share(who) => {
-                        let by = super::label_studio::by(who);
-                        match labels::share::create(&state.db, id, None, ask.tz, &by).await {
-                            Ok(link) => link.code,
-                            Err(e) => {
-                                tracing::error!(error = %e, "making a share link for a label");
-                                return Err((
-                                    StatusCode::INTERNAL_SERVER_ERROR,
-                                    "could not make the share link",
-                                )
-                                    .into_response());
+            let code =
+                match &ask.roast {
+                    None => labels::share::SAMPLE_CODE.to_string(),
+                    Some(id) => match labels::share::active(&state.db, id).await {
+                        Ok(Some(link)) => link.code,
+                        Ok(None) if purpose == Purpose::Preview => {
+                            labels::share::SAMPLE_CODE.to_string()
+                        }
+                        Ok(None) if may_share(who) => {
+                            let by = super::label_studio::by(who);
+                            match labels::share::create(&state.db, id, None, ask.tz, &by).await {
+                                Ok(link) => link.code,
+                                Err(e) => {
+                                    tracing::error!(error = %e, "making a share link for a label");
+                                    return Err((
+                                        StatusCode::INTERNAL_SERVER_ERROR,
+                                        "could not make the share link",
+                                    )
+                                        .into_response());
+                                }
                             }
                         }
-                    }
-                    Ok(None) => {
-                        return Err((
+                        Ok(None) => return Err((
                             StatusCode::FORBIDDEN,
                             format!(
                                 "roast {id:?} has no share link and this token may not make one: \
                                  ask the owner to share it (roast share {id})"
                             ),
                         )
-                            .into_response())
-                    }
-                    Err(e) => {
-                        tracing::error!(error = %e, "reading share links");
-                        return Err((
-                            StatusCode::INTERNAL_SERVER_ERROR,
-                            "could not read the share links",
-                        )
-                            .into_response());
-                    }
-                },
-            };
+                            .into_response()),
+                        Err(e) => {
+                            tracing::error!(error = %e, "reading share links");
+                            return Err((
+                                StatusCode::INTERNAL_SERVER_ERROR,
+                                "could not read the share links",
+                            )
+                                .into_response());
+                        }
+                    },
+                };
             Ok(Some(QrUrl {
                 shown: labels::share::url(&base, &code),
                 encoded: labels::share::qr_text(&base, &code),

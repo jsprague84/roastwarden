@@ -53,9 +53,10 @@ async fn fill_from_links(
                 req.green_weight = req.green_weight.or(weight);
                 req.notes = req.notes.or(notes);
                 if let Some(n) = name.filter(|n| !n.trim().is_empty())
-                    && (req.name.trim().is_empty() || req.name.starts_with("Roast ")) {
-                        req.name = n;
-                    }
+                    && (req.name.trim().is_empty() || req.name.starts_with("Roast "))
+                {
+                    req.name = n;
+                }
             }
             None => req.planned_roast_id = None,
         }

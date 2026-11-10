@@ -8,7 +8,7 @@ use crate::profiles::types::{
     CreateProfileEventRequest, CreateProfilePointRequest, CreateProfileRequest,
     ImportArtisanProfileRequest, ProfileCurves, ProfileWithPoints, RoastProfile,
 };
-use crate::profiles::validate::{is_roaster_kind, ProfileInputError};
+use crate::profiles::validate::{ProfileInputError, is_roaster_kind};
 use crate::roasts::types::RoastEventType;
 
 pub async fn import_artisan_profile(

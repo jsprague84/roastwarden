@@ -207,7 +207,7 @@ fn curve_minimum(curve: &[(f64, f64)]) -> Option<f64> {
     let (i, p) = half
         .iter()
         .enumerate()
-        .min_by(|a, b| a.1 .1.total_cmp(&b.1 .1))?;
+        .min_by(|a, b| a.1.1.total_cmp(&b.1.1))?;
     (i > 0).then_some(p.0)
 }
 

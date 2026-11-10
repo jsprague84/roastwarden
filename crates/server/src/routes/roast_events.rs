@@ -1,10 +1,10 @@
 //! A roast's events (CHARGE … DROP, docs/roast-sequence.md) and its cupping scores.
 
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -70,19 +70,19 @@ async fn api_create_roast_event(
     if matches!(
         req.event_type,
         RoastEventType::Charge | RoastEventType::Drop
-    )
-        && let Ok(events) = crate::roasts::events::get_roast_events(&state.db, &session_id).await
-            && events.iter().any(|e| e.event_type == req.event_type) {
-                let name = req.event_type.to_string().to_uppercase();
-                let mut res = (
-                    StatusCode::CONFLICT,
-                    format!("{name} is already marked on this roast"),
-                )
-                    .into_response();
-                res.extensions_mut()
-                    .insert(crate::http::errors::ErrorCode("ALREADY_MARKED"));
-                return res;
-            }
+    ) && let Ok(events) = crate::roasts::events::get_roast_events(&state.db, &session_id).await
+        && events.iter().any(|e| e.event_type == req.event_type)
+    {
+        let name = req.event_type.to_string().to_uppercase();
+        let mut res = (
+            StatusCode::CONFLICT,
+            format!("{name} is already marked on this roast"),
+        )
+            .into_response();
+        res.extensions_mut()
+            .insert(crate::http::errors::ErrorCode("ALREADY_MARKED"));
+        return res;
+    }
     match crate::roasts::events::create_roast_event(&state.db, &session_id, req).await {
         Ok(event) => {
             state.alarms.invalidate_events(&session_id).await;

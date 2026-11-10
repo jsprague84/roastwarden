@@ -7,9 +7,9 @@
     reason = "the test harness: a panic fails the test that called it"
 )]
 
-use axum::body::{to_bytes, Body};
-use axum::http::{header, Request, StatusCode};
 use axum::Router;
+use axum::body::{Body, to_bytes};
+use axum::http::{Request, StatusCode, header};
 use roastwarden_mqtt::MqttService;
 use serde_json::Value;
 use std::path::PathBuf;

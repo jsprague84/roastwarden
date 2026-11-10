@@ -5,7 +5,7 @@
 //! It travels in the `x-request-id` response header and in the `http` tracing span, so
 //! "what happened to request X" is one grep of the log.
 
-use axum::{extract::Request, middleware::Next, response::Response, Router};
+use axum::{Router, extract::Request, middleware::Next, response::Response};
 use tower_http::request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer};
 use tracing::Instrument;
 

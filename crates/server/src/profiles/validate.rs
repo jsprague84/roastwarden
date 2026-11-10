@@ -65,7 +65,7 @@ pub(crate) fn validate_auto_drop(
     req: &CreateProfileRequest,
     stored: Option<String>,
 ) -> Result<Option<Option<String>>> {
-    use crate::replay::auto_drop::{trigger_value, DropBy};
+    use crate::replay::auto_drop::{DropBy, trigger_value};
     let bad = |m: String| anyhow::Error::new(ProfileInputError(m));
     let set = req.auto_drop.as_ref().map(|v| non_blank(v.as_deref()));
     let check = match (&set, &stored) {
@@ -176,12 +176,13 @@ pub(crate) fn validate_profile_input(
             return Err(bad(format!("invalid point at {} s", p.time_seconds)));
         }
         if let Some(h) = p.heater_pct
-            && !(0..=100).contains(&h) {
-                return Err(bad(format!(
-                    "heater_pct {h} at {} s is outside 0..=100",
-                    p.time_seconds
-                )));
-            }
+            && !(0..=100).contains(&h)
+        {
+            return Err(bad(format!(
+                "heater_pct {h} at {} s is outside 0..=100",
+                p.time_seconds
+            )));
+        }
     }
     if let Some(Some(c)) = &req.curves {
         c.validate().map_err(bad)?;

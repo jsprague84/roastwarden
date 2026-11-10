@@ -244,11 +244,13 @@ async fn an_agent_keeps_a_roasts_record() {
         .owner("GET", &format!("/api/sessions/{id}/events"), None)
         .await
         .json();
-    assert!(!events
-        .as_array()
-        .unwrap()
-        .iter()
-        .any(|e| e["event_type"] == "drying_end"));
+    assert!(
+        !events
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|e| e["event_type"] == "drying_end")
+    );
     let r = roast(&url, t, &["landmark", &id, "dry", "--rm"]).await;
     assert_eq!(r.code, 4, "{:?}", r.json);
     let r = roast(&url, t, &["landmark", &id, "dry"]).await;

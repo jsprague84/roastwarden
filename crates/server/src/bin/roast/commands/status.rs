@@ -5,11 +5,11 @@ use std::time::Duration;
 
 use clap::Args;
 use reqwest::Method;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use crate::api::{enc, Api};
+use crate::api::{Api, enc};
 use crate::commands::{records, settings};
-use crate::out::{code, Failure, Out};
+use crate::out::{Failure, Out, code};
 use crate::text::{duration, grams};
 
 /// `GET /api/busy`, once or until idle. Exit 1 while a real roaster is busy.

@@ -11,12 +11,12 @@ use uuid::Uuid;
 use crate::coffee::costs::{self, Ledger, MoveIn};
 use crate::roasts::types::RoastSession;
 
-use super::stock::{insert_move, move_in, NewMove};
+use super::stock::{NewMove, insert_move, move_in};
 use super::types::{
-    clean, details_json, finite_nonneg, Bean, BeanDeleted, BeanDetail, BeanRequest, StockMove, Val,
-    BEAN_SELECT,
+    BEAN_SELECT, Bean, BeanDeleted, BeanDetail, BeanRequest, StockMove, Val, clean, details_json,
+    finite_nonneg,
 };
-use super::{bad, cost_settings, InventoryService};
+use super::{InventoryService, bad, cost_settings};
 
 impl InventoryService {
     pub async fn list_beans(&self, include_archived: bool) -> Result<Vec<Bean>> {

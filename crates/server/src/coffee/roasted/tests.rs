@@ -386,10 +386,11 @@ async fn moves_take_coffee_and_a_deleted_roast_takes_its_moves() {
         grams: Some(40.0),
         ..req("used")
     };
-    assert!(svc
-        .add_move("a", too_much, Zone::default(), now)
-        .await
-        .is_err());
+    assert!(
+        svc.add_move("a", too_much, Zone::default(), now)
+            .await
+            .is_err()
+    );
     let to = RoastedMoveRequest {
         grams: Some(1.0),
         recipient: Some("x".into()),
@@ -402,8 +403,8 @@ async fn moves_take_coffee_and_a_deleted_roast_takes_its_moves() {
         ..req("used")
     };
     assert!(svc.add_move("a", two, Zone::default(), now).await.is_err());
-    assert!(svc
-        .add_move(
+    assert!(
+        svc.add_move(
             "b",
             RoastedMoveRequest {
                 all: true,
@@ -413,9 +414,10 @@ async fn moves_take_coffee_and_a_deleted_roast_takes_its_moves() {
             now
         )
         .await
-        .is_err());
-    assert!(svc
-        .add_move(
+        .is_err()
+    );
+    assert!(
+        svc.add_move(
             "nope",
             RoastedMoveRequest {
                 all: true,
@@ -426,7 +428,8 @@ async fn moves_take_coffee_and_a_deleted_roast_takes_its_moves() {
         )
         .await
         .unwrap()
-        .is_none());
+        .is_none()
+    );
 
     // A count of what is left, then everything used
     let l = svc
@@ -477,11 +480,12 @@ async fn moves_take_coffee_and_a_deleted_roast_takes_its_moves() {
         .unwrap()
         .unwrap();
     assert_eq!(l.left_g, Some(25.0));
-    assert!(svc
-        .delete_move("a", "nope", Zone::default(), now)
-        .await
-        .unwrap()
-        .is_none());
+    assert!(
+        svc.delete_move("a", "nope", Zone::default(), now)
+            .await
+            .unwrap()
+            .is_none()
+    );
 
     // Deleting the roast deletes its moves
     sqlx::query("DELETE FROM roast_sessions WHERE id = 'a'")
@@ -707,8 +711,8 @@ async fn roasts_in_one_bag_share_their_moves() {
     let parts: Vec<f32> = c.members.iter().map(|m| m.left_g.unwrap()).collect();
     assert_eq!(parts, vec![61.9, 75.1]);
     // More than the lot holds: refused
-    assert!(svc
-        .add_move(
+    assert!(
+        svc.add_move(
             "a",
             RoastedMoveRequest {
                 grams: Some(140.0),
@@ -718,7 +722,8 @@ async fn roasts_in_one_bag_share_their_moves() {
             now
         )
         .await
-        .is_err());
+        .is_err()
+    );
 
     // The list: both roasts, side by side, counted as one lot, resting as the lot is
     let s = svc.stock(z, false, now).await.unwrap();
@@ -798,13 +803,14 @@ async fn roasts_in_one_bag_share_their_moves() {
         .await
         .unwrap();
     assert_eq!(n, 0);
-    assert!(svc
-        .lot("d", z, now)
-        .await
-        .unwrap()
-        .unwrap()
-        .combined
-        .is_none());
+    assert!(
+        svc.lot("d", z, now)
+            .await
+            .unwrap()
+            .unwrap()
+            .combined
+            .is_none()
+    );
 }
 
 #[test]

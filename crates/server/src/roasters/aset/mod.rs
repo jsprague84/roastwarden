@@ -18,8 +18,8 @@ mod qt;
 #[cfg(test)]
 mod tests;
 
-pub use machines::{machines, Machine};
-pub use plan::{plan, plan_machine, Plan};
+pub use machines::{Machine, machines};
+pub use plan::{Plan, plan, plan_machine};
 
 /// The embedded catalogue: `@@ Brand/Model` then that machine's trimmed `.aset` lines.
 const CATALOGUE: &str = include_str!("../../../assets/artisan/machines.txt");

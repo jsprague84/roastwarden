@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
     Arc,
+    atomic::{AtomicBool, Ordering},
 };
 use std::time::Duration;
 
@@ -9,7 +9,7 @@ use rumqttc::{
     AsyncClient, ClientError, Event, EventLoop, Incoming, LastWill, MqttOptions, Outgoing, QoS,
     TlsConfiguration, Transport,
 };
-use tokio::sync::{broadcast, Mutex, RwLock};
+use tokio::sync::{Mutex, RwLock, broadcast};
 use tokio::task::JoinHandle;
 use tokio::time::sleep;
 use tracing::{debug, error, info, warn};
@@ -306,9 +306,9 @@ async fn run_eventloop(
                     && let Err(err) = client
                         .publish(&status.topic, QoS::AtLeastOnce, true, status.online.clone())
                         .await
-                    {
-                        warn!(?err, "Failed to publish server status");
-                    }
+                {
+                    warn!(?err, "Failed to publish server status");
+                }
                 drop(client); // Release the client lock
                 drop(subs); // Release the read lock
 

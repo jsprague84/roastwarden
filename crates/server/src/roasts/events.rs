@@ -1,7 +1,7 @@
 //! A roast's landmarks (`roast_events`): CHARGE, dry end, first crack, DROP and the rest, as
 //! marked by hand, by the roast sequence or by an auto event.
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use chrono::Utc;
 use sqlx::AssertSqlSafe;
 use sqlx::SqlitePool;

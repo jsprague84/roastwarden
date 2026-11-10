@@ -8,10 +8,10 @@ use uuid::Uuid;
 use crate::coffee::costs::{self, MoveIn};
 
 use super::types::{
-    clean, currency_code, finite_nonneg, money, purchase_time, Bean, MoveRequest, OrderRecorded,
-    OrderRequest, StockMove, StockRequest,
+    Bean, MoveRequest, OrderRecorded, OrderRequest, StockMove, StockRequest, clean, currency_code,
+    finite_nonneg, money, purchase_time,
 };
-use super::{bad, InventoryService};
+use super::{InventoryService, bad};
 
 /// A purchase move to write.
 #[derive(Default)]
@@ -99,7 +99,7 @@ impl InventoryService {
         let delta = match req.delta_g {
             Some(d) if !d.is_finite() || d == 0.0 => return Err(bad("delta_g must not be 0")),
             Some(d) if m.kind == "purchase" && d < 0.0 => {
-                return Err(bad("a purchase adds stock: delta_g above 0"))
+                return Err(bad("a purchase adds stock: delta_g above 0"));
             }
             Some(d) => d,
             None => m.delta_g,

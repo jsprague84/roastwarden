@@ -1,4 +1,4 @@
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::profiles::types::{ProfileAction, ProfileWithPoints, TriggerKind};
 
@@ -337,11 +337,12 @@ fn session_export_has_no_extra_devices_and_a_uuid() {
     let v = build_alog(&session, &[], &[], &[]);
     assert!(v.get("extradevices").is_none());
     assert!(v.get("extratimex").is_none());
-    assert!(v
-        .as_object()
-        .unwrap()
-        .keys()
-        .all(|k| !k.starts_with("extra")));
+    assert!(
+        v.as_object()
+            .unwrap()
+            .keys()
+            .all(|k| !k.starts_with("extra"))
+    );
     assert_eq!(v["roastUUID"], "aba92bf3811f4437b1ebd4942df4235d");
     assert_eq!(v["roastbatchnr"], 12);
     assert_eq!(v["timeindex"], json!([-1, 0, 0, 0, 0, 0, 0, 0]));

@@ -8,7 +8,7 @@ use serde::Serialize;
 use serde_bytes::ByteBuf;
 use utoipa::ToSchema;
 
-use super::{engine, BUILTIN_DESIGNS};
+use super::{BUILTIN_DESIGNS, engine};
 
 /// A design to choose from.
 #[derive(Debug, Clone, Serialize, ToSchema)]

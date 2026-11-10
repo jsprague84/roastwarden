@@ -28,7 +28,7 @@ mod roast;
 mod tests;
 
 pub use literal::to_python_literal;
-pub use parse::{parse_profile, parse_session, ParsedSession};
+pub use parse::{ParsedSession, parse_profile, parse_session};
 pub use profile::build_profile_alog;
 pub use roast::build_alog;
 

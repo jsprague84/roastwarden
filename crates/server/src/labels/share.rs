@@ -892,13 +892,15 @@ pub fn html(p: &Page) -> String {
             parts.push(format!("Roast time {}", clock(d)));
         }
         if let (Some(fc), Some(d)) = (c.first_crack, c.drop)
-            && d > fc && d > 0.0 {
-                parts.push(format!(
-                    "development {} ({:.0} %)",
-                    clock(d - fc),
-                    (d - fc) / d * 100.0
-                ));
-            }
+            && d > fc
+            && d > 0.0
+        {
+            parts.push(format!(
+                "development {} ({:.0} %)",
+                clock(d - fc),
+                (d - fc) / d * 100.0
+            ));
+        }
         if let Some(t) = c.drop_temp {
             parts.push(format!("dropped at {t:.0} °C ({:.0} °F)", f_of(t)));
         }

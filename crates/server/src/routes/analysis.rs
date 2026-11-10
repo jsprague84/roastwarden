@@ -2,10 +2,10 @@
 //! lined up against one. Only reads; the numbers come from `analysis.rs`.
 
 use axum::{
+    Json,
     extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde::Deserialize;
 use utoipa::IntoParams;
@@ -98,7 +98,7 @@ async fn compare_roasts(State(state): State<AppState>, Query(q): Query<CompareQu
                     StatusCode::BAD_REQUEST,
                     "the reference is not one of the roasts",
                 )
-                    .into_response()
+                    .into_response();
             }
         },
     };

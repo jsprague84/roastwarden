@@ -1,7 +1,7 @@
 //! A recorded roast as an Artisan dict: its samples, landmarks and events, the control
 //! curves as Artisan's events, the roaster's declared channels as extra devices.
 
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
 use crate::roasters::channels::{self, Channel};
 use crate::roasts::types::{RoastEvent, RoastEventType, RoastSession, SessionTelemetry};

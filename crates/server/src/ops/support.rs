@@ -11,10 +11,10 @@
 //! coffee, purchases, orders and their receipts (an address, card digits), tokens, the audit
 //! log, label designs and printers.
 
-use axum::body::{to_bytes, Body};
-use axum::http::Request;
 use axum::Router;
-use serde_json::{json, Map, Value};
+use axum::body::{Body, to_bytes};
+use axum::http::Request;
+use serde_json::{Map, Value, json};
 use tower::ServiceExt;
 
 use crate::app::state::AppState;
@@ -459,10 +459,11 @@ mod tests {
 
             let r = h.owner("GET", "/api/support-bundle", None).await;
             assert!(r.status.is_success());
-            assert!(r
-                .content_type
-                .as_deref()
-                .is_some_and(|c| c.starts_with("application/json")));
+            assert!(
+                r.content_type
+                    .as_deref()
+                    .is_some_and(|c| c.starts_with("application/json"))
+            );
             let text = match &r.body {
                 crate::test_support::ReplyBody::Json(v) => v.to_string(),
                 _ => panic!("a JSON body"),
@@ -480,11 +481,13 @@ mod tests {
             let b = r.json();
             assert_eq!(b["bundle"]["format"], FORMAT);
             assert_eq!(b["about"]["version"], env!("CARGO_PKG_VERSION"));
-            assert!(b["roasters"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .any(|r| r["device"]["device_id"] == "bench_01"));
+            assert!(
+                b["roasters"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|r| r["device"]["device_id"] == "bench_01")
+            );
             assert_eq!(b["newest_roast"]["session"]["name"], "Bundle roast");
             assert!(b["log"].is_array());
             // Only the note says what is left out

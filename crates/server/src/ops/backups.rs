@@ -17,11 +17,11 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use chrono::{DateTime, Days, NaiveDateTime, TimeZone, Utc};
 use serde::Serialize;
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use tracing::{error, info, warn};
 
 use crate::notify::{EventKind, Notifier};
@@ -195,10 +195,12 @@ fn remove_leftovers(dir: &Path) {
     for entry in entries.flatten() {
         let name = entry.file_name();
         let Some(name) = name.to_str() else { continue };
-        if name.starts_with(&format!(".{PREFIX}")) && name.ends_with(".tmp")
-            && let Err(e) = std::fs::remove_file(entry.path()) {
-                warn!(file = name, error = %e, "could not remove a half-written backup");
-            }
+        if name.starts_with(&format!(".{PREFIX}"))
+            && name.ends_with(".tmp")
+            && let Err(e) = std::fs::remove_file(entry.path())
+        {
+            warn!(file = name, error = %e, "could not remove a half-written backup");
+        }
     }
 }
 
@@ -388,7 +390,7 @@ pub fn apply_staged_restore(db: &Path) -> Result<Option<PathBuf>> {
             // Not there, or SQLite removed its -wal or -shm as the last connection closed
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
             Err(e) => {
-                return Err(e).with_context(|| format!("could not move {} aside", from.display()))
+                return Err(e).with_context(|| format!("could not move {} aside", from.display()));
             }
         }
     }

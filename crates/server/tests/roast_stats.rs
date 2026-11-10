@@ -3,7 +3,7 @@
 //! the roast's status and end time alone. The whole server (`test_support::Harness`).
 
 use roastwarden_server::test_support::Harness;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn moving_first_crack_on_a_finished_roast_recomputes_its_numbers() {

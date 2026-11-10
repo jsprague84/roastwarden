@@ -148,13 +148,13 @@ impl CreateProfileEventRequest {
         let action = self.action.ok_or("event needs an action")?;
         let at_seconds = match self.at_seconds {
             Some(t) if !t.is_finite() || !(0.0..=7200.0).contains(&t) => {
-                return Err(format!("at_seconds {t} is outside 0..=7200"))
+                return Err(format!("at_seconds {t} is outside 0..=7200"));
             }
             other => other,
         };
         let at_bt = match self.at_bt {
             Some(t) if !t.is_finite() || !(0.0..=350.0).contains(&t) => {
-                return Err(format!("at_bt {t} is outside 0..=350 °C"))
+                return Err(format!("at_bt {t} is outside 0..=350 °C"));
             }
             other => other,
         };
@@ -166,10 +166,10 @@ impl CreateProfileEventRequest {
         };
         match trigger_kind {
             TriggerKind::Time if at_seconds.is_none() => {
-                return Err("a time-triggered event needs at_seconds".into())
+                return Err("a time-triggered event needs at_seconds".into());
             }
             TriggerKind::Bt if at_bt.is_none() => {
-                return Err("a BT-triggered event needs at_bt".into())
+                return Err("a BT-triggered event needs at_bt".into());
             }
             _ => {}
         }
@@ -197,7 +197,7 @@ impl CreateProfileEventRequest {
                 let l = label.ok_or("landmark event needs an event type label")?;
                 match l.parse::<RoastEventType>() {
                     Ok(RoastEventType::Custom) | Err(_) => {
-                        return Err(format!("landmark label {l:?} is not a roast event type"))
+                        return Err(format!("landmark label {l:?} is not a roast event type"));
                     }
                     Ok(t) => (None, Some(t.to_string())),
                 }

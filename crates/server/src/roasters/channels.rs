@@ -109,8 +109,8 @@ pub fn validate(channels: &mut [Channel]) -> Result<(), String> {
             "C" | "c" | "°C" => "C".into(),
             "F" | "f" | "°F" => {
                 return Err(format!(
-                "channel {n}: temperatures are kept in °C; use C (an ingest mapping converts °F)"
-            ))
+                    "channel {n}: temperatures are kept in °C; use C (an ingest mapping converts °F)"
+                ));
             }
             u => u.to_string(),
         };
@@ -121,9 +121,10 @@ pub fn validate(channels: &mut [Channel]) -> Result<(), String> {
             ch.max = None;
         }
         if let Some(m) = ch.max
-            && !(m.is_finite() && m > 0.0) {
-                return Err(format!("channel {n}: max must be a number above 0"));
-            }
+            && !(m.is_finite() && m > 0.0)
+        {
+            return Err(format!("channel {n}: max must be a number above 0"));
+        }
     }
     for (i, a) in channels.iter().enumerate() {
         if channels[..i].iter().any(|b| b.key == a.key) {

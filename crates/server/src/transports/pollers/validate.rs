@@ -12,9 +12,9 @@ use crate::transports::types::{
     SerialTc4ConnectionConfig, WebSocketConnectionConfig,
 };
 
+use super::MIN_POLL_MS;
 use super::modbus::is_bits;
 use super::websocket::MIN_WS_POLL_MS;
-use super::MIN_POLL_MS;
 
 /// Check a connection's config for its protocol before it is saved. The error is the 400's
 /// message, written for the person filling in the form.
@@ -53,7 +53,9 @@ pub(crate) fn check_connection_config(
         Protocol::WebSocket => crate::transports::ingest::check_config(Kind::WebSocket, config)?,
         Protocol::SerialTc4 => crate::transports::ingest::check_config(Kind::Tc4, config)?,
         Protocol::Phidget22 if config.get("commands").is_some_and(|v| !v.is_null()) => {
-            return Err("a Phidget connection reads temperatures only: it takes no commands".into())
+            return Err(
+                "a Phidget connection reads temperatures only: it takes no commands".into(),
+            );
         }
         Protocol::Phidget22 => crate::transports::ingest::check_config(Kind::Phidget, config)?,
         Protocol::ModbusTcp | Protocol::ModbusRtu if mapped => {
@@ -61,7 +63,7 @@ pub(crate) fn check_connection_config(
                 "a Modbus connection takes no ingest or commands: give each register \
                  a role in the register map instead"
                     .into(),
-            )
+            );
         }
         Protocol::ModbusTcp | Protocol::ModbusRtu => {}
     }
@@ -83,7 +85,7 @@ pub(crate) fn check_connection_config(
                     return Err(format!(
                         "WebSocket url '{}' must be ws://host… or wss://host…",
                         c.url
-                    ))
+                    ));
                 }
             }
             if let Some(p) = &c.poll {
@@ -127,13 +129,13 @@ pub(crate) fn check_connection_config(
                         "data_bits is {}: Modbus RTU frames are 8 data bits (Modbus ASCII \
                          takes 7 or 8: framing ascii)",
                         c.data_bits
-                    ))
+                    ));
                 }
                 ModbusFraming::Ascii if !(7..=8).contains(&c.data_bits) => {
                     return Err(format!(
                         "data_bits is {}: Modbus ASCII is 7 or 8 data bits",
                         c.data_bits
-                    ))
+                    ));
                 }
                 _ => {}
             }
@@ -294,24 +296,27 @@ pub(crate) fn check_register_map(entries: &[CreateRegisterMapEntry]) -> Result<(
             )));
         }
         if let Some(u) = e.unit_id
-            && !(1..=247).contains(&u) {
-                return Err(at(format!(
-                    "slave {u}: a Modbus slave address is 1 to 247 (leave it out for the \
+            && !(1..=247).contains(&u)
+        {
+            return Err(at(format!(
+                "slave {u}: a Modbus slave address is 1 to 247 (leave it out for the \
                      connection's)"
-                )));
-            }
+            )));
+        }
         if let Some(order) = e.byte_order.as_deref().map(str::trim)
-            && !order.is_empty() && !BYTE_ORDERS.iter().any(|o| o.eq_ignore_ascii_case(order)) {
-                return Err(at(format!(
-                    "byte order '{order}' is not one of {}",
-                    BYTE_ORDERS.join(", ")
-                )));
-            }
+            && !order.is_empty()
+            && !BYTE_ORDERS.iter().any(|o| o.eq_ignore_ascii_case(order))
+        {
+            return Err(at(format!(
+                "byte order '{order}' is not one of {}",
+                BYTE_ORDERS.join(", ")
+            )));
+        }
         match e.scale_factor {
             Some(s) if !s.is_finite() || s == 0.0 => {
                 return Err(at(format!(
                     "scale factor {s}: a finite number other than 0"
-                )))
+                )));
             }
             _ => {}
         }

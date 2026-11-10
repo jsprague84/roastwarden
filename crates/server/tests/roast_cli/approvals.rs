@@ -23,10 +23,12 @@ async fn a_delete_waits_for_the_owner() {
     let approval = &r.json["approval"];
     assert_eq!(approval["status"], "pending");
     assert_eq!(approval["summary"], "Delete bean \"Old lot\"");
-    assert!(approval["url"]
-        .as_str()
-        .unwrap()
-        .contains("/settings/approvals?id="));
+    assert!(
+        approval["url"]
+            .as_str()
+            .unwrap()
+            .contains("/settings/approvals?id=")
+    );
     let id = approval["id"].as_str().unwrap().to_string();
 
     // The same call again is the same request

@@ -98,9 +98,11 @@ async fn a_roast_draws_its_green_weight_and_cancel_gives_it_back() {
     assert_eq!(inv.bean(&bean.id).await.unwrap().unwrap().stock_g, 880.0);
 
     // Cancel deletes the roast: its move goes with it.
-    assert!(crate::roasts::sessions::delete_session(&db, &s.id)
-        .await
-        .unwrap());
+    assert!(
+        crate::roasts::sessions::delete_session(&db, &s.id)
+            .await
+            .unwrap()
+    );
     assert_eq!(inv.bean(&bean.id).await.unwrap().unwrap().stock_g, 1000.0);
 }
 
@@ -299,18 +301,20 @@ async fn stock_purchases_adjustments_and_deleting_beans() {
         .map(|m| (m.kind.as_str(), m.delta_g))
         .collect();
     assert_eq!(kinds, vec![("adjust", -150.0), ("purchase", 2000.0)]);
-    assert!(inv
-        .add_stock(&bean.id, StockRequest::default())
-        .await
-        .unwrap_err()
-        .downcast_ref::<InventoryInputError>()
-        .is_some());
-    assert!(inv
-        .create_bean(BeanRequest::default())
-        .await
-        .unwrap_err()
-        .downcast_ref::<InventoryInputError>()
-        .is_some());
+    assert!(
+        inv.add_stock(&bean.id, StockRequest::default())
+            .await
+            .unwrap_err()
+            .downcast_ref::<InventoryInputError>()
+            .is_some()
+    );
+    assert!(
+        inv.create_bean(BeanRequest::default())
+            .await
+            .unwrap_err()
+            .downcast_ref::<InventoryInputError>()
+            .is_some()
+    );
 
     // Unused: deleted. Used: archived, and hidden from the default list.
     let spare = inv.create_bean(bean_req("Spare", 0.0)).await.unwrap();
@@ -447,12 +451,13 @@ async fn purchases_price_the_stock_and_the_roasts() {
     );
     // A roast's move is the roast's.
     let roast_move = d.moves.iter().find(|m| m.kind == "roast").unwrap();
-    assert!(inv
-        .delete_move(&guji.id, &roast_move.id)
-        .await
-        .unwrap_err()
-        .downcast_ref::<InventoryInputError>()
-        .is_some());
+    assert!(
+        inv.delete_move(&guji.id, &roast_move.id)
+            .await
+            .unwrap_err()
+            .downcast_ref::<InventoryInputError>()
+            .is_some()
+    );
     // A price goes with a purchase only, and the currency is a code.
     for req in [
         StockRequest {

@@ -8,9 +8,9 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use crate::test_support::{eventually, Harness};
+use crate::test_support::{Harness, eventually};
 
 /// What every example device reads at room temperature, °C.
 const BT: f64 = 21.5;
@@ -531,7 +531,7 @@ impl tokio_modbus::server::Service for ModbusExample {
 /// `examples/roasters/modbus-tcp`: holding registers with roles.
 #[tokio::test]
 async fn the_modbus_tcp_example() {
-    use tokio_modbus::server::tcp::{accept_tcp_connection, Server};
+    use tokio_modbus::server::tcp::{Server, accept_tcp_connection};
     let device = sim();
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let port = listener.local_addr().unwrap().port();

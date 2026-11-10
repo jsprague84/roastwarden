@@ -2,7 +2,7 @@
 //! every plan ends with (the setup at control off, the channels, the notes).
 
 use serde::Serialize;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 use utoipa::ToSchema;
 
 use crate::roasters::channels::Channel;
@@ -23,7 +23,7 @@ mod tests;
 mod websocket;
 
 use fuji::plan_fuji;
-use inputs::{extra_curves, Etypes, Reads};
+use inputs::{Etypes, Reads, extra_curves};
 use modbus::plan_modbus;
 use mqtt::plan_mqtt;
 use phidget::plan_phidget;
@@ -34,7 +34,7 @@ pub(crate) use inputs::Input;
 
 use super::catalogue_source;
 use super::ini::Ini;
-use super::machines::{machine_text, summary, Machine};
+use super::machines::{Machine, machine_text, summary};
 
 /// A roaster planned from an Artisan machine setup. Nothing is made: `roast roaster add
 /// --artisan` and the dashboard's Add roaster apply it (device, connection, register map,

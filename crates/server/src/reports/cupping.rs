@@ -5,12 +5,12 @@
 use std::collections::HashSet;
 
 use chrono::{DateTime, NaiveDate, Utc};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sqlx::SqlitePool;
 
-use super::{day_month, long_date, meta, short_date, Options, ReportError, DASH};
+use super::{DASH, Options, ReportError, day_month, long_date, meta, short_date};
 use crate::coffee::inventory::InventoryService;
-use crate::roasts::cupping::{Kind, ATTRIBUTES, CUPS};
+use crate::roasts::cupping::{ATTRIBUTES, CUPS, Kind};
 use crate::roasts::types::{CuppingWithAttributes, RoastSession};
 
 /// At most this many samples on a blank sheet, roasts in a session table
@@ -261,16 +261,17 @@ pub fn build(roasts: &[Roasted], ask: &Ask, o: &Options) -> Result<Value, Report
             }
         }
         if let Some(f) = c.cupping.final_score
-            && best.as_ref().is_none_or(|(b, _)| f > *b) {
-                best = Some((
-                    f,
-                    format!(
-                        "{}, {f:.2} ({})",
-                        name(r).split(" · ").next().unwrap_or_default(),
-                        c.band.clone().unwrap_or_default()
-                    ),
-                ));
-            }
+            && best.as_ref().is_none_or(|(b, _)| f > *b)
+        {
+            best = Some((
+                f,
+                format!(
+                    "{}, {f:.2} ({})",
+                    name(r).split(" · ").next().unwrap_or_default(),
+                    c.band.clone().unwrap_or_default()
+                ),
+            ));
+        }
         let on = roasted_on(&r.session, o);
         let cupped_on = o.local(c.cupping.created_at).date_naive();
         let cups: Vec<String> = ["uniformity", "clean_cup", "sweetness"]
@@ -331,7 +332,7 @@ mod tests {
     use super::*;
     use crate::labels::Renderer;
     use crate::reports::roast::tests::{fixture, options};
-    use crate::reports::{kind, render, Format, Paper, Units};
+    use crate::reports::{Format, Paper, Units, kind, render};
     use crate::roasts::types::{CuppingAttribute, CuppingScore};
 
     fn roast(batch: i32, scores: Option<(f32, i64)>) -> Roasted {
@@ -396,9 +397,11 @@ mod tests {
             .map(|s| s["code"].as_str().unwrap())
             .collect();
         assert_eq!(codes.len(), 4);
-        assert!(codes
-            .iter()
-            .all(|c| c.len() == 3 && c.parse::<u16>().is_ok_and(|n| (100..1000).contains(&n))));
+        assert!(
+            codes
+                .iter()
+                .all(|c| c.len() == 3 && c.parse::<u16>().is_ok_and(|n| (100..1000).contains(&n)))
+        );
         assert_eq!(codes.iter().collect::<HashSet<_>>().len(), 4, "{codes:?}");
         assert_eq!(a["samples"], b["samples"], "the same all day");
         let mut sorted = codes.clone();

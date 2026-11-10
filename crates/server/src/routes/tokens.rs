@@ -3,10 +3,10 @@
 //! list: `tokens::OWNER_ONLY`, enforced by the auth middleware.
 
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -87,7 +87,7 @@ async fn create(State(state): State<AppState>, Json(b): Json<CreateBody>) -> Res
                 StatusCode::BAD_REQUEST,
                 "expires_in_days must be 1 to 3650, or null for never",
             )
-                .into_response()
+                .into_response();
         }
     };
     let require_approval = b.require_approval.unwrap_or(true);

@@ -479,10 +479,11 @@ mod tests {
             ..input(t)
         });
         assert!(log.is_empty(), "{log:?}");
-        assert!(rt
-            .view(&c, false)
-            .waiting_for
-            .is_some_and(|w| w.contains("first crack")));
+        assert!(
+            rt.view(&c, false)
+                .waiting_for
+                .is_some_and(|w| w.contains("first crack"))
+        );
         // With no first crack or drop time in the profile, only a marked first crack counts.
         let bare = AutoDrop {
             bt_from_profile_t: None,
@@ -559,9 +560,11 @@ mod tests {
             trigger_value(DropBy::Development, Some(605.0), Some(470.0), None),
             Ok(135.0)
         );
-        assert!(trigger_value(DropBy::Development, Some(605.0), None, None)
-            .unwrap_err()
-            .contains("first crack"));
+        assert!(
+            trigger_value(DropBy::Development, Some(605.0), None, None)
+                .unwrap_err()
+                .contains("first crack")
+        );
         assert!(trigger_value(DropBy::Bt, None, None, None).is_err());
         assert!(trigger_value(DropBy::Bt, None, None, Some(50.0)).is_err());
         assert!("later".parse::<DropBy>().is_err());

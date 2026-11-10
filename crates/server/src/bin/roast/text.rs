@@ -2,7 +2,7 @@
 //! roasts and the shopping list: what `roast` prints when a person reads the answer.
 
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 /// `7:30` or `450` (seconds) as seconds.
 pub fn parse_clock(s: &str) -> Result<f64, String> {

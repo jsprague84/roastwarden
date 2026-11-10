@@ -8,7 +8,7 @@ use tokio_modbus::prelude::*;
 use crate::roasters::types::{
     CreateRegisterMapEntry, ModbusDataType, ModbusRegisterMap, ModbusRegisterType, Protocol,
 };
-use crate::transports::transport::{is_writable, role_of, ModbusWrite};
+use crate::transports::transport::{ModbusWrite, is_writable, role_of};
 use crate::transports::types::{ModbusRtuConnectionConfig, SerialParity};
 
 use super::modbus::*;
@@ -518,15 +518,17 @@ async fn a_refused_read_drops_its_registers_and_a_silent_device_fails_the_poll()
     assert_eq!(poll.refused.len(), 1, "{:?}", poll.refused);
     // Only refused reads: the poll fails (and the poller reopens the link).
     let only = [map[1].clone()];
-    assert!(poll_modbus_registers(
-        &mut ctx,
-        &plan_reads(&only),
-        &only,
-        Duration::from_secs(1),
-        7
-    )
-    .await
-    .is_err());
+    assert!(
+        poll_modbus_registers(
+            &mut ctx,
+            &plan_reads(&only),
+            &only,
+            Duration::from_secs(1),
+            7
+        )
+        .await
+        .is_err()
+    );
 
     // Another unit id on the line gets no answer: the poll times out instead of hanging.
     let (master, device) = tokio::io::duplex(512);
@@ -568,59 +570,75 @@ fn rtu_config_reads_with_defaults_and_frames_the_port() {
     assert!(rtu_port_builder(&c).is_ok());
     let bad = ModbusRtuConnectionConfig { stop_bits: 3, ..c };
     assert!(rtu_port_builder(&bad).is_err());
-    assert!(serde_json::from_value::<ModbusRtuConnectionConfig>(
-        json!({ "port": "/dev/ttyUSB0", "parity": "mark" })
-    )
-    .is_err());
+    assert!(
+        serde_json::from_value::<ModbusRtuConnectionConfig>(
+            json!({ "port": "/dev/ttyUSB0", "parity": "mark" })
+        )
+        .is_err()
+    );
 }
 
 #[test]
 fn connection_configs_are_checked_before_they_are_saved() {
     let ok = |p: Protocol, c: serde_json::Value| check_connection_config(&p, &c);
     assert!(ok(Protocol::ModbusRtu, json!({ "port": "/dev/ttyUSB0" })).is_ok());
-    assert!(ok(
-        Protocol::ModbusTcp,
-        json!({ "host": "pid.local", "port": 502, "unit_id": 1 })
-    )
-    .is_ok());
+    assert!(
+        ok(
+            Protocol::ModbusTcp,
+            json!({ "host": "pid.local", "port": 502, "unit_id": 1 })
+        )
+        .is_ok()
+    );
     assert!(ok(Protocol::Mqtt, json!({ "topic_prefix": "roaster/x" })).is_ok());
     assert!(ok(Protocol::WebSocket, json!({ "url": "ws://10.0.0.5/ws" })).is_ok());
     assert!(ok(Protocol::SerialTc4, json!({ "port": "/dev/ttyACM0" })).is_ok());
 
     let err = |p: Protocol, c: serde_json::Value| check_connection_config(&p, &c).unwrap_err();
     assert!(err(Protocol::ModbusRtu, json!({ "port": "" })).contains("serial port"));
-    assert!(err(
-        Protocol::ModbusRtu,
-        json!({ "port": "/dev/ttyUSB0", "unit_id": 0 })
-    )
-    .contains("1 to 247"));
-    assert!(err(
-        Protocol::ModbusRtu,
-        json!({ "port": "/dev/ttyUSB0", "data_bits": 7 })
-    )
-    .contains("8 data bits"));
-    assert!(err(
-        Protocol::ModbusRtu,
-        json!({ "port": "/dev/ttyUSB0", "parity": "mark" })
-    )
-    .contains("Modbus RTU config"));
+    assert!(
+        err(
+            Protocol::ModbusRtu,
+            json!({ "port": "/dev/ttyUSB0", "unit_id": 0 })
+        )
+        .contains("1 to 247")
+    );
+    assert!(
+        err(
+            Protocol::ModbusRtu,
+            json!({ "port": "/dev/ttyUSB0", "data_bits": 7 })
+        )
+        .contains("8 data bits")
+    );
+    assert!(
+        err(
+            Protocol::ModbusRtu,
+            json!({ "port": "/dev/ttyUSB0", "parity": "mark" })
+        )
+        .contains("Modbus RTU config")
+    );
     assert!(err(Protocol::ModbusTcp, json!({ "host": " " })).contains("host"));
-    assert!(err(
-        Protocol::ModbusTcp,
-        json!({ "host": "10.0.0.2", "poll_interval_ms": 10 })
-    )
-    .contains("poll_interval_ms"));
+    assert!(
+        err(
+            Protocol::ModbusTcp,
+            json!({ "host": "10.0.0.2", "poll_interval_ms": 10 })
+        )
+        .contains("poll_interval_ms")
+    );
     assert!(err(Protocol::WebSocket, json!({ "url": "http://x" })).contains("ws://"));
-    assert!(err(
-        Protocol::SerialTc4,
-        json!({ "port": "/dev/ttyACM0", "et_channel": 2, "bt_channel": 2 })
-    )
-    .contains("one channel only"));
-    assert!(err(
-        Protocol::SerialTc4,
-        json!({ "port": "/dev/ttyACM0", "t3_channel": 5 })
-    )
-    .contains("T3 channel is 5"));
+    assert!(
+        err(
+            Protocol::SerialTc4,
+            json!({ "port": "/dev/ttyACM0", "et_channel": 2, "bt_channel": 2 })
+        )
+        .contains("one channel only")
+    );
+    assert!(
+        err(
+            Protocol::SerialTc4,
+            json!({ "port": "/dev/ttyACM0", "t3_channel": 5 })
+        )
+        .contains("T3 channel is 5")
+    );
     assert!(err(Protocol::Mqtt, json!("roaster/x")).contains("JSON object"));
 }
 
@@ -672,11 +690,13 @@ fn register_maps_are_checked_before_they_are_saved() {
         err(&[entry(Input, 0, " ", Uint16, false)]),
         "register 1: it needs a name"
     );
-    assert!(err(&[
-        entry(Input, 0, "BT", Int16, false),
-        entry(Holding, 9, "bt", Int16, false)
-    ])
-    .starts_with("register 2 ('bt'): register 1 has the same name"));
+    assert!(
+        err(&[
+            entry(Input, 0, "BT", Int16, false),
+            entry(Holding, 9, "bt", Int16, false)
+        ])
+        .starts_with("register 2 ('bt'): register 1 has the same name")
+    );
     assert!(err(&[entry(Coil, 0, "e_stop", Uint16, true)]).contains("data type is bool"));
     assert!(err(&[entry(Input, 3, "sv", Float32, true)]).contains("read-only"));
     assert!(err(&[entry(Discrete, 3, "door", Bool, true)]).contains("read-only"));
@@ -710,22 +730,28 @@ fn register_roles_are_checked() {
     ];
     assert_eq!(check_register_map(&ok), Ok(()));
     let err = |map: &[CreateRegisterMapEntry]| check_register_map(map).unwrap_err();
-    assert!(err(&[
-        roled(entry(Input, 0, "PV", Int16, false), "bt"),
-        roled(entry(Input, 1, "PV2", Int16, false), "bt"),
-    ])
-    .contains("register 1 already has the role bt as a readable register"));
-    assert!(err(&[
-        roled(entry(Holding, 0, "A", Int16, true), "fan"),
-        roled(entry(Coil, 1, "B", Bool, true), "fan"),
-    ])
-    .contains("writable"));
+    assert!(
+        err(&[
+            roled(entry(Input, 0, "PV", Int16, false), "bt"),
+            roled(entry(Input, 1, "PV2", Int16, false), "bt"),
+        ])
+        .contains("register 1 already has the role bt as a readable register")
+    );
+    assert!(
+        err(&[
+            roled(entry(Holding, 0, "A", Int16, true), "fan"),
+            roled(entry(Coil, 1, "B", Bool, true), "fan"),
+        ])
+        .contains("writable")
+    );
     assert!(
         err(&[roled(entry(Coil, 0, "STOP", Bool, false), "emergency_stop")])
             .contains("written, never read")
     );
-    assert!(err(&[roled(entry(Input, 0, "PV", Int16, false), "bean")])
-        .contains("role 'bean' is not one of"));
+    assert!(
+        err(&[roled(entry(Input, 0, "PV", Int16, false), "bean")])
+            .contains("role 'bean' is not one of")
+    );
     // Empty is no role.
     assert_eq!(
         check_register_map(&[roled(entry(Input, 0, "PV", Int16, false), " ")]),
@@ -788,51 +814,65 @@ fn registers_with_roles_decode_as_their_field() {
 #[test]
 fn mapped_connection_configs_are_checked() {
     let ok = |p: Protocol, c: serde_json::Value| check_connection_config(&p, &c);
-    assert!(ok(
-        Protocol::Mqtt,
-        json!({ "telemetry_topic": "tele/roaster/SENSOR",
+    assert!(
+        ok(
+            Protocol::Mqtt,
+            json!({ "telemetry_topic": "tele/roaster/SENSOR",
                 "ingest": { "units": "F", "fields": { "bt": "MAX31855.Temperature" } },
                 "commands": { "heater": { "topic": "cmnd/roaster/Dimmer" } } })
-    )
-    .is_ok());
+        )
+        .is_ok()
+    );
     assert!(ok(
             Protocol::WebSocket,
             json!({ "url": "ws://10.0.0.9/ws", "ingest": { "fields": { "bt": "data.BT" } },
                 "poll": { "message": "{\"command\":\"getData\",\"id\":{id}}", "interval_ms": 1000 } })
         )
         .is_ok());
-    assert!(ok(
-        Protocol::SerialTc4,
-        json!({ "port": "/dev/ttyUSB0", "ingest": { "units": "F" },
+    assert!(
+        ok(
+            Protocol::SerialTc4,
+            json!({ "port": "/dev/ttyUSB0", "ingest": { "units": "F" },
                 "commands": { "drum": { "payload": "OT2;{value}" } } })
-    )
-    .is_ok());
+        )
+        .is_ok()
+    );
     let err = |p: Protocol, c: serde_json::Value| check_connection_config(&p, &c).unwrap_err();
-    assert!(err(
-        Protocol::Mqtt,
-        json!({ "telemetry_topic": "tele/+/SENSOR" })
-    )
-    .contains("wildcard"));
-    assert!(err(
-        Protocol::Mqtt,
-        json!({ "ingest": { "fields": { "fan": "f" } } })
-    )
-    .contains("bt or et"));
-    assert!(err(
-        Protocol::WebSocket,
-        json!({ "url": "ws://x", "poll": { "message": "x", "interval_ms": 50 } })
-    )
-    .contains("at least 200"));
-    assert!(err(
-        Protocol::ModbusTcp,
-        json!({ "host": "10.0.0.2", "ingest": { "units": "F" } })
-    )
-    .contains("role in the register map"));
-    assert!(err(
-        Protocol::SerialTc4,
-        json!({ "port": "/dev/ttyUSB0", "commands": { "drum": { "topic": "a" } } })
-    )
-    .contains("MQTT"));
+    assert!(
+        err(
+            Protocol::Mqtt,
+            json!({ "telemetry_topic": "tele/+/SENSOR" })
+        )
+        .contains("wildcard")
+    );
+    assert!(
+        err(
+            Protocol::Mqtt,
+            json!({ "ingest": { "fields": { "fan": "f" } } })
+        )
+        .contains("bt or et")
+    );
+    assert!(
+        err(
+            Protocol::WebSocket,
+            json!({ "url": "ws://x", "poll": { "message": "x", "interval_ms": 50 } })
+        )
+        .contains("at least 200")
+    );
+    assert!(
+        err(
+            Protocol::ModbusTcp,
+            json!({ "host": "10.0.0.2", "ingest": { "units": "F" } })
+        )
+        .contains("role in the register map")
+    );
+    assert!(
+        err(
+            Protocol::SerialTc4,
+            json!({ "port": "/dev/ttyUSB0", "commands": { "drum": { "topic": "a" } } })
+        )
+        .contains("MQTT")
+    );
     assert_eq!(
         poll_message("{\"command\":\"getData\",\"id\":{id}}", 7),
         "{\"command\":\"getData\",\"id\":7}"
@@ -844,7 +884,7 @@ fn mapped_connection_configs_are_checked() {
 /// another device cannot claim the topic; the default ESP32 path is unchanged.
 #[tokio::test]
 async fn an_mqtt_device_with_its_own_topics_and_fields() {
-    use crate::test_support::{eventually, Harness};
+    use crate::test_support::{Harness, eventually};
     let h = Harness::new().await;
     let dev = h
         .owner(
@@ -920,9 +960,10 @@ async fn an_mqtt_device_with_its_own_topics_and_fields() {
     let got = tokio::time::timeout(Duration::from_secs(2), async {
         loop {
             if let Ok(roastwarden_mqtt::MqttEvent::Publish { topic, payload }) = rx.recv().await
-                && topic.starts_with("cmnd/") {
-                    return (topic, String::from_utf8(payload).unwrap());
-                }
+                && topic.starts_with("cmnd/")
+            {
+                return (topic, String::from_utf8(payload).unwrap());
+            }
         }
     })
     .await
@@ -951,10 +992,12 @@ async fn an_mqtt_device_with_its_own_topics_and_fields() {
             )
             .await;
         assert_eq!(r.status, 400, "{:?}", r.json());
-        assert!(r.json()["error"]["message"]
-            .as_str()
-            .unwrap()
-            .contains("tasmota_01"));
+        assert!(
+            r.json()["error"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("tasmota_01")
+        );
     }
 
     // The ESP32-style default device still goes the way it always has.
@@ -1028,7 +1071,7 @@ impl tokio_modbus::server::Service for FakeController {
 }
 
 async fn fake_controller(regs: Arc<Mutex<HashMap<u16, u16>>>) -> u16 {
-    use tokio_modbus::server::tcp::{accept_tcp_connection, Server};
+    use tokio_modbus::server::tcp::{Server, accept_tcp_connection};
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let port = listener.local_addr().unwrap().port();
     tokio::spawn(async move {
@@ -1044,7 +1087,7 @@ async fn fake_controller(regs: Arc<Mutex<HashMap<u16, u16>>>) -> u16 {
 
 #[tokio::test]
 async fn pollers_start_restart_and_stop_as_connections_and_maps_change() {
-    use crate::test_support::{eventually, Harness};
+    use crate::test_support::{Harness, eventually};
     let h = Harness::new().await;
     let regs = Arc::new(Mutex::new(HashMap::from([(0x1000, 2004), (0x1001, 1850)])));
     let port = fake_controller(regs).await;
@@ -1080,10 +1123,12 @@ async fn pollers_start_restart_and_stop_as_connections_and_maps_change() {
         )
         .await;
     assert_eq!(bad.status, 400);
-    assert!(bad.json()["error"]["message"]
-        .as_str()
-        .unwrap()
-        .contains("read-only"));
+    assert!(
+        bad.json()["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("read-only")
+    );
     let map = |scale: f64| {
         json!([
             { "register_type": "holding", "address": 4096, "name": "BT",

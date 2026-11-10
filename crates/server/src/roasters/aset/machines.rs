@@ -6,9 +6,9 @@ use std::sync::LazyLock;
 use serde::Serialize;
 use utoipa::ToSchema;
 
+use super::CATALOGUE;
 use super::ini::Ini;
 use super::plan::Input;
-use super::CATALOGUE;
 
 /// One machine in Artisan's catalogue.
 #[derive(Debug, Clone, Serialize, ToSchema)]
@@ -181,7 +181,9 @@ fn modbus_supported(ini: &Ini) -> Result<(), String> {
     match kind {
         0 | 1 | 3 => {}
         2 => {
-            return Err("its Modbus is serial binary, which Artisan itself no longer speaks".into())
+            return Err(
+                "its Modbus is serial binary, which Artisan itself no longer speaks".into(),
+            );
         }
         4 => return Err("its Modbus is over UDP; Roastwarden speaks RTU, ASCII and TCP".into()),
         t => return Err(format!("its Modbus type {t} is not one Artisan documents")),

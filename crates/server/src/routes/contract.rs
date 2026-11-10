@@ -5,10 +5,10 @@
 //! and the write check (the owner's, on a cold roaster).
 
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde::Serialize;
 use utoipa::ToSchema;
@@ -206,7 +206,7 @@ async fn preview_ingest(
         Protocol::Phidget22 => Kind::Phidget,
         Protocol::ModbusTcp | Protocol::ModbusRtu => {
             return bad("a Modbus connection is mapped by role in its register map \
-                 (roast roaster map --register kind:address:type:role)")
+                 (roast roaster map --register kind:address:type:role)");
         }
     };
     let mut config = conn.config.clone();

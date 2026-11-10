@@ -9,12 +9,12 @@
 
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::Serialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sqlx::AssertSqlSafe;
 use sqlx::SqlitePool;
 use utoipa::ToSchema;
 
-use super::{grams, meta, short_date, Options, ReportError, DASH};
+use super::{DASH, Options, ReportError, grams, meta, short_date};
 use crate::coffee::inventory::InventoryService;
 use crate::coffee::roasted::{LotState, RoastedMove, RoastedService};
 use crate::labels::runs::RunItem;
@@ -516,7 +516,7 @@ pub async fn gather(
         _ => {
             return Err(ReportError::Bad(
                 "a trace is of one roast or one bean (roast=… or bean=…)".into(),
-            ))
+            ));
         }
     };
     found.ok_or_else(|| {
@@ -534,7 +534,7 @@ mod tests {
     use crate::coffee::roasted::RoastedMoveRequest;
     use crate::labels::Renderer;
     use crate::reports::roast::tests::options;
-    use crate::reports::{kind, render, Format, Paper, Units};
+    use crate::reports::{Format, Paper, Units, kind, render};
 
     #[tokio::test]
     async fn a_bean_leads_to_its_roasts_and_their_bags() {
@@ -681,10 +681,12 @@ mod tests {
         let back = of_roast(&db, "r2", o.zone, o.now).await.unwrap().unwrap();
         assert_eq!(back.roasts.len(), 1);
         assert_eq!(back.coffee.unwrap().lot.as_deref(), Some("HMB-2026-14"));
-        assert!(of_roast(&db, "nope", o.zone, o.now)
-            .await
-            .unwrap()
-            .is_none());
+        assert!(
+            of_roast(&db, "nope", o.zone, o.now)
+                .await
+                .unwrap()
+                .is_none()
+        );
 
         // The report: both subjects lay out, pass the report check
         for (name, t) in [("bean", t), ("roast", back_trace(&db, &o).await)] {

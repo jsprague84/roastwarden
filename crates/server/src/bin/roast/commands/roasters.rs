@@ -4,14 +4,14 @@
 use std::fmt::Write as _;
 
 use clap::Subcommand;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use crate::api::{enc, Api};
+use crate::api::{Api, enc};
 use crate::cli::Wait;
 use crate::commands::adding;
-use crate::commands::firmware::{firmware, firmware_info, password, FirmwareArgs, PasswordCommand};
+use crate::commands::firmware::{FirmwareArgs, PasswordCommand, firmware, firmware_info, password};
 use crate::commands::prediction::{auto_drop_brief, drive_line, prediction_lines, roaster_model};
-use crate::out::{code, Failure, Out};
+use crate::out::{Failure, Out, code};
 use crate::text::duration;
 
 #[derive(Subcommand, Debug)]
@@ -781,7 +781,10 @@ fn design_line(d: &Value, gains: &Value) -> String {
             .filter(|a| !a.is_empty())
             .map(|a| format!(
                 " ({})",
-                a.iter().filter_map(Value::as_str).collect::<Vec<_>>().join("; ")
+                a.iter()
+                    .filter_map(Value::as_str)
+                    .collect::<Vec<_>>()
+                    .join("; ")
             ))
             .unwrap_or_default()
     )
@@ -856,10 +859,12 @@ fn server_run_text(r: &Value) -> String {
 
 pub async fn live(api: &Api, out: &Out, roaster: Option<String>) -> Result<u8, Failure> {
     let ids: Vec<String> = match roaster {
-        Some(r) => vec![api.roaster(&r).await?["device_id"]
-            .as_str()
-            .unwrap_or_default()
-            .to_string()],
+        Some(r) => vec![
+            api.roaster(&r).await?["device_id"]
+                .as_str()
+                .unwrap_or_default()
+                .to_string(),
+        ],
         None => {
             let reg = api.get("/api/devices/registry").await?;
             reg["devices"]

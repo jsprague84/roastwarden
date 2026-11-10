@@ -8,7 +8,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use chrono::Utc;
 use tokio::sync::Mutex;
 
-use super::{marks_from, ReplayService, RunInner, LEASE_MS, STALE_MS, STALE_STOP, TICK};
+use super::{LEASE_MS, ReplayService, RunInner, STALE_MS, STALE_STOP, TICK, marks_from};
 use crate::replay::engine::{Channel, TickInput};
 use crate::roasts::types::{RoastEventType, SessionStatus};
 use crate::transports::transport::SendOptions;

@@ -1,14 +1,14 @@
 //! A machine on a Phidgets board (Artisan devices 35, 36, 59, 60 and their kin): the board,
 //! its inputs and thermocouple types as a Phidget22 connection.
 
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
 use crate::roasters::channels::Channel;
 use crate::roasters::setup::{Kind, Outputs};
 use crate::roasters::types::Protocol;
 
-use super::inputs::{extra_curves, Etypes, Reads};
-use super::{finish, poll_ms, Plan};
+use super::inputs::{Etypes, Reads, extra_curves};
+use super::{Plan, finish, poll_ms};
 use crate::roasters::aset::ini::Ini;
 
 /// A board's extra inputs as Artisan's extra devices read them: the 1048's and TMP1101's

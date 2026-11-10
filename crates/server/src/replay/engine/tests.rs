@@ -643,10 +643,11 @@ fn a_profile_fan_below_the_interlock_goes_out_at_45() {
     let mut e = Engine::new(p, c);
     let out = e.tick(&with_charge(at(0.0, Some(200.0)), 0.0));
     assert_eq!(fans(&out), vec![45.0]);
-    assert!(out.log.iter().any(|l| l
-        .detail
-        .as_deref()
-        .is_some_and(|d| d.contains("raised to 45"))));
+    assert!(out.log.iter().any(|l| {
+        l.detail
+            .as_deref()
+            .is_some_and(|d| d.contains("raised to 45"))
+    }));
     let out = e.tick(&with_charge(at(16.0, Some(200.0)), 0.0));
     assert_eq!(fans(&out), vec![45.0], "the refresh too");
     assert!(out.log.is_empty(), "logged once");

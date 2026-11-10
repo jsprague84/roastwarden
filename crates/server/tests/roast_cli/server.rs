@@ -61,11 +61,13 @@ async fn health_status_and_reads_with_and_without_a_token() {
     let first = &profiles[0];
     assert!(first.get("description").is_none() && first.get("created_at").is_none());
     // Each says the roaster kind it is for (the drum seeds, migration 051)
-    assert!(profiles
-        .as_array()
-        .unwrap()
-        .iter()
-        .any(|p| p["id"] == "drum-light-filter" && p["roaster_kind"] == "drum_gas"));
+    assert!(
+        profiles
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|p| p["id"] == "drum-light-filter" && p["roaster_kind"] == "drum_gas")
+    );
     let name = first["name"].as_str().unwrap().to_string();
     let r = roast(&url, None, &["profile", "show", &name]).await;
     assert_eq!(r.code, 0, "{:?}", r.json);
@@ -100,9 +102,10 @@ async fn health_status_and_reads_with_and_without_a_token() {
     let r = roast(&url, None, &["openapi", "--find", "approve"]).await;
     assert_eq!(r.code, 0);
     let ops = r.json.as_array().unwrap();
-    assert!(ops
-        .iter()
-        .any(|o| o["method"] == "POST" && o["path"] == "/api/approvals/{id}/approve"));
+    assert!(
+        ops.iter()
+            .any(|o| o["method"] == "POST" && o["path"] == "/api/approvals/{id}/approve")
+    );
     assert!(r.json.to_string().len() < 1000, "a short list");
 
     let r = roast(&url, None, &["openapi", "--offline"]).await;
@@ -123,10 +126,12 @@ async fn failures_have_codes_hints_and_exit_codes() {
         "{:?}",
         r.json
     );
-    assert!(r.json["error"]["hint"]
-        .as_str()
-        .unwrap()
-        .contains("ROASTWARDEN_TOKEN"));
+    assert!(
+        r.json["error"]["hint"]
+            .as_str()
+            .unwrap()
+            .contains("ROASTWARDEN_TOKEN")
+    );
 
     // A read-only token may not
     let read_only = h.token("read_only").await;
@@ -205,10 +210,12 @@ async fn backups_by_the_server_and_next_to_the_database() {
 
     let r = roast(&url, Some(&admin), &["backups", "--now"]).await;
     assert_eq!(r.code, 0, "{:?}", r.json);
-    assert!(r.json["file"]["name"]
-        .as_str()
-        .unwrap()
-        .starts_with("roastwarden-"));
+    assert!(
+        r.json["file"]["name"]
+            .as_str()
+            .unwrap()
+            .starts_with("roastwarden-")
+    );
 
     // Without the server: a copy, recorded in the run history the server shows (copies are
     // named by the second)

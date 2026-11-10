@@ -19,17 +19,17 @@ use std::time::Duration;
 
 use anyhow::Result;
 use axum::body::Body;
-use axum::http::{header, HeaderMap, Method, Request, StatusCode};
+use axum::http::{HeaderMap, Method, Request, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use axum::{Json, Router};
 use serde::Serialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sqlx::AssertSqlSafe;
 use sqlx::SqlitePool;
 use tower::ServiceExt;
 use tracing::{info, warn};
 
-use crate::auth::tokens::{self, path_matches, TokenAuth};
+use crate::auth::tokens::{self, TokenAuth, path_matches};
 use crate::notify::{Note, Notifier, Priority};
 
 /// How long a request waits for the owner

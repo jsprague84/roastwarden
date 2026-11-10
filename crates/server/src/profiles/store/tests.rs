@@ -329,10 +329,11 @@ async fn seed_profiles_name_their_roaster_kind_and_the_drum_seeds_are_whole() {
         );
     }
     // The legacy generic profiles are for no kind in particular.
-    assert!(all
-        .iter()
-        .filter(|p| p.id.starts_with("default-"))
-        .all(|p| p.roaster_kind.is_none()));
+    assert!(
+        all.iter()
+            .filter(|p| p.id.starts_with("default-"))
+            .all(|p| p.roaster_kind.is_none())
+    );
     for (id, level, purpose) in [
         ("drum-light-filter", "light", "filter"),
         ("drum-medium-omni", "medium", "omni"),

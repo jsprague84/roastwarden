@@ -3,10 +3,10 @@
 //! test helpers that publish a message.
 
 use axum::{
-    extract::{ConnectInfo, Path, State},
-    http::{header, HeaderMap, StatusCode},
-    response::{IntoResponse, Response},
     Extension, Json,
+    extract::{ConnectInfo, Path, State},
+    http::{HeaderMap, StatusCode, header},
+    response::{IntoResponse, Response},
 };
 use prometheus::{Encoder, TextEncoder};
 use rumqttc::QoS;
@@ -138,7 +138,7 @@ async fn api_auth_status(
     login: Option<axum::Extension<logins::LoginId>>,
 ) -> Response {
     let actor = actor.map_or(auth::Actor::Anonymous(None), |a| a.0);
-    Json(status_of(&state.auth, &actor, login.map(|l| l.0 .0))).into_response()
+    Json(status_of(&state.auth, &actor, login.map(|l| l.0.0))).into_response()
 }
 
 fn status_of(auth: &auth::AuthConfig, actor: &auth::Actor, login_id: Option<i64>) -> AuthStatus {
@@ -202,7 +202,7 @@ async fn api_demo_roaster(
         None => (demo::new_cookie(), true),
     };
     let roaster = demo::roaster_for(&cookie);
-    let address = auth::client(&headers, peer.map(|p| p.0 .0.ip()));
+    let address = auth::client(&headers, peer.map(|p| p.0.0.ip()));
     let visitors = state.auth.visitors();
     let now = std::time::Instant::now();
     let claim = visitors.claim(&roaster, &address, now);
@@ -215,15 +215,16 @@ async fn api_demo_roaster(
         },
         demo::Claim::Own { new } => {
             if (new || !running)
-                && let Err(e) = demo::provision(&state, &roaster).await {
-                    tracing::error!(error = %e, %roaster, "demo: could not make a visitor's roaster");
-                    visitors.release(&roaster);
-                    return (
-                        StatusCode::SERVICE_UNAVAILABLE,
-                        "Could not make a simulated roaster: try again.",
-                    )
-                        .into_response();
-                }
+                && let Err(e) = demo::provision(&state, &roaster).await
+            {
+                tracing::error!(error = %e, %roaster, "demo: could not make a visitor's roaster");
+                visitors.release(&roaster);
+                return (
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "Could not make a simulated roaster: try again.",
+                )
+                    .into_response();
+            }
             DemoRoaster {
                 device_id: roaster,
                 shared: false,
@@ -272,7 +273,7 @@ async fn api_login(
     if !auth.enabled() {
         return Json(status_of(auth, &auth::Actor::Open, None)).into_response();
     }
-    let client = auth::client(&headers, peer.map(|p| p.0 .0.ip()));
+    let client = auth::client(&headers, peer.map(|p| p.0.0.ip()));
     if let Some(secs) = auth.blocked(&client) {
         let mut res = auth::refuse(
             StatusCode::TOO_MANY_REQUESTS,
@@ -299,7 +300,7 @@ async fn api_login(
                     "UNAVAILABLE",
                     "Could not check the API token.".into(),
                     auth::Actor::Anonymous(None),
-                )
+                );
             }
             _ => {
                 auth.failed(&client);
@@ -342,10 +343,11 @@ async fn api_login(
     responses((status = 204, description = "Signed out; `Set-Cookie` removes `rr_login`")))]
 async fn api_logout(State(state): State<AppState>, headers: HeaderMap) -> Response {
     if let Some(secret) = logins::presented(&headers)
-        && let Err(e) = logins::end(&state.db, secret).await {
-            tracing::error!(error = %e, "could not end a login");
-            return (StatusCode::INTERNAL_SERVER_ERROR, "could not sign out").into_response();
-        }
+        && let Err(e) = logins::end(&state.db, secret).await
+    {
+        tracing::error!(error = %e, "could not end a login");
+        return (StatusCode::INTERNAL_SERVER_ERROR, "could not sign out").into_response();
+    }
     let mut res = StatusCode::NO_CONTENT.into_response();
     res.headers_mut()
         .append(header::SET_COOKIE, logins::cleared(logins::https(&headers)));

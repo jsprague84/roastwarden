@@ -155,7 +155,7 @@ async fn run_worker(exe: &PathBuf, req: &Request, limit: Duration) -> Reply {
             return failed(format!(
                 "the design took longer than {} s to lay out and was stopped: look for loops over huge ranges (a `for` over range(100000) inside another)",
                 limit.as_secs_f64()
-            ))
+            ));
         }
         Ok(Err(e)) => return failed(format!("the label renderer failed: {e}")),
         Ok(Ok(o)) => o,

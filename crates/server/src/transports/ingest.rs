@@ -17,7 +17,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, RwLock};
 
 use roastwarden_core::{ControlMode, DeviceCommand};
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
 // ---------------------------------------------------------------------------
 // Roles and units
@@ -585,7 +585,7 @@ fn parse_field(key: &str, spec: &Value, kind: Kind) -> Result<Field, String> {
                 Some(Value::String(p)) => p.clone(),
                 None | Some(Value::Null) if f.topic.is_some() => "$".to_string(),
                 None | Some(Value::Null) => {
-                    return Err(at("a path is needed (or a topic of its own)".into()))
+                    return Err(at("a path is needed (or a topic of its own)".into()));
                 }
                 Some(_) => return Err(at("path must be a string".into())),
             }
@@ -593,7 +593,7 @@ fn parse_field(key: &str, spec: &Value, kind: Kind) -> Result<Field, String> {
         _ => {
             return Err(at(
                 "a path string or { path, scale, offset, unit, topic }".into()
-            ))
+            ));
         }
     };
     f.path = parse_path(&path).map_err(at)?;
@@ -940,11 +940,7 @@ pub fn format_value(v: f64, decimals: u8) -> String {
     } else {
         s
     };
-    if s == "-0" {
-        "0".into()
-    } else {
-        s
-    }
+    if s == "-0" { "0".into() } else { s }
 }
 
 /// The payload a template writes for `cmd` (already in the device's unit).
@@ -1056,9 +1052,10 @@ impl MqttRoute {
         let mut t = vec![self.telemetry_topic.clone()];
         for f in self.ingest.iter().flat_map(|i| &i.fields) {
             if let Some(ft) = &f.topic
-                && !t.contains(ft) {
-                    t.push(ft.clone());
-                }
+                && !t.contains(ft)
+            {
+                t.push(ft.clone());
+            }
         }
         t
     }
@@ -1381,10 +1378,12 @@ mod tests {
         assert_eq!(f("bt").value, Some(100.0));
         assert_eq!(f("bt").field, "beanTemp");
         assert!(f("et").problem.unwrap().contains("not a number"));
-        assert!(f("fan")
-            .problem
-            .unwrap()
-            .contains("data.fan is not in the message"));
+        assert!(
+            f("fan")
+                .problem
+                .unwrap()
+                .contains("data.fan is not in the message")
+        );
         assert_eq!(f("exhaust").value, Some(200.0));
         assert_eq!(f("exhaust").source, "topic n/sensor/exhaust/state: $");
         let s = sample.unwrap();
@@ -1392,9 +1391,11 @@ mod tests {
         assert!(!s.contains_key("envTemp"));
         // No message on the field's topic yet
         let (fields, _) = preview_json(&i, Some("t"), &msgs[..1]);
-        assert!(fields
-            .iter()
-            .any(|f| f.problem.as_deref() == Some("no message on n/sensor/exhaust/state yet")));
+        assert!(
+            fields
+                .iter()
+                .any(|f| f.problem.as_deref() == Some("no message on n/sensor/exhaust/state yet"))
+        );
         // Nothing for BT or ET: no sample
         let (_, none) = preview_json(&i, Some("t"), &[(Some("t".into()), json!({}))]);
         assert!(none.is_none());
@@ -1407,9 +1408,11 @@ mod tests {
         assert_eq!(f("et").problem.as_deref(), Some("-1: no probe"));
         assert!(f("exhaust").problem.unwrap().contains("not a number"));
         let short = preview_columns("21.5,180", &cols, Units::C, &[]);
-        assert!(short
-            .iter()
-            .any(|f| f.key == "bt" && f.problem.as_deref() == Some("the line has 2 columns")));
+        assert!(
+            short
+                .iter()
+                .any(|f| f.key == "bt" && f.problem.as_deref() == Some("the line has 2 columns"))
+        );
     }
 
     #[test]
@@ -1544,12 +1547,14 @@ mod tests {
         assert!(i.has_field_topics(tele));
         let mut a = Assembler::default();
         // ET and the fan first: no sample yet.
-        assert!(a
-            .on_message(&i, "node/sensor/env/state", tele, &json!(392.0), 1_000)
-            .is_none());
-        assert!(a
-            .on_message(&i, "node/fan/state", tele, &json!({"speed": 70}), 2_000)
-            .is_none());
+        assert!(
+            a.on_message(&i, "node/sensor/env/state", tele, &json!(392.0), 1_000)
+                .is_none()
+        );
+        assert!(
+            a.on_message(&i, "node/fan/state", tele, &json!({"speed": 70}), 2_000)
+                .is_none()
+        );
         // BT's message cuts one, from every field's newest value.
         let s = a
             .on_message(
@@ -1570,9 +1575,10 @@ mod tests {
         assert_eq!(s["beanTemp"], json!(110.0));
         assert!(s.get("envTemp").is_none() && s.get("fan").is_none());
         // A BT message with no number cuts nothing.
-        assert!(a
-            .on_message(&i, "node/sensor/bean/state", tele, &json!("nan"), 14_000)
-            .is_none());
+        assert!(
+            a.on_message(&i, "node/sensor/bean/state", tele, &json!("nan"), 14_000)
+                .is_none()
+        );
 
         // Without BT, ET's message cuts.
         let et_only = ingest(json!({ "fields": {
@@ -1656,10 +1662,12 @@ mod tests {
             read_columns("200,180.26", cols, Units::C, &ex).unwrap()["exhaust"],
             json!(180.3)
         );
-        assert!(read_columns("200,-1", cols, Units::C, &ex)
-            .unwrap()
-            .get("exhaust")
-            .is_none());
+        assert!(
+            read_columns("200,-1", cols, Units::C, &ex)
+                .unwrap()
+                .get("exhaust")
+                .is_none()
+        );
         // Checks
         let e = |c: Value| parse_ingest(&json!({ "columns": c }), Kind::Tc4).unwrap_err();
         assert!(e(json!(["bt", "exhaust:K"])).contains("C, F or none"));

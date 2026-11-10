@@ -3,10 +3,10 @@
 //! once, without a restart.
 
 use axum::{
-    extract::{Path, State},
-    http::{header, StatusCode},
-    response::{IntoResponse, Response},
     Json,
+    extract::{Path, State},
+    http::{StatusCode, header},
+    response::{IntoResponse, Response},
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 

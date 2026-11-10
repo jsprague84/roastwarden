@@ -17,7 +17,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::model::Model;
-use crate::robust::{evaluate, ramp_lag, robust_box, Pid, RobustBox, Robustness};
+use crate::robust::{Pid, RobustBox, Robustness, evaluate, ramp_lag, robust_box};
 
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

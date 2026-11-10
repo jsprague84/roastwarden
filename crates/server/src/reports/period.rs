@@ -6,10 +6,10 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use chrono::{DateTime, Datelike, Duration, NaiveDate, Utc};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sqlx::SqlitePool;
 
-use super::{g1, long_date, meta, money, n1, short_date, weight, Options, ReportError, DASH};
+use super::{DASH, Options, ReportError, g1, long_date, meta, money, n1, short_date, weight};
 use crate::coffee::costs::{self, MoveIn};
 use crate::coffee::inventory::StockMove;
 use crate::roasts::types::RoastSession;
@@ -509,7 +509,7 @@ pub(crate) mod tests {
     use super::*;
     use crate::labels::Renderer;
     use crate::reports::roast::tests::{fixture, options};
-    use crate::reports::{kind, render, Format, Paper, Units};
+    use crate::reports::{Format, Paper, Units, kind, render};
 
     /// A ledger move; `money` is a purchase's (price, shipping, order)
     pub(crate) fn mv(
@@ -675,11 +675,13 @@ pub(crate) mod tests {
         let last = Range::parse(Some("2025"), None, None, None, today).unwrap();
         assert!(!last.so_far);
         assert_eq!(last.to.to_string(), "2025-12-31");
-        assert!(y["highlights"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|h| h["label"] == "Cupped best"));
+        assert!(
+            y["highlights"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|h| h["label"] == "Cupped best")
+        );
         let r = Renderer::in_process();
         for (name, d) in [("period-month", m), ("period-year", y)] {
             let pdf = render(&r, kind("period").unwrap(), d.clone(), Format::Pdf, 1, 96)

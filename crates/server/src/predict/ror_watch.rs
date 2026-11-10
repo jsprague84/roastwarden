@@ -228,17 +228,18 @@ fn seen(inp: &WatchInput, obs: &[Obs], now: Option<f64>) -> Vec<RorWarning> {
 
     // Crash: the highest RoR in the last minute, 8 °C/min or more above now.
     if let Some(peak) = recent(CRASH_WINDOW_S).max_by(|a, b| a.ror.total_cmp(&b.ror))
-        && crashes(peak.ror, now) {
-            out.push(warn(
-                RorWarningKind::Crash,
-                peak.t,
-                format!(
-                    "RoR fell from {:.1} to {now:.1} °C/min in {:.0} s",
-                    peak.ror,
-                    inp.t_now - peak.t
-                ),
-            ));
-        }
+        && crashes(peak.ror, now)
+    {
+        out.push(warn(
+            RorWarningKind::Crash,
+            peak.t,
+            format!(
+                "RoR fell from {:.1} to {now:.1} °C/min in {:.0} s",
+                peak.ror,
+                inp.t_now - peak.t
+            ),
+        ));
+    }
 
     // Flick: after first crack, RoR held 2 °C/min above its lowest since, for 20 s.
     let since_fc: Vec<&Obs> = obs
@@ -398,9 +399,11 @@ fn causes(inp: &WatchInput, b: &dyn Fn(usize) -> f64, k: usize) -> Vec<String> {
         c.push(format!("the fan goes from {f0:.0} to {fk:.0} %"));
     }
     if let Some(fc) = inp.fc_bt.filter(|_| inp.fc_marked.is_none())
-        && inp.bt_now < fc && b(k) >= fc {
-            c.push(format!("BT passes first crack's {fc:.1} °C"));
-        }
+        && inp.bt_now < fc
+        && b(k) >= fc
+    {
+        c.push(format!("BT passes first crack's {fc:.1} °C"));
+    }
     c
 }
 
@@ -842,8 +845,8 @@ mod tests {
     #[test]
     #[ignore = "needs ROASTWARDEN_PREDICT_DIR: a directory of roasts exported to CSV"]
     fn watch_exported_roasts() {
-        use super::super::live::{predict, DropTarget, FcHistory, LiveInput, Plan, PlanKind};
-        use super::super::model::{fit, tests::exported, FitQuality, Record};
+        use super::super::live::{DropTarget, FcHistory, LiveInput, Plan, PlanKind, predict};
+        use super::super::model::{FitQuality, Record, fit, tests::exported};
         let dir = std::env::var("ROASTWARDEN_PREDICT_DIR").expect("ROASTWARDEN_PREDICT_DIR");
         let roasts = exported(&dir);
         let recs: Vec<Record> = roasts

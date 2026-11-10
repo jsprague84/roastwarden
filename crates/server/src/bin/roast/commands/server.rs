@@ -7,15 +7,15 @@ use std::time::Duration;
 
 use clap::Args;
 use reqwest::Method;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use crate::api::{self, enc, Api};
+use crate::api::{self, Api, enc};
 use crate::cli::Wait;
 use crate::commands::approvals::held_or_done;
 use crate::commands::records;
-use crate::out::{code, for_finding, Failure, Out};
+use crate::out::{Failure, Out, code, for_finding};
 use crate::surface;
-use crate::text::{bytes, AuditRow};
+use crate::text::{AuditRow, bytes};
 
 /// The OpenAPI document this roast was built with (`openapi --offline`)
 pub const OPENAPI: &str = include_str!("../../../../../../docs/openapi.json");

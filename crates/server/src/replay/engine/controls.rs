@@ -1,10 +1,10 @@
 //! What the operator changes mid-run: a ghost run engaged (or a live one made ghost), the align
 //! landmark, trigger policy and lookahead, a channel paused by a manual override and resumed.
 
+use super::Engine;
 use super::config::{AlignOn, Channel, TriggerPolicy};
 use super::pid::ServerPid;
 use super::view::{LogEntry, LogKind};
-use super::Engine;
 
 impl Engine {
     pub fn set_ghost(&mut self, ghost: bool) -> LogEntry {

@@ -25,7 +25,7 @@ use roastwarden_core::Sample;
 use roastwarden_mqtt::{MqttConfig, MqttService, StatusAnnouncement};
 use rumqttc::QoS;
 use serde::Serialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use tokio::sync::Mutex;
 use utoipa::ToSchema;
 
@@ -544,13 +544,12 @@ impl HomeAssistant {
             .link
             .as_ref()
             .is_some_and(|l| cfg.enabled && l.broker == cfg.broker);
-        if !keep
-            && let Some(link) = inner.link.take() {
-                withdraw_all(&link.mqtt, &mut inner.published).await;
-                if link.broker.is_some() {
-                    link.mqtt.close().await;
-                }
+        if !keep && let Some(link) = inner.link.take() {
+            withdraw_all(&link.mqtt, &mut inner.published).await;
+            if link.broker.is_some() {
+                link.mqtt.close().await;
             }
+        }
 
         let mut status = Status {
             enabled: cfg.enabled,
@@ -1075,7 +1074,7 @@ mod tests {
     /// The whole server: switched on, the virtual roaster appears; off, it is taken back.
     mod server {
         use super::super::*;
-        use crate::test_support::{eventually, Harness};
+        use crate::test_support::{Harness, eventually};
         use roastwarden_mqtt::MqttEvent;
 
         /// Home Assistant's messages received so far (the roasters' own are left out)
@@ -1083,9 +1082,10 @@ mod tests {
             let mut out = Vec::new();
             while let Ok(e) = rx.try_recv() {
                 if let MqttEvent::Publish { topic, payload } = e
-                    && (topic.starts_with("homeassistant/") || topic.starts_with("roastwarden/ha/")) {
-                        out.push((topic, payload));
-                    }
+                    && (topic.starts_with("homeassistant/") || topic.starts_with("roastwarden/ha/"))
+                {
+                    out.push((topic, payload));
+                }
             }
             out
         }
@@ -1182,11 +1182,13 @@ mod tests {
             assert_eq!(status["roasters"][0]["available"], true);
 
             // The simulated roaster only when asked for
-            assert!(status["roasters"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .all(|r| r["device_id"] != "virtual_roaster"));
+            assert!(
+                status["roasters"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .all(|r| r["device_id"] != "virtual_roaster")
+            );
 
             // Off: the discovery cleared (retained empty message)
             h.owner(

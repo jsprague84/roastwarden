@@ -23,7 +23,7 @@
 use std::fmt::Write as _;
 use std::net::SocketAddr;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 
 /// The server's own user on the broker (`MQTT_USERNAME` for an outside broker)
 pub const SERVER_USER: &str = "roastwarden";

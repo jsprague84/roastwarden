@@ -323,7 +323,7 @@ pub(crate) fn decode_response(
                 v => {
                     return Err(invalid_data(format!(
                         "Modbus ASCII: coil value {v:#06X} is neither on nor off"
-                    )))
+                    )));
                 }
             };
             Response::WriteSingleCoil(word(0)?, on)
@@ -339,7 +339,7 @@ pub(crate) fn decode_response(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio::io::{duplex, AsyncBufReadExt, BufReader, DuplexStream};
+    use tokio::io::{AsyncBufReadExt, BufReader, DuplexStream, duplex};
     use tokio::task::JoinHandle;
     use tokio_modbus::prelude::*;
 
@@ -478,7 +478,9 @@ mod tests {
             .unwrap();
         assert_eq!(
             ctx.read_coils(0x20, 10).await.unwrap().unwrap(),
-            [true, false, true, false, false, false, false, false, false, true]
+            [
+                true, false, true, false, false, false, false, false, false, true
+            ]
         );
         ctx.write_single_coil(0x0813, true).await.unwrap().unwrap();
 

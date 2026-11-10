@@ -17,8 +17,8 @@ use std::time::Duration;
 
 use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes128Gcm, Nonce};
-use base64::engine::general_purpose::URL_SAFE_NO_PAD as B64;
 use base64::Engine;
+use base64::engine::general_purpose::URL_SAFE_NO_PAD as B64;
 use hkdf::Hkdf;
 use p256::ecdsa::signature::Signer;
 use p256::ecdsa::{Signature, SigningKey};
@@ -502,7 +502,9 @@ mod tests {
             SecretKey::from_slice(&b64("yfWPiYE-n46HLnH0KqZOF1fJJU3MYrct3AELtAQ-oRw")).unwrap();
         assert_eq!(
             uncompressed(&sender.public_key()),
-            b64("BP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A8")
+            b64(
+                "BP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A8"
+            )
         );
         let ua_public = b64(
             "BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4",
@@ -630,7 +632,7 @@ mod tests {
     /// subscription the service says is gone is removed.
     #[tokio::test]
     async fn alarms_are_delivered_encrypted_and_dead_subscriptions_pruned() {
-        use axum::{body::Bytes, extract::State, http::HeaderMap, routing::post, Router};
+        use axum::{Router, body::Bytes, extract::State, http::HeaderMap, routing::post};
         type Seen = Arc<Mutex<Vec<(HeaderMap, Bytes)>>>;
         let seen: Seen = Arc::default();
         let app = Router::new()
@@ -704,10 +706,12 @@ mod tests {
         );
         n.record_push(&[]).await;
         let st = n.statuses().await;
-        assert!(st[&crate::notify::Channel::Push]
-            .last_error
-            .as_deref()
-            .is_some_and(|e| e.starts_with("No device")));
+        assert!(
+            st[&crate::notify::Channel::Push]
+                .last_error
+                .as_deref()
+                .is_some_and(|e| e.starts_with("No device"))
+        );
         let _ = std::fs::remove_dir_all(dir);
     }
 
@@ -729,18 +733,21 @@ mod tests {
             name: Some("Firefox on Android".into()),
         };
         let auth = B64.encode([7u8; 16]);
-        assert!(push
-            .subscribe(sub("http://push.example/x", &ua, &auth), None)
-            .await
-            .is_err());
-        assert!(push
-            .subscribe(sub("https://push.example/x", "AAAA", &auth), None)
-            .await
-            .is_err());
-        assert!(push
-            .subscribe(sub("https://push.example/x", &ua, "AAAA"), None)
-            .await
-            .is_err());
+        assert!(
+            push.subscribe(sub("http://push.example/x", &ua, &auth), None)
+                .await
+                .is_err()
+        );
+        assert!(
+            push.subscribe(sub("https://push.example/x", "AAAA", &auth), None)
+                .await
+                .is_err()
+        );
+        assert!(
+            push.subscribe(sub("https://push.example/x", &ua, "AAAA"), None)
+                .await
+                .is_err()
+        );
         let a = push
             .subscribe(
                 sub("https://push.example/x", &ua, &auth),
@@ -755,10 +762,11 @@ mod tests {
             .unwrap();
         assert_eq!(a.id, b.id, "same endpoint, same row");
         assert_eq!(push.list().await.unwrap().len(), 1);
-        assert!(push
-            .remove_endpoint("https://push.example/x")
-            .await
-            .unwrap());
+        assert!(
+            push.remove_endpoint("https://push.example/x")
+                .await
+                .unwrap()
+        );
         assert!(push.list().await.unwrap().is_empty());
         let _ = std::fs::remove_dir_all(dir);
     }

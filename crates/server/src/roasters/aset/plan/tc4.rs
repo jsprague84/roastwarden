@@ -1,15 +1,15 @@
 //! A machine on an Arduino TC4 (Artisan device 19): the serial TC4 connection, its channels
 //! 3 and 4 when named, the sliders' serial commands as templates.
 
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
 use crate::roasters::channels::Channel;
 use crate::roasters::setup::{Kind, Outputs};
 use crate::roasters::types::Protocol;
 
-use super::inputs::{extra_curves, Etypes, EXTRAS_TC4};
+use super::inputs::{EXTRAS_TC4, Etypes, extra_curves};
 use super::sliders::{py_format, sliders, slot};
-use super::{finish, poll_ms, Plan};
+use super::{Plan, finish, poll_ms};
 use crate::roasters::aset::ini::Ini;
 
 /// A machine on an Arduino TC4 (Artisan device 19): the serial TC4 connection as stock

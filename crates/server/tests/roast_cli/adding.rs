@@ -130,9 +130,11 @@ async fn an_agent_adds_a_logger_and_maps_and_checks_it() {
         r.json
     );
     let dev = h.owner("GET", "/api/devices/tas1", None).await.json();
-    assert!(dev["connections"][0]["config"]["ingest"]["fields"]
-        .get("et")
-        .is_none());
+    assert!(
+        dev["connections"][0]["config"]["ingest"]["fields"]
+            .get("et")
+            .is_none()
+    );
     // Saving it merges with what is there
     let r = roast(
         &url,
@@ -341,9 +343,10 @@ async fn an_agent_adds_a_roaster_from_artisans_machine_catalogue() {
     let regs = map.as_array().unwrap();
     let et = regs.iter().find(|r| r["role"] == "et").unwrap();
     assert_eq!(et["unit_id"], 2, "ET is a controller of its own: {et}");
-    assert!(regs
-        .iter()
-        .any(|r| r["role"] == "heater" && r["writable"] == true));
+    assert!(
+        regs.iter()
+            .any(|r| r["role"] == "heater" && r["writable"] == true)
+    );
     let setup = h
         .owner("GET", "/api/roaster/berto1/setup", None)
         .await
@@ -523,14 +526,18 @@ async fn artisans_websocket_mqtt_tc4_and_ascii_machines_are_added() {
         c["config"]["ingest"]["fields"]["bt"]["path"],
         "data.beanTemp"
     );
-    assert!(c["config"]["poll"]["message"]
-        .as_str()
-        .unwrap()
-        .contains("getCurrentRoastingStep"));
-    assert!(c["config"]["commands"]["heater"]["payload"]
-        .as_str()
-        .unwrap()
-        .contains("{value}"));
+    assert!(
+        c["config"]["poll"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("getCurrentRoastingStep")
+    );
+    assert!(
+        c["config"]["commands"]["heater"]["payload"]
+            .as_str()
+            .unwrap()
+            .contains("{value}")
+    );
     let setup = h
         .owner("GET", "/api/roaster/probat1/setup", None)
         .await

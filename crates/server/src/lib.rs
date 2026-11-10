@@ -42,7 +42,7 @@ pub use ops::{backups, legacy, logbuf};
 
 /// The token presets, for the `roast` CLI's agent-surface check (`bin/roast/surface.rs`).
 pub mod presets {
-    pub use crate::auth::tokens::{is_owner_only, Preset};
+    pub use crate::auth::tokens::{Preset, is_owner_only};
 }
 
 /// The label render worker (`roastwarden-server label-render`, labels/sandbox.rs): reads one

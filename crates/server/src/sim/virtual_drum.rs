@@ -791,7 +791,7 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn switching_it_on_writes_its_roaster_once_and_it_is_driven_through_the_gate() {
-        use crate::test_support::{eventually, Harness};
+        use crate::test_support::{Harness, eventually};
         let h = Harness::new().await;
         drum_on(&h).await;
 

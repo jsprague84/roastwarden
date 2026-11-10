@@ -8,15 +8,15 @@ use std::time::Duration;
 
 use clap::Args;
 use reqwest::Method;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use crate::api::{self, enc, Api};
+use crate::api::{self, Api, enc};
 use crate::cli::Wait;
 use crate::commands::approvals::held_or_done;
 use crate::commands::beans::{DetailArgs, PurchaseArgs};
 use crate::commands::roasts::roast_id;
-use crate::out::{self, code, Failure, Out};
-use crate::text::{bean_line, mmss, parse_clock, parse_weight, BeanRow};
+use crate::out::{self, Failure, Out, code};
+use crate::text::{BeanRow, bean_line, mmss, parse_clock, parse_weight};
 
 // ---- a roast's record ----
 
@@ -953,10 +953,9 @@ pub async fn profile_shares(
             let mut l = api
                 .get(&format!("/api/profiles/{}/share", enc(&id)))
                 .await?;
-            if !all
-                && let Some(a) = l.as_array_mut() {
-                    a.retain(|x| x["revoked_at"].is_null());
-                }
+            if !all && let Some(a) = l.as_array_mut() {
+                a.retain(|x| x["revoked_at"].is_null());
+            }
             l
         }
         None => api.get(&format!("/api/profile-shares?all={all}")).await?,

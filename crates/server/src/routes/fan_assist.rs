@@ -1,10 +1,10 @@
 //! Fan assist settings and state (`docs/fan-assist.md`).
 
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde::Serialize;
 use utoipa::ToSchema;

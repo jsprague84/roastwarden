@@ -6,11 +6,11 @@ use clap::Subcommand;
 use reqwest::Method;
 use serde_json::json;
 
-use crate::api::{self, enc, Api};
+use crate::api::{self, Api, enc};
 use crate::cli::Wait;
 use crate::commands::records;
-use crate::out::{self, code, for_finding, Failure, Out};
-use crate::text::{parse_weight, plan_line, PlanRow};
+use crate::out::{self, Failure, Out, code, for_finding};
+use crate::text::{PlanRow, parse_weight, plan_line};
 
 #[derive(Subcommand, Debug)]
 pub enum PlanCommand {

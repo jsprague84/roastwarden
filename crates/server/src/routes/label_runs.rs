@@ -5,21 +5,21 @@
 //! are kept with their times, and a sheet's next free label moves on when a job completes.
 
 use axum::{
-    extract::{Path, Query, State},
-    http::{header, HeaderMap, StatusCode},
-    response::{IntoResponse, Response},
     Extension, Json,
+    extract::{Path, Query, State},
+    http::{HeaderMap, StatusCode, header},
+    response::{IntoResponse, Response},
 };
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::labels::{label_error, prepare, sheet_for, LabelAsk, Purpose};
+use super::labels::{LabelAsk, Purpose, label_error, prepare, sheet_for};
 use crate::app::state::AppState;
 use crate::auth::Actor;
 use crate::http::errors::ErrorBody;
-use crate::labels::{self, runs, store, Output};
+use crate::labels::{self, Output, runs, store};
 
 pub fn routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
@@ -488,7 +488,7 @@ async fn bags_for(
                         "roast {:?} is not a finished roast: its bags cannot be taken off",
                         it.roast
                     ),
-                ))
+                ));
             }
             Err(e) => return Err(failed(e)),
         };
@@ -1089,15 +1089,16 @@ async fn reprint_label_run(
         Err(r) => return r,
     };
     if let Some(p) = &ask.labels
-        && let Some(bad) = p.iter().find(|n| **n == 0 || **n > run.run.labels as usize) {
-            return status(
-                StatusCode::BAD_REQUEST,
-                format!(
-                    "label {bad} is not in the run: its labels are 1 to {}",
-                    run.run.labels
-                ),
-            );
-        }
+        && let Some(bad) = p.iter().find(|n| **n == 0 || **n > run.run.labels as usize)
+    {
+        return status(
+            StatusCode::BAD_REQUEST,
+            format!(
+                "label {bad} is not in the run: its labels are 1 to {}",
+                run.run.labels
+            ),
+        );
+    }
     let printer = match labels::printers::default(&state.db).await {
         Ok(d) => run.run.printer_id.clone().or(d.map(|p| p.id)),
         Err(e) => return failed(e),

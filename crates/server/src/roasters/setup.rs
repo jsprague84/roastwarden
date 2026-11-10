@@ -710,13 +710,14 @@ mod tests {
             Control::Full
         );
         assert!(s.get(virtual_roaster::DEVICE_ID).await.fixed);
-        assert!(s
-            .set(
+        assert!(
+            s.set(
                 virtual_roaster::DEVICE_ID,
                 change(Kind::Logger, Control::Off)
             )
             .await
-            .is_err());
+            .is_err()
+        );
         assert_eq!(
             s.limits(virtual_roaster::DEVICE_ID).await.control,
             Control::Full
@@ -783,7 +784,7 @@ mod tests {
     /// but not a setpoint; only the owner changes a setup; the virtual roaster is unchanged.
     #[tokio::test]
     async fn the_gate_through_the_api() {
-        use crate::test_support::{call, Harness};
+        use crate::test_support::{Harness, call};
         use axum::http::StatusCode;
         use serde_json::json;
 
@@ -796,10 +797,12 @@ mod tests {
             .await;
         assert_eq!(r.status, StatusCode::CONFLICT, "{:?}", r.json());
         assert_eq!(r.json()["error"]["code"], "CONTROL_OFF");
-        assert!(r.json()["error"]["message"]
-            .as_str()
-            .unwrap()
-            .contains("control is off for esp32_new"));
+        assert!(
+            r.json()["error"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("control is off for esp32_new")
+        );
         let stop = h
             .owner(
                 "POST",
@@ -852,10 +855,12 @@ mod tests {
             )
             .await;
         assert_eq!(r.status, StatusCode::CONFLICT);
-        assert!(r.json()["error"]["message"]
-            .as_str()
-            .unwrap()
-            .contains("setpoint needs full control"));
+        assert!(
+            r.json()["error"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("setpoint needs full control")
+        );
 
         // The virtual roaster: full, fixed, its control unchanged.
         let vr = virtual_roaster::DEVICE_ID;
@@ -1219,10 +1224,12 @@ mod tests {
             .await;
         assert_eq!(r.status, StatusCode::CONFLICT);
         assert_eq!(r.json()["error"]["code"], "OUTPUT_NOT_DECLARED");
-        assert!(r.json()["error"]["message"]
-            .as_str()
-            .unwrap()
-            .contains("gas1 has no damper output"));
+        assert!(
+            r.json()["error"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("gas1 has no damper output")
+        );
         let bad = h
             .owner("POST", "/api/roaster/gas1/control/drum", Some(drum(120.0)))
             .await;
@@ -1242,9 +1249,10 @@ mod tests {
         let got = tokio::time::timeout(std::time::Duration::from_secs(2), async {
             loop {
                 if let Ok(roastwarden_mqtt::MqttEvent::Publish { topic, payload }) = rx.recv().await
-                    && topic.ends_with("/drum") {
-                        return (topic, String::from_utf8(payload).unwrap());
-                    }
+                    && topic.ends_with("/drum")
+                {
+                    return (topic, String::from_utf8(payload).unwrap());
+                }
             }
         })
         .await
@@ -1261,7 +1269,7 @@ mod tests {
     /// turning it off runs at once; a read-only token never.
     #[tokio::test]
     async fn an_admin_token_switches_control_on_only_with_the_owners_approval() {
-        use crate::test_support::{call, Harness};
+        use crate::test_support::{Harness, call};
         use axum::http::StatusCode;
         use serde_json::json;
         let h = Harness::new().await;
@@ -1451,10 +1459,12 @@ mod tests {
             .await;
         assert_eq!(r.status, StatusCode::CONFLICT);
         assert_eq!(r.json()["error"]["code"], "OUTPUT_NOT_DECLARED");
-        assert!(r.json()["error"]["message"]
-            .as_str()
-            .unwrap()
-            .contains("tc4 has no heater output"));
+        assert!(
+            r.json()["error"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("tc4 has no heater output")
+        );
 
         // A gas drum with full control: its sequence records only, and takes a low fan.
         let r = h

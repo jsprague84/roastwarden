@@ -1,8 +1,8 @@
 //! Python literals, as Artisan stores an `.alog` (the `repr()` of a dict): a parser for what
 //! `ast.literal_eval` accepts, and a writer whose output it accepts back.
 
-use anyhow::{anyhow, bail, Context, Result};
-use serde_json::{json, Map, Value};
+use anyhow::{Context, Result, anyhow, bail};
+use serde_json::{Map, Value, json};
 use std::fmt::Write as _;
 
 /// Parse an `.alog` body: JSON first (Artisan can export JSON, and older
@@ -290,9 +290,10 @@ impl PyParser<'_> {
             return Ok(json!(i64::from_str_radix(hex, 16)?));
         }
         if !text.contains(['.', 'e', 'E'])
-            && let Ok(i) = text.parse::<i64>() {
-                return Ok(json!(i));
-            }
+            && let Ok(i) = text.parse::<i64>()
+        {
+            return Ok(json!(i));
+        }
         let f: f64 = text
             .parse()
             .map_err(|_| anyhow!("invalid number '{text}' at byte {start}"))?;

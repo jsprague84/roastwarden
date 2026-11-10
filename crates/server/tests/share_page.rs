@@ -10,10 +10,10 @@
     reason = "test code: a panic is the failure, and the helpers are not #[test] functions"
 )]
 
-use axum::body::{to_bytes, Body};
-use axum::http::{header, Request, StatusCode};
-use roastwarden_server::test_support::{call, Harness};
-use serde_json::{json, Value};
+use axum::body::{Body, to_bytes};
+use axum::http::{Request, StatusCode, header};
+use roastwarden_server::test_support::{Harness, call};
+use serde_json::{Value, json};
 use tower::ServiceExt;
 
 /// A finished roast of a coffee: ten minutes of samples, charge, first crack and drop
@@ -109,10 +109,12 @@ async fn a_shared_roast_opens_for_anyone_until_revoked() {
     let link = r.json();
     let code = link["code"].as_str().unwrap().to_string();
     assert_eq!(code.len(), 25);
-    assert!(link["url"]
-        .as_str()
-        .unwrap()
-        .ends_with(&format!("/R/{code}")));
+    assert!(
+        link["url"]
+            .as_str()
+            .unwrap()
+            .ends_with(&format!("/R/{code}"))
+    );
     assert_eq!(link["name"], "Kenya Nyeri AA");
     assert_eq!(link["created_by"], "owner");
 

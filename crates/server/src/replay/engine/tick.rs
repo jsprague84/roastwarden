@@ -9,8 +9,8 @@ use super::config::{AlignOn, Channel, LoopAt, ReplayMode};
 use super::plan::interpolate;
 use super::view::{AlignView, Clock, LogEntry, LogKind};
 use super::{
-    Engine, TpTracker, ADAPT_FROM_SECS, ADAPT_MAX_AHEAD_SECS, ADAPT_MIN_SLOPE, ADAPT_TAU_SECS,
-    REFRESH_SECS,
+    ADAPT_FROM_SECS, ADAPT_MAX_AHEAD_SECS, ADAPT_MIN_SLOPE, ADAPT_TAU_SECS, Engine, REFRESH_SECS,
+    TpTracker,
 };
 use crate::replay::auto_drop::DropInput;
 
@@ -64,21 +64,22 @@ impl Engine {
         // CHARGE marked (or moved) after the run started: the time base
         // re-anchors and whatever fired before the new CHARGE fires again.
         if let Some(prev) = self.charge
-            && (prev - charge).abs() > 0.5 {
-                self.tp = TpTracker::default();
-                self.drop_rt.reset();
-                let rearmed = self.rearm_before(charge);
-                self.clock.profile_t = live_t - self.align.offset_seconds;
-                self.log(
-                    &mut out,
-                    LogKind::Anchor,
-                    None,
-                    None,
-                    Some(format!(
-                        "time base re-anchored on CHARGE at {charge:.0} s; {rearmed} event(s) re-armed"
-                    )),
-                );
-            }
+            && (prev - charge).abs() > 0.5
+        {
+            self.tp = TpTracker::default();
+            self.drop_rt.reset();
+            let rearmed = self.rearm_before(charge);
+            self.clock.profile_t = live_t - self.align.offset_seconds;
+            self.log(
+                &mut out,
+                LogKind::Anchor,
+                None,
+                None,
+                Some(format!(
+                    "time base re-anchored on CHARGE at {charge:.0} s; {rearmed} event(s) re-armed"
+                )),
+            );
+        }
         self.charge = Some(charge);
 
         self.tp.update(live_t, inp.bt);
@@ -340,9 +341,10 @@ impl Engine {
                 Some(sp) => {
                     let f = ff.unwrap_or(0.0);
                     if !self.pid.started()
-                        && let Some(b) = bt {
-                            self.pid.reset(sp, b, heater_now.unwrap_or(f), f);
-                        }
+                        && let Some(b) = bt
+                    {
+                        self.pid.reset(sp, b, heater_now.unwrap_or(f), f);
+                    }
                     let out = self.pid.compute(sp, bt, dt, f);
                     self.pid_out = Some(out);
                     Some(out.round())
@@ -352,9 +354,10 @@ impl Engine {
             _ => None,
         };
         if let Some(c) = self.channels.get_mut(&Channel::Heater)
-            && !c.paused {
-                c.target = heater;
-            }
+            && !c.paused
+        {
+            c.target = heater;
+        }
     }
 
     /// A channel's profile value: the latest fired event for an

@@ -1,7 +1,7 @@
 //! An Artisan roast log as a finished roast: its samples with the canonical RoR, its landmarks,
 //! the statistics Complete computes, the real roast times kept.
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use chrono::Utc;
 use sqlx::SqlitePool;
 use uuid::Uuid;

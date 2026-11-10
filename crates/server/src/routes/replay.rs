@@ -3,10 +3,10 @@
 //! cut its heater.
 
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde::Deserialize;
 use utoipa::ToSchema;

@@ -2,10 +2,10 @@
 //! decisions, and the one request a token waits on.
 
 use axum::{
+    Json,
     extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde::Deserialize;
 use utoipa_axum::{router::OpenApiRouter, routes};

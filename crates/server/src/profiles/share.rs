@@ -25,7 +25,7 @@ use sqlx::SqlitePool;
 use std::fmt::Write as _;
 use utoipa::ToSchema;
 
-use crate::labels::share::{self as rshare, esc, Curve, PageBrand};
+use crate::labels::share::{self as rshare, Curve, PageBrand, esc};
 use crate::profiles::types::{
     CreateProfileEventRequest, CreateProfilePointRequest, ProfileAction, ProfileCurves,
     ProfileWithPoints, TriggerKind,
@@ -274,7 +274,7 @@ pub fn read_document(text: &str) -> Result<SharedProfile, String> {
         Some(f) if f.starts_with("roastwarden.profile/") => {
             return Err(format!(
                 "a shared profile in a newer format ({f}); update this server to import it"
-            ))
+            ));
         }
         _ => return Err("not a shared Roastwarden profile".into()),
     }
@@ -368,17 +368,19 @@ pub fn curve(p: &ProfileWithPoints) -> Option<Curve> {
             TriggerKind::Bt => e.at_bt.and_then(|b| time_at_bt(b as f32)),
         };
         if let Some(t) = t
-            && !marks.iter().any(|m| m.0 == word) {
-                marks.push((word, t, temp_at(t)));
-            }
+            && !marks.iter().any(|m| m.0 == word)
+        {
+            marks.push((word, t, temp_at(t)));
+        }
     }
     let end = bt.last().map(|q| q.0);
     let mut first_crack = marks.iter().find(|m| m.0 == "First crack").map(|m| m.1);
     if first_crack.is_none()
-        && let Some(fc) = p.profile.target_first_crack {
-            first_crack = Some(fc as f32);
-            marks.push(("First crack", fc as f32, temp_at(fc as f32)));
-        }
+        && let Some(fc) = p.profile.target_first_crack
+    {
+        first_crack = Some(fc as f32);
+        marks.push(("First crack", fc as f32, temp_at(fc as f32)));
+    }
     let drop = marks
         .iter()
         .find(|m| m.0 == "Drop")
@@ -386,9 +388,10 @@ pub fn curve(p: &ProfileWithPoints) -> Option<Curve> {
         .or(p.profile.target_total_time.map(|t| t as f32))
         .or(end);
     if !marks.iter().any(|m| m.0 == "Drop")
-        && let Some(d) = drop {
-            marks.push(("Drop", d, temp_at(d)));
-        }
+        && let Some(d) = drop
+    {
+        marks.push(("Drop", d, temp_at(d)));
+    }
     marks.sort_by(|a, b| a.1.total_cmp(&b.1));
     Some(Curve {
         drop_temp: drop.and_then(temp_at),
@@ -479,13 +482,15 @@ pub fn html(
             parts.push(format!("Roast time {}", clock(f64::from(dr))));
         }
         if let (Some(fc), Some(dr)) = (c.first_crack, c.drop)
-            && dr > fc && dr > 0.0 {
-                parts.push(format!(
-                    "development {} ({:.0} %)",
-                    clock(f64::from(dr - fc)),
-                    (dr - fc) / dr * 100.0
-                ));
-            }
+            && dr > fc
+            && dr > 0.0
+        {
+            parts.push(format!(
+                "development {} ({:.0} %)",
+                clock(f64::from(dr - fc)),
+                (dr - fc) / dr * 100.0
+            ));
+        }
         if let Some(t) = c.drop_temp {
             let t = f64::from(t);
             parts.push(format!("drop at {t:.0} °C ({:.0} °F)", f_of(t)));
@@ -593,7 +598,7 @@ pub fn parse_link(text: &str) -> Result<Link, String> {
         s => {
             return Err(format!(
                 "a {s}: link; a shared profile's starts with https://"
-            ))
+            ));
         }
     };
     if !u.username().is_empty() || u.password().is_some() {
@@ -763,7 +768,7 @@ pub async fn fetch(link: &Link) -> Result<String, FetchError> {
             return Err(FetchError::NotFound(format!(
                 "{} is not active (revoked, or never was)",
                 link.page()
-            )))
+            )));
         }
         s => return Err(format!("{} answered {s}", link.page()).into()),
     }

@@ -4,11 +4,11 @@
 //! report. Writes for inventory and admin tokens; deletes may wait for the owner's approval.
 
 use axum::{
+    Extension, Json,
     body::Bytes,
     extract::{Path, Query, State},
-    http::{header, StatusCode},
+    http::{StatusCode, header},
     response::{IntoResponse, Response},
-    Extension, Json,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -18,7 +18,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::app::state::AppState;
 use crate::auth::Actor;
 use crate::http::errors::ErrorBody;
-use crate::labels::{self, store, Report};
+use crate::labels::{self, Report, store};
 
 pub fn routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
@@ -334,7 +334,7 @@ async fn create_design(
                     "there is a design {:?}: edit it (PUT) for a new version",
                     d.id
                 ),
-            )
+            );
         }
         Err(e) => return failed(e),
     }
@@ -435,7 +435,7 @@ async fn rollback_design(
             return status(
                 StatusCode::NOT_FOUND,
                 format!("no version {} of {id:?}", r.version),
-            )
+            );
         }
         Err(e) => return failed(e),
     };
@@ -484,7 +484,7 @@ async fn delete_design(State(state): State<AppState>, Path(id): Path<String>) ->
                     "{} uses it as its label: give it another first",
                     beans.join(", ")
                 ),
-            )
+            );
         }
         Ok(_) => {}
         Err(e) => return failed(e),
@@ -679,9 +679,9 @@ async fn put_brand(
                 return status(
                     StatusCode::BAD_REQUEST,
                     format!(
-                    "the logo {logo:?} is not an image asset (PUT /api/label-assets/{logo} first)"
-                ),
-                )
+                        "the logo {logo:?} is not an image asset (PUT /api/label-assets/{logo} first)"
+                    ),
+                );
             }
             Err(e) => return failed(e),
         }
@@ -759,7 +759,7 @@ async fn set_bean_label(
                 return status(
                     StatusCode::BAD_REQUEST,
                     format!("no brand {b:?} (GET /api/label-brands)"),
-                )
+                );
             }
             Err(e) => return failed(e),
         }

@@ -4,7 +4,7 @@
 
 use reqwest::Method;
 use serde::de::DeserializeOwned;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::fmt::Write as _;
 use std::time::Duration;
 
@@ -280,7 +280,7 @@ pub fn pick(list: Value, reference: &str, kind: &str, name_key: &str) -> Result<
             return Err(Failure {
                 details: Some(Box::new(other)),
                 ..Failure::new("BAD_RESPONSE", format!("expected a list of {kind}s"))
-            })
+            });
         }
     };
     let id_of = |v: &Value| match &v["id"] {

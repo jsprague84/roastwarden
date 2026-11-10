@@ -7,8 +7,8 @@
 //! A public demo that counts its visits (`ROASTWARDEN_DEMO_STATS_URL`) also allows its Umami
 //! server's script and calls; no other install does.
 
-use axum::http::{header, HeaderName, HeaderValue};
 use axum::Router;
+use axum::http::{HeaderName, HeaderValue, header};
 use tower_http::set_header::SetResponseHeaderLayer;
 
 pub const CSP: &str = "default-src 'self'; \
@@ -89,10 +89,12 @@ mod tests {
             let h = res.headers();
             assert_eq!(h[header::X_CONTENT_TYPE_OPTIONS], "nosniff", "{path}");
             assert_eq!(h[header::X_FRAME_OPTIONS], "DENY", "{path}");
-            assert!(h[header::CONTENT_SECURITY_POLICY]
-                .to_str()
-                .unwrap()
-                .contains("frame-ancestors 'none'"));
+            assert!(
+                h[header::CONTENT_SECURITY_POLICY]
+                    .to_str()
+                    .unwrap()
+                    .contains("frame-ancestors 'none'")
+            );
         }
     }
 
@@ -112,7 +114,7 @@ mod tests {
     async fn a_response_with_its_own_csp_keeps_it() {
         // Label assets carry a sandboxed CSP (routes/label_studio.rs); the app's must not
         // replace it.
-        use crate::routes::label_studio::{asset_response, ASSET_CSP};
+        use crate::routes::label_studio::{ASSET_CSP, asset_response};
         let app = with_security_headers(
             Router::new().route(
                 "/asset",

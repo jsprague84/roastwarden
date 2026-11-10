@@ -1,10 +1,10 @@
 //! The server-run autotune (docs/autotune-2.md): start, stop and its state.
 
 use axum::{
+    Json,
     extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 

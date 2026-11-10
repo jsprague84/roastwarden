@@ -5,10 +5,10 @@ use std::fmt::Write as _;
 
 use clap::Subcommand;
 use reqwest::Method;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use crate::api::{enc, Api};
-use crate::out::{code, Failure, Out};
+use crate::api::{Api, enc};
+use crate::out::{Failure, Out, code};
 
 #[derive(Subcommand, Debug)]
 pub enum PasswordCommand {
@@ -220,15 +220,16 @@ fn stdin_line(what: &str) -> Result<String, Failure> {
 
 /// `roast roaster firmware ID`: the zip, written to a file.
 pub async fn firmware(api: &Api, out: &Out, f: FirmwareArgs) -> Result<u8, Failure> {
-    let address =
-        match f.address.or_else(|| api.host()) {
-            Some(a) if a != "localhost" && a != "127.0.0.1" && a != "::1" => a,
-            _ => return Err(Failure::new(
+    let address = match f.address.or_else(|| api.host()) {
+        Some(a) if a != "localhost" && a != "127.0.0.1" && a != "::1" => a,
+        _ => {
+            return Err(Failure::new(
                 "USAGE",
                 "--address: the server's address on the network (192.168.1.50), which the ESP32 \
                  connects to; roast calls it at localhost",
-            )),
-        };
+            ));
+        }
+    };
     let mut body = json!({
         "kind": f.kind.replace('-', "_"),
         "roaster_id": f.roaster,

@@ -13,11 +13,11 @@
 use std::io::Read;
 use std::time::Duration;
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use ipp::attribute::IppAttribute;
 use ipp::model::DelimiterTag;
-use ipp::operation::builder::IppOperationBuilder;
 use ipp::operation::IppOperation;
+use ipp::operation::builder::IppOperationBuilder;
 use ipp::parser::IppParser;
 use ipp::payload::IppPayload;
 use ipp::request::IppRequestResponse;
@@ -338,7 +338,7 @@ pub mod tls {
     use std::fmt::Write as _;
     use std::sync::{Arc, Mutex};
 
-    use anyhow::{anyhow, Result};
+    use anyhow::{Result, anyhow};
     use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
     use rustls::crypto::CryptoProvider;
     use rustls::pki_types::{CertificateDer, ServerName, UnixTime};

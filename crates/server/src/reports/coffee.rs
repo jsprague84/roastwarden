@@ -2,12 +2,12 @@
 //! green coffee, what is known of it, its stock and cost, its roasts as a table and overlaid
 //! on one chart with their RoR, its cuppings, and its ledger with a running balance.
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sqlx::SqlitePool;
 
 use super::chart::{self, Point};
 use super::{
-    clock_opt, g1, grams, meta, money, n1, short_date, weight, Options, ReportError, DASH,
+    DASH, Options, ReportError, clock_opt, g1, grams, meta, money, n1, short_date, weight,
 };
 use crate::coffee::inventory::{BeanDetail, InventoryService};
 use crate::profiles::history::ProfileHistoryRoast;
@@ -369,7 +369,7 @@ pub(crate) mod tests {
     use crate::coffee::inventory::{BeanRequest, PurchaseFields, StockRequest};
     use crate::labels::Renderer;
     use crate::reports::roast::tests::{fixture, options};
-    use crate::reports::{kind, render, Format, Paper, Units};
+    use crate::reports::{Format, Paper, Units, kind, render};
     use crate::roasts::types::RoastEventType;
 
     /// Batch #5 and two variants of it (#4 a little faster, #3 slower), newest first
@@ -494,11 +494,13 @@ pub(crate) mod tests {
         assert_eq!(ledger[1]["what"], "Roasted #3");
         assert_eq!(ledger[3]["balance"], "700.0");
         assert_eq!(d["roasts"][0]["green"], "100.0", "one decimal in a table");
-        assert!(d["facts"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|f| f["label"] == "Crop" && f["value"] == "2026"));
+        assert!(
+            d["facts"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|f| f["label"] == "Crop" && f["value"] == "2026")
+        );
 
         let r = Renderer::in_process();
         let pdf = render(&r, kind("coffee").unwrap(), d.clone(), Format::Pdf, 1, 96)

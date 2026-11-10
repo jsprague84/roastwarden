@@ -25,12 +25,12 @@ pub mod trace;
 
 use chrono::{DateTime, Datelike, FixedOffset, Timelike, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sqlx::SqlitePool;
 use utoipa::ToSchema;
 
-use crate::labels::engine::{self, Diag, Reply, Request};
 use crate::labels::Renderer;
+use crate::labels::engine::{self, Diag, Reply, Request};
 
 /// A kind of report and its built-in design.
 #[derive(Debug, Clone, Copy)]
@@ -483,7 +483,7 @@ pub async fn render(
                 bytes: serde_json::to_vec(&data).map_err(|e| ReportError::Internal(e.into()))?,
                 content_type: "application/json",
                 pages: None,
-            })
+            });
         }
         Format::Pdf => (engine::Output::Pdf, "application/pdf"),
         Format::Svg => (engine::Output::SvgPages, "image/svg+xml"),

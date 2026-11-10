@@ -34,7 +34,7 @@ use commands::{
     analysis, approvals, beans, labels, orders, plans, profiles, records, reports, roasted,
     roasters, roasts, server, settings, share, status,
 };
-use out::{code, Failure, Out};
+use out::{Failure, Out, code};
 
 fn main() -> ExitCode {
     // RUSTROAST_URL and RUSTROAST_TOKEN from before the rename still work, with a note

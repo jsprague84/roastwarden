@@ -7,15 +7,15 @@ use std::time::Duration;
 
 use clap::Subcommand;
 use reqwest::Method;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use super::check::{check, CheckArgs};
+use super::check::{CheckArgs, check};
 use super::{params, read_file};
-use crate::api::{enc, Api, Upload};
+use crate::api::{Api, Upload, enc};
 use crate::cli::Wait;
 use crate::commands::approvals::held_or_done;
 use crate::commands::records::save_file;
-use crate::out::{code, Failure, Out};
+use crate::out::{Failure, Out, code};
 
 #[derive(Subcommand, Debug)]
 pub enum DesignCmd {

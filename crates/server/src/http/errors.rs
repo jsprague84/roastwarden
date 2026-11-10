@@ -13,7 +13,7 @@
 use axum::{
     body::Body,
     extract::Request,
-    http::{header, HeaderValue, StatusCode},
+    http::{HeaderValue, StatusCode, header},
     middleware::Next,
     response::{IntoResponse, Response},
 };
@@ -122,7 +122,7 @@ pub async fn api_not_found() -> Response {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::{routing::get, Router};
+    use axum::{Router, routing::get};
     use tower::ServiceExt;
 
     fn app() -> Router {

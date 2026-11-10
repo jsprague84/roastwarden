@@ -109,11 +109,7 @@ impl Form {
 
     /// whole | ground
     pub fn word(&self) -> &'static str {
-        if self.ground {
-            "ground"
-        } else {
-            "whole"
-        }
+        if self.ground { "ground" } else { "whole" }
     }
 
     /// What a label prints: "Whole bean", "Ground · espresso", "Ground"

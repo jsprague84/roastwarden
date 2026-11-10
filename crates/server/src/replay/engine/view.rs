@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use super::config::{AlignOn, Channel, LoopAt};
 use super::pid::PidGains;
-use super::plan::{interpolate, PlanEvent};
+use super::plan::{PlanEvent, interpolate};
 use super::tick::TickOutput;
 use super::{Engine, EventRt, RECENT_LEN, UPCOMING_LEN};
 use crate::control::fan_assist::AssistView;

@@ -158,12 +158,16 @@ async fn test_delete_device() {
     .await
     .unwrap();
 
-    assert!(crate::roasters::registry::delete_device(&db, &device.id)
-        .await
-        .unwrap());
-    assert!(!crate::roasters::registry::delete_device(&db, &device.id)
-        .await
-        .unwrap()); // Already deleted
+    assert!(
+        crate::roasters::registry::delete_device(&db, &device.id)
+            .await
+            .unwrap()
+    );
+    assert!(
+        !crate::roasters::registry::delete_device(&db, &device.id)
+            .await
+            .unwrap()
+    ); // Already deleted
 
     let fetched = crate::roasters::registry::get_device(&db, &device.id)
         .await
@@ -365,12 +369,16 @@ async fn test_add_and_remove_connection() {
     assert_eq!(fetched.connections.len(), 1);
 
     // Remove connection
-    assert!(crate::roasters::registry::remove_connection(&db, &conn.id)
-        .await
-        .unwrap());
-    assert!(!crate::roasters::registry::remove_connection(&db, &conn.id)
-        .await
-        .unwrap());
+    assert!(
+        crate::roasters::registry::remove_connection(&db, &conn.id)
+            .await
+            .unwrap()
+    );
+    assert!(
+        !crate::roasters::registry::remove_connection(&db, &conn.id)
+            .await
+            .unwrap()
+    );
 
     let fetched = crate::roasters::registry::get_device(&db, &device.id)
         .await
@@ -459,9 +467,11 @@ async fn test_cascade_delete_connections() {
     }).await.unwrap();
 
     // Delete device should cascade delete connections
-    assert!(crate::roasters::registry::delete_device(&db, &device.id)
-        .await
-        .unwrap());
+    assert!(
+        crate::roasters::registry::delete_device(&db, &device.id)
+            .await
+            .unwrap()
+    );
 
     // Connections should be gone (we can verify by trying to get the device)
     let fetched = crate::roasters::registry::get_device(&db, &device.id)

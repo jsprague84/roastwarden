@@ -1,7 +1,7 @@
 //! An `.alog` read: as a profile (its curve, events and landmarks) or as a recorded roast
 //! (its samples, events and weights) for the imports.
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 use super::literal::parse_alog;
 
@@ -106,27 +106,29 @@ pub fn parse_profile(content: &str) -> Result<ParsedProfile> {
     let has_timeindex = timeindex.len() >= 7;
     if has_timeindex {
         if timeindex[0] >= 0
-            && let Some((t, bt, et)) = sample(charge_idx) {
-                events.push(ParsedEvent {
-                    name: "Charge".into(),
-                    time: t,
-                    bean_temp: bt,
-                    env_temp: et,
-                    event_type: "CHARGE".into(),
-                });
-            }
+            && let Some((t, bt, et)) = sample(charge_idx)
+        {
+            events.push(ParsedEvent {
+                name: "Charge".into(),
+                time: t,
+                bean_temp: bt,
+                env_temp: et,
+                event_type: "CHARGE".into(),
+            });
+        }
         for (slot, code, label) in TIMEINDEX_SLOTS {
             let idx = timeindex[slot];
             if idx > 0
-                && let Some((t, bt, et)) = sample(idx as usize) {
-                    events.push(ParsedEvent {
-                        name: label.into(),
-                        time: t,
-                        bean_temp: bt,
-                        env_temp: et,
-                        event_type: code.into(),
-                    });
-                }
+                && let Some((t, bt, et)) = sample(idx as usize)
+            {
+                events.push(ParsedEvent {
+                    name: label.into(),
+                    time: t,
+                    bean_temp: bt,
+                    env_temp: et,
+                    event_type: code.into(),
+                });
+            }
         }
     }
     // `computed` carries TP, which timeindex does not, and is the only source

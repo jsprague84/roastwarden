@@ -3,10 +3,10 @@
 //! prediction did on one roast.
 
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 

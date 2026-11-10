@@ -1,10 +1,10 @@
 //! Beans and planned roasts (`docs/batches.md`); purchases and costs (`docs/green-coffee.md`).
 
 use axum::{
+    Json,
     extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};

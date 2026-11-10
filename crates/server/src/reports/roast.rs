@@ -2,12 +2,12 @@
 //! the coffee and the roast, eight figures judged against what was expected
 //! (`expect.rs`), the chart's series, phases, events, notes and cupping.
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sqlx::SqlitePool;
 
 use super::chart::{self, Point};
 use super::expect::{self, Expected, Range, Source};
-use super::{clock, clock_opt, grams, hm, long_date, meta, n1, Options, ReportError, DASH};
+use super::{DASH, Options, ReportError, clock, clock_opt, grams, hm, long_date, meta, n1};
 use crate::coffee::costs::RoastCost;
 use crate::coffee::inventory::InventoryService;
 use crate::profiles::history::ProfileHistoryRoast;
@@ -744,7 +744,7 @@ pub(crate) mod tests {
     use super::*;
     use crate::labels::Renderer;
     use crate::profiles::types::{ProfileEvent, ProfilePoint, RoastProfile};
-    use crate::reports::{kind, render, Format, Paper, Units};
+    use crate::reports::{Format, Paper, Units, kind, render};
     use crate::roasts::types::{CuppingAttribute, CuppingScore};
 
     /// A recorded roast on the real fluid bed, as `roast show --telemetry` gave it

@@ -42,7 +42,7 @@ use std::fmt::Write as _;
 use std::sync::Arc;
 
 use axum::extract::{Request, State};
-use axum::http::{header, HeaderMap, Method, StatusCode};
+use axum::http::{HeaderMap, Method, StatusCode, header};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use sqlx::SqlitePool;
@@ -323,7 +323,7 @@ fn demo_stats_from(
                 "ROASTWARDEN_DEMO_STATS_URL and ROASTWARDEN_DEMO_STATS_WEBSITE go \
                         together: set both, or neither"
                     .into(),
-            )
+            );
         }
     };
     if !demo {
@@ -715,23 +715,25 @@ pub async fn require_api_key(
         let now = std::time::Instant::now();
         // A request from a demo visitor keeps their simulated roaster (demo.rs)
         if auth.demo
-            && let Some(own) = crate::ops::demo::own_roaster(req.headers()) {
-                auth.visitors.touch(&own, now);
-            }
+            && let Some(own) = crate::ops::demo::own_roaster(req.headers())
+        {
+            auth.visitors.touch(&own, now);
+        }
         if credential.is_some()
-            && let Some(secs) = auth.failures.wait(&client, now) {
-                let mut res = refuse(
-                    StatusCode::TOO_MANY_REQUESTS,
-                    "TOO_MANY_FAILURES",
-                    format!(
-                        "{FAIL_LIMIT} wrong keys or tokens came from here within a minute: wait {secs} s."
-                    ),
-                    Actor::Anonymous(None),
-                );
-                res.headers_mut()
-                    .insert(header::RETRY_AFTER, header::HeaderValue::from(secs));
-                return res;
-            }
+            && let Some(secs) = auth.failures.wait(&client, now)
+        {
+            let mut res = refuse(
+                StatusCode::TOO_MANY_REQUESTS,
+                "TOO_MANY_FAILURES",
+                format!(
+                    "{FAIL_LIMIT} wrong keys or tokens came from here within a minute: wait {secs} s."
+                ),
+                Actor::Anonymous(None),
+            );
+            res.headers_mut()
+                .insert(header::RETRY_AFTER, header::HeaderValue::from(secs));
+            return res;
+        }
         let refused = |status, code, msg, actor| {
             auth.failures.fail(&client, now);
             refuse(status, code, msg, actor)
@@ -767,7 +769,7 @@ pub async fn require_api_key(
                             "UNAVAILABLE",
                             "Could not check the login.".into(),
                             Actor::Anonymous(None),
-                        )
+                        );
                     }
                 }
             }
@@ -797,7 +799,7 @@ pub async fn require_api_key(
                             "TOKEN_INVALID",
                             "Unknown API token.".into(),
                             Actor::Anonymous(None),
-                        )
+                        );
                     }
                     TokenCheck::Revoked { id, name } => {
                         return refused(
@@ -805,7 +807,7 @@ pub async fn require_api_key(
                             "TOKEN_REVOKED",
                             format!("The API token \"{name}\" was revoked."),
                             Actor::Anonymous(Some(TokenRef { id, name })),
-                        )
+                        );
                     }
                     TokenCheck::Expired { id, name } => {
                         return refused(
@@ -813,7 +815,7 @@ pub async fn require_api_key(
                             "TOKEN_EXPIRED",
                             format!("The API token \"{name}\" has expired."),
                             Actor::Anonymous(Some(TokenRef { id, name })),
-                        )
+                        );
                     }
                     TokenCheck::Error => {
                         return refuse(
@@ -821,7 +823,7 @@ pub async fn require_api_key(
                             "UNAVAILABLE",
                             "Could not check the API token.".into(),
                             Actor::Anonymous(None),
-                        )
+                        );
                     }
                 }
             }

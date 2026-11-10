@@ -7,8 +7,8 @@ use anyhow::{Context, Result};
 use chrono::Utc;
 use uuid::Uuid;
 
-use super::types::{clean, finite_nonneg, PlanRequest, PlannedRoast, Val, PLAN_SELECT};
-use super::{bad, InventoryService};
+use super::types::{PLAN_SELECT, PlanRequest, PlannedRoast, Val, clean, finite_nonneg};
+use super::{InventoryService, bad};
 
 impl InventoryService {
     /// The queue in order; `done` adds the plans that ran (newest last). `device_id`

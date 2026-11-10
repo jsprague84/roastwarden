@@ -10,7 +10,7 @@ use super::config::{Channel, TriggerPolicy};
 use super::plan::PlanEvent;
 use super::tick::{TickInput, TickOutput};
 use super::view::{EventStatus, LogEntry, LogKind};
-use super::{Engine, CUE_GRACE_SECS};
+use super::{CUE_GRACE_SECS, Engine};
 use crate::profiles::types::{ProfileAction, TriggerKind};
 
 impl Engine {

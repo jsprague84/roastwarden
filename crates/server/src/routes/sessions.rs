@@ -3,10 +3,10 @@
 //! drive in `replay.rs`.
 
 use axum::{
-    extract::{Path, Query, State},
-    http::{header::CONTENT_TYPE, StatusCode},
-    response::{IntoResponse, Response},
     Json,
+    extract::{Path, Query, State},
+    http::{StatusCode, header::CONTENT_TYPE},
+    response::{IntoResponse, Response},
 };
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};

@@ -22,7 +22,7 @@ use roastwarden_core::{ControlMode, DeviceCommand, Sample};
 use serde::Serialize;
 use tokio::net::TcpListener;
 use tokio_modbus::prelude::*;
-use tokio_modbus::server::tcp::{accept_tcp_connection, Server};
+use tokio_modbus::server::tcp::{Server, accept_tcp_connection};
 use utoipa::ToSchema;
 
 use crate::app::state::AppState;
@@ -743,9 +743,9 @@ mod tests {
     /// A Modbus client against the slave in the whole server, as Artisan reads it.
     mod server {
         use super::super::*;
-        use crate::test_support::{eventually, Harness};
+        use crate::test_support::{Harness, eventually};
         use serde_json::json;
-        use tokio_modbus::client::{tcp, Context, Reader, Writer};
+        use tokio_modbus::client::{Context, Reader, Writer, tcp};
 
         async fn client(addr: SocketAddr) -> Context {
             tcp::connect_slave(addr, Slave(1)).await.unwrap()

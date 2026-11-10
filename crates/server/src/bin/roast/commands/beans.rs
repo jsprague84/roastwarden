@@ -7,14 +7,14 @@ use clap::{Args, Subcommand};
 use reqwest::Method;
 use serde_json::json;
 
-use crate::api::{self, enc, Api};
+use crate::api::{self, Api, enc};
 use crate::cli::Wait;
 use crate::commands::approvals::held_or_done;
 use crate::commands::{analysis, records};
-use crate::out::{self, code, for_finding, Failure, Out};
+use crate::out::{self, Failure, Out, code, for_finding};
 use crate::text::{
-    bean_line, beans_text, carts_text, costs_text, draft_text, grams, parse_weight, wanted_line,
-    wanted_text, BeanRow,
+    BeanRow, bean_line, beans_text, carts_text, costs_text, draft_text, grams, parse_weight,
+    wanted_line, wanted_text,
 };
 
 #[derive(Subcommand, Debug)]
@@ -243,10 +243,9 @@ pub async fn list(api: &Api, out: &Out, archived: bool, low: bool) -> Result<u8,
         "/api/beans"
     };
     let mut list = api.get(path).await?;
-    if low
-        && let Some(items) = list.as_array_mut() {
-            items.retain(|b| b["low"] == json!(true));
-        }
+    if low && let Some(items) = list.as_array_mut() {
+        items.retain(|b| b["low"] == json!(true));
+    }
     let beans: Vec<BeanRow> = api::decode(list.clone())?;
     if out.json {
         out.emit(&for_finding(list, &["created_at", "updated_at"]), |_| {

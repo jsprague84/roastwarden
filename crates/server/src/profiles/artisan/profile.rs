@@ -1,14 +1,14 @@
 //! A profile as an Artisan dict: its points interpolated without overshoot (PCHIP) at one
 //! second, its events and landmarks in Artisan's slots, its background curves.
 
-use anyhow::{bail, Result};
-use serde_json::{json, Map, Value};
+use anyhow::{Result, bail};
+use serde_json::{Map, Value, json};
 
 use crate::profiles::types::{ProfileAction, ProfileWithPoints, TriggerKind};
 
 use super::roast::{
-    artisan_event_value, computed_entries, nearest_index, roast_uuid, timeindex_slots, ETYPE_AIR,
-    ETYPE_BURNER,
+    ETYPE_AIR, ETYPE_BURNER, artisan_event_value, computed_entries, nearest_index, roast_uuid,
+    timeindex_slots,
 };
 use super::round1;
 
@@ -323,9 +323,10 @@ pub fn build_profile_alog(p: &ProfileWithPoints) -> Result<Value> {
     let t0 = timex[charge_idx as usize];
     let mut put = |code: &str, idx: Option<i64>| {
         if let Some(i) = idx.map(|i| i as usize)
-            && let (Some(t), Some(bt)) = (timex.get(i), temp2.get(i).filter(|v| **v > -1.0)) {
-                computed_entries(&mut computed, code, t - t0, *bt);
-            }
+            && let (Some(t), Some(bt)) = (timex.get(i), temp2.get(i).filter(|v| **v > -1.0))
+        {
+            computed_entries(&mut computed, code, t - t0, *bt);
+        }
     };
     put("CHARGE", Some(charge_idx));
     put("TP", tp_idx);

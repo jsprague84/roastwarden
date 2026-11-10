@@ -6,7 +6,7 @@ use std::fmt::Write as _;
 use utoipa::ToSchema;
 
 use super::model::{
-    drive, projection, sim_closed_loop, FitQuality, Mode, State, ThermalModel, Tick,
+    FitQuality, Mode, State, ThermalModel, Tick, drive, projection, sim_closed_loop,
 };
 use super::ror_watch::{self, RorWatch, WatchInput};
 use crate::replay::engine::PidGains;
@@ -149,11 +149,7 @@ pub struct Prediction {
 fn band(q: &FitQuality, mode: Mode, dt: f64) -> f64 {
     let h = HORIZON_S as f64;
     let at = q.band(mode, dt.min(h)).unwrap_or(dt.min(h) / 24.0);
-    if dt > h {
-        at * (dt / h).sqrt()
-    } else {
-        at
-    }
+    if dt > h { at * (dt / h).sqrt() } else { at }
 }
 
 /// The lag state now, from the samples since CHARGE.

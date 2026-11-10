@@ -1,10 +1,10 @@
 //! Virtual roaster control (`docs/virtual-roaster.md`).
 
 use axum::{
+    Json,
     extract::{Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};

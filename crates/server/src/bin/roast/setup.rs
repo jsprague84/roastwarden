@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::api::Api;
-use crate::out::{code, Failure, Out};
+use crate::out::{Failure, Out, code};
 
 pub const SKILL_MD: &str = include_str!("../../../../../skills/roastwarden/SKILL.md");
 pub const LABEL_DESIGN_MD: &str = include_str!("../../../../../skills/roastwarden/label-design.md");
@@ -256,7 +256,7 @@ pub fn install(
             return Err(Failure::new(
                 "BAD_INPUT",
                 "say which agent (claude-code, hermes, agents) or give --dir",
-            ))
+            ));
         }
     };
     std::fs::create_dir_all(&dir).map_err(|e| io_failure("cannot create", &dir, e))?;

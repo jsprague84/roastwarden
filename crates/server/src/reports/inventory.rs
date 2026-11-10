@@ -5,10 +5,10 @@
 use std::collections::HashMap;
 
 use chrono::{DateTime, Duration, Utc};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sqlx::SqlitePool;
 
-use super::{ahead, long_date, meta, money, past, short_date, Options, ReportError, DASH};
+use super::{DASH, Options, ReportError, ahead, long_date, meta, money, past, short_date};
 use crate::coffee::inventory::{Bean, InventoryService, PlannedRoast, StockMove};
 
 /// Days of roasting the pace is taken from
@@ -222,7 +222,7 @@ mod tests {
     use crate::coffee::inventory::{BeanRequest, PurchaseFields, StockRequest};
     use crate::labels::Renderer;
     use crate::reports::roast::tests::options;
-    use crate::reports::{kind, render, Format, Paper, Units};
+    use crate::reports::{Format, Paper, Units, kind, render};
 
     /// Three coffees: Kenya roasted 700 g over the last 70 days (10 g a day), 2 kg bought on
     /// 1 March at $40 with 300 g planned; Brazil never roasted; Old lot at 0 (left out).

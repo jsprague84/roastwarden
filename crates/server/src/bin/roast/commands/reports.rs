@@ -7,11 +7,11 @@ use std::path::PathBuf;
 use clap::{Args, Subcommand, ValueEnum};
 use reqwest::Method;
 
-use crate::api::{enc, Api};
+use crate::api::{Api, enc};
 use crate::commands::labels;
 use crate::commands::records::save_file;
 use crate::commands::roasts::roast_id;
-use crate::out::{code, Failure, Out};
+use crate::out::{Failure, Out, code};
 
 #[derive(Args, Debug)]
 pub struct ReportCmd {
@@ -183,10 +183,9 @@ pub fn trace_text(t: &serde_json::Value) -> String {
                 ),
                 Some(k) => format!(
                     "{k} {}",
-                    g(&serde_json::json!(m["delta_g"]
-                        .as_f64()
-                        .unwrap_or(0.0)
-                        .abs()))
+                    g(&serde_json::json!(
+                        m["delta_g"].as_f64().unwrap_or(0.0).abs()
+                    ))
                 ),
                 None => "?".into(),
             };

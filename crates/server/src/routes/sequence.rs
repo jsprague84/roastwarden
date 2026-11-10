@@ -1,10 +1,10 @@
 //! Roast sequence settings per roaster (`docs/roast-sequence.md`).
 
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde::Serialize;
 use utoipa::ToSchema;

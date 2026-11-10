@@ -5,12 +5,12 @@ use std::time::Duration;
 
 use clap::{Args, Subcommand};
 use reqwest::Method;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use crate::api::{enc, Api};
+use crate::api::{Api, enc};
 use crate::cli::Wait;
 use crate::commands::approvals::held_or_done;
-use crate::out::{code, Failure, Out};
+use crate::out::{Failure, Out, code};
 
 #[derive(Args, Debug)]
 #[command(args_conflicts_with_subcommands = true, subcommand_negates_reqs = true)]
@@ -399,7 +399,7 @@ pub async fn printer(api: &Api, out: &Out, c: PrinterCmd) -> Result<u8, Failure>
                     return Err(Failure::new(
                         "USAGE",
                         "give --right and --down, or --first R,D (and --last R,D)",
-                    ))
+                    ));
                 }
             }
             if let Some(t) = tray {

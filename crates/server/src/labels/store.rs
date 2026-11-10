@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 use sqlx::AssertSqlSafe;
 use sqlx::SqlitePool;
 use utoipa::ToSchema;
@@ -487,9 +487,10 @@ pub async fn images_named(db: &SqlitePool, texts: &[&str]) -> Result<BTreeMap<St
     let mut out = BTreeMap::new();
     for (name,) in names {
         if texts.iter().any(|t| t.contains(&name))
-            && let Some((_, data)) = asset_data(db, &name).await? {
-                out.insert(name, ByteBuf::from(data));
-            }
+            && let Some((_, data)) = asset_data(db, &name).await?
+        {
+            out.insert(name, ByteBuf::from(data));
+        }
     }
     Ok(out)
 }
@@ -718,12 +719,14 @@ mod tests {
         let v = Brand::value(Some(&b));
         assert_eq!(v["name"], "Hill Street Roasting");
         assert!(v.as_object().unwrap().contains_key("logo"));
-        assert!(Brand {
-            ink: Some("brown".into()),
-            ..b.clone()
-        }
-        .check()
-        .is_err());
+        assert!(
+            Brand {
+                ink: Some("brown".into()),
+                ..b.clone()
+            }
+            .check()
+            .is_err()
+        );
         assert_eq!(Brand::value(None)["name"], Value::Null);
     }
 }

@@ -23,15 +23,15 @@ use std::time::{Duration, Instant};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
-use tokio::sync::{broadcast, Mutex};
+use tokio::sync::{Mutex, broadcast};
 
 use crate::analysis::telemetry::{TelemetryEvent, TelemetryService};
 use crate::control::fan_assist::FanAssistService;
 use crate::control::schedule::GainScheduler;
-use crate::predict::ror_watch::{RorWarningKind, RorWatch, AHEAD_S};
+use crate::predict::ror_watch::{AHEAD_S, RorWarningKind, RorWatch};
 use crate::predict::{PredictService, WARN_HOLD_S};
-use crate::replay::engine::{interpolate, Channel, Plan};
 use crate::replay::ReplayService;
+use crate::replay::engine::{Channel, Plan, interpolate};
 use crate::roasts::types::{
     CreateRoastEventRequest, RoastEvent, RoastEventType, RoastSession, SessionStatus,
 };
@@ -829,9 +829,10 @@ impl AlarmService {
     /// else the profile curve at the time since CHARGE.
     async fn profile_bt_now(&self, watch: &mut SessionWatch, elapsed: f64) -> Option<f64> {
         if let Some(st) = self.deps.replay.state(&watch.session.id).await
-            && st.active {
-                return st.view.target_now;
-            }
+            && st.active
+        {
+            return st.view.target_now;
+        }
         self.load_profile(watch).await;
         let curve = watch.profile_bt.as_ref()?;
         let charge = watch
@@ -1615,18 +1616,22 @@ mod tests {
         for k in 1..=20 {
             v.push((300.0 + k as f64, 175.0 - k as f64, -60.0));
         }
-        assert!(!run_auto(AutoConfig::default(), &v)
-            .iter()
-            .any(|m| m.0 == "drop"));
+        assert!(
+            !run_auto(AutoConfig::default(), &v)
+                .iter()
+                .any(|m| m.0 == "drop")
+        );
         // Above 190 °C, a single glitch sample is not either.
         let mut g: Vec<(f64, f64, f64)> = (0..200)
             .map(|t| (t as f64, 150.0 + t as f64 * 0.25, 15.0))
             .collect();
         g.push((200.0, 170.0, -80.0));
         g.extend((201..260).map(|t| (t as f64, 200.0, 5.0)));
-        assert!(!run_auto(AutoConfig::default(), &g)
-            .iter()
-            .any(|m| m.0 == "drop"));
+        assert!(
+            !run_auto(AutoConfig::default(), &g)
+                .iter()
+                .any(|m| m.0 == "drop")
+        );
         // Switched off.
         let off = AutoConfig {
             drop: false,

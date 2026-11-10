@@ -19,7 +19,7 @@
 use std::collections::BTreeMap;
 use std::time::Duration;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -408,9 +408,10 @@ impl Importer {
     /// store's `/cart/` link). A 429 is not remembered.
     pub async fn permalink(&self, host: &str) -> Option<String> {
         if let Some((at, e)) = self.profiles.lock().ok()?.get(host)
-            && at.elapsed() < PROFILE_FOR {
-                return e.clone();
-            }
+            && at.elapsed() < PROFILE_FOR
+        {
+            return e.clone();
+        }
         let e = match self.get(&format!("https://{host}/.well-known/ucp")).await {
             Ok(p) => permalink_endpoint(&p, host),
             Err(e) if store_busy(&e).is_some_and(StoreBusy::throttled) => return None,
@@ -767,9 +768,10 @@ pub fn shopify(json: &str, supplier: &str, url: &str) -> Result<Draft> {
     }
     // Prose before the first labelled line is the description.
     if d.cupping_notes.is_none()
-        && let Some(first) = text.lines().find(|l| !l.contains(':') && l.len() > 40) {
-            d.cupping_notes = Some(first.to_string());
-        }
+        && let Some(first) = text.lines().find(|l| !l.contains(':') && l.len() > 40)
+    {
+        d.cupping_notes = Some(first.to_string());
+    }
     let tags: Vec<String> = match &p["tags"] {
         Value::String(t) => t.split(',').map(|x| x.trim().to_string()).collect(),
         Value::Array(a) => a.iter().filter_map(s).collect(),
@@ -875,9 +877,10 @@ pub fn sweet_marias(json: &str, page: &str, url: &str) -> Result<Draft> {
         .filter(|t| t.starts_with("Category_Sweet Marias/Green Coffee/"))
         .max_by_key(|t| t.matches('/').count());
     if let Some(t) = deepest
-        && t.matches('/').count() >= 3 {
-            d.origin = t.rsplit('/').next().map(str::to_string);
-        }
+        && t.matches('/').count() >= 3
+    {
+        d.origin = t.rsplit('/').next().map(str::to_string);
+    }
     let mut specs = specs_table(page);
     // "country origin" is the continent there; the tag has the country.
     specs.retain(|(k, _)| k != "country origin");

@@ -409,7 +409,7 @@ use sqlx::SqlitePool;
 use crate::profiles::types::{
     CreateProfileRequest, ProfileWithPoints, SaveSessionAsProfileRequest,
 };
-use crate::profiles::validate::{is_roaster_kind, ProfileInputError, ROAST_LEVELS, ROAST_PURPOSES};
+use crate::profiles::validate::{ProfileInputError, ROAST_LEVELS, ROAST_PURPOSES, is_roaster_kind};
 
 /// Save a recorded session as a new profile: feedforward points, events
 /// and background curves, all CHARGE-relative. `Ok(None)` when the
@@ -609,10 +609,11 @@ mod tests {
             let truth = p.curves.bt[i as usize].unwrap();
             assert!((v - truth).abs() < 2.0, "t={i}: {v} vs {truth}");
         }
-        assert!(p
-            .points
-            .iter()
-            .all(|p| p.heater_pct.is_some() && p.fan_speed.is_some()));
+        assert!(
+            p.points
+                .iter()
+                .all(|p| p.heater_pct.is_some() && p.fan_speed.is_some())
+        );
     }
 
     #[test]
@@ -652,10 +653,11 @@ mod tests {
             x.heater_pct = Some(50.0 + ((i * 37) % 23) as f32); // jitters every second
         }
         let p = extract(&s, &l).unwrap();
-        assert!(p
-            .events
-            .iter()
-            .all(|e| e.action != Some(ProfileAction::Heater)));
+        assert!(
+            p.events
+                .iter()
+                .all(|e| e.action != Some(ProfileAction::Heater))
+        );
     }
 
     #[test]
@@ -666,10 +668,11 @@ mod tests {
         assert_eq!(p.total_time, 620);
         assert!(p.curves.bt[215].is_none());
         assert!(p.curves.bt[199].is_some());
-        assert!(p
-            .events
-            .iter()
-            .all(|e| e.action != Some(ProfileAction::Landmark)));
+        assert!(
+            p.events
+                .iter()
+                .all(|e| e.action != Some(ProfileAction::Landmark))
+        );
     }
 
     #[test]
@@ -728,13 +731,15 @@ mod tests {
         assert_eq!(fc.at_seconds, Some(420.0));
 
         // Missing session is None, not an error.
-        assert!(crate::profiles::extract::save_session_as_profile(
-            &db,
-            "nope",
-            SaveSessionAsProfileRequest::default()
-        )
-        .await
-        .unwrap()
-        .is_none());
+        assert!(
+            crate::profiles::extract::save_session_as_profile(
+                &db,
+                "nope",
+                SaveSessionAsProfileRequest::default()
+            )
+            .await
+            .unwrap()
+            .is_none()
+        );
     }
 }

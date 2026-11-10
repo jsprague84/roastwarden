@@ -8,10 +8,10 @@ use std::collections::BTreeMap;
 use std::time::Duration;
 
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -66,7 +66,7 @@ pub async fn resolve(state: &AppState, id: Option<&str>) -> Result<Resolved, Res
                 return Err(status(
                     StatusCode::NOT_FOUND,
                     format!("no printer {id:?} (GET /api/label-printers)"),
-                ))
+                ));
             }
             Err(e) => return Err(failed(e)),
         },
@@ -104,9 +104,10 @@ pub async fn resolve(state: &AppState, id: Option<&str>) -> Result<Resolved, Res
 pub async fn ask(state: &AppState, r: &Resolved) -> anyhow::Result<PrinterInfo> {
     let info = print::info(&r.target).await?;
     if let Some(id) = &r.id
-        && let Ok(v) = serde_json::to_value(&info) {
-            let _ = printers::set_info(&state.db, id, &v).await;
-        }
+        && let Ok(v) = serde_json::to_value(&info)
+    {
+        let _ = printers::set_info(&state.db, id, &v).await;
+    }
     Ok(info)
 }
 
@@ -331,7 +332,7 @@ async fn set_calibration(
             return status(
                 StatusCode::BAD_REQUEST,
                 "give x_mm and y_mm, or first (and last) as [right, down]",
-            )
+            );
         }
     };
     if !(x.abs() <= 20.0 && y.abs() <= 20.0) {

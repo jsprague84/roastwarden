@@ -5,11 +5,11 @@
 use std::collections::{BTreeMap, HashMap};
 
 use chrono::{DateTime, Duration, Utc};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sqlx::SqlitePool;
 
 use super::inventory::{self, Row};
-use super::{ahead, day_month, long_date, meta, money, short_date, Options, ReportError, DASH};
+use super::{DASH, Options, ReportError, ahead, day_month, long_date, meta, money, short_date};
 use crate::coffee::inventory::StockMove;
 use crate::coffee::wanted::{Wanted, WantedService};
 
@@ -192,7 +192,7 @@ mod tests {
     use crate::coffee::wanted::WantedRequest;
     use crate::labels::Renderer;
     use crate::reports::roast::tests::options;
-    use crate::reports::{kind, render, Format, Paper, Units};
+    use crate::reports::{Format, Paper, Units, kind, render};
 
     #[tokio::test]
     async fn one_order_per_supplier_with_its_usual_shipping_and_what_runs_low() {

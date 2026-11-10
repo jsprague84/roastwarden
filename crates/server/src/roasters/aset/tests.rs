@@ -1,4 +1,4 @@
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::roasters::setup::{Control, Kind};
 use crate::roasters::types::{ModbusDataType, ModbusRegisterType, Protocol};
@@ -376,10 +376,11 @@ fn phidgets_machines_plan_a_phidget22_connection() {
         c["ingest"]["fields"],
         json!({ "bt": "ch0", "board": "ch1" })
     );
-    assert!(p
-        .notes
-        .iter()
-        .any(|n| n.contains("draws the board's own sensor")));
+    assert!(
+        p.notes
+            .iter()
+            .any(|n| n.contains("draws the board's own sensor"))
+    );
 
     // A TMP1200: its RTD as the file sets it; the second board's curve left out.
     let p = plan_machine("Phidget/VINT_TMP1200_2xRTD").unwrap();
@@ -499,9 +500,11 @@ fn a_websocket_machine_plans_its_poll_mapping_and_commands() {
     assert_eq!(f["pa"]["scale"], json!(1000.0));
     assert_eq!(f["inlet"]["unit"], json!("C"));
     assert_eq!(
-            c["commands"]["heater"]["payload"],
-            json!("{\"command\":\"setControlParams\",\"id\":{id},\"params\":{\"burner\":{value}},\"roasterID\":0}")
-        );
+        c["commands"]["heater"]["payload"],
+        json!(
+            "{\"command\":\"setControlParams\",\"id\":{id},\"params\":{\"burner\":{value}},\"roasterID\":0}"
+        )
+    );
     let setup = p.setup.unwrap();
     let ror = setup.channels.iter().find(|c| c.label == "RoR").unwrap();
     assert_eq!(ror.unit, "C/min");
@@ -535,10 +538,12 @@ fn bcd_and_ascii_machines_plan() {
         (bt.unit.as_deref(), bt.byte_order.as_deref()),
         (Some("F"), Some("CDAB"))
     );
-    assert!(loring
-        .registers
-        .iter()
-        .any(|r| r.data_type == ModbusDataType::Bcd16));
+    assert!(
+        loring
+            .registers
+            .iter()
+            .any(|r| r.data_type == ModbusDataType::Bcd16)
+    );
     let delta = plan_machine("Nordic/DeltaDTA").unwrap();
     assert!(delta.machine.supported, "{:?}", delta.machine.why);
     let c = delta.config.unwrap();
@@ -696,8 +701,10 @@ fn unsupported_setups_say_why() {
     assert!(why("[Device]\nid=0\ncontrolETpid=3, 1\n").contains("ET controller is a Delta"));
     assert!(why("[Device]\nid=0\ncontrolETpid=2, 1\n").contains("names no Fuji"));
     assert!(why("[Device]\nid=0\n").contains("names no Fuji"));
-    assert!(why("[Device]\nid=0\ncontrolETpid=0, 1\nreadBTpid=3, 2\n")
-        .contains("BT controller is a Delta"));
+    assert!(
+        why("[Device]\nid=0\ncontrolETpid=0, 1\nreadBTpid=3, 2\n")
+            .contains("BT controller is a Delta")
+    );
     assert!(
         why("[Device]\nid=0\ncontrolETpid=0, 1\n[SerialPort]\nbytesize=7\n").contains("needs 8")
     );

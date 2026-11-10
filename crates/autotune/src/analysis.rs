@@ -4,11 +4,11 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::design::{design, Design, DesignOptions, Rule, TAU_C_DEFAULT, TAU_C_STOPS};
-use crate::fit::{fit, holdout_rmse, Fit, FitOptions, Order, Record};
-use crate::harmonic::{berner_tau, harmonics, FreqPoint, Harmonics};
+use crate::design::{Design, DesignOptions, Rule, TAU_C_DEFAULT, TAU_C_STOPS, design};
+use crate::fit::{Fit, FitOptions, Order, Record, fit, holdout_rmse};
+use crate::harmonic::{FreqPoint, Harmonics, berner_tau, harmonics};
 use crate::model::Model;
-use crate::relay::{clean_cycles, Phase, RelaySummary};
+use crate::relay::{Phase, RelaySummary, clean_cycles};
 
 /// Bump when the report's meaning changes (stored runs keep the version they were made with).
 pub const VERSION: u32 = 1;
@@ -284,24 +284,26 @@ pub fn analyse(rec: Record, summary: &RelaySummary, dt: f64) -> Analysis {
         }
     }
     if let Some(r) = best.residual_ratio
-        && r > 2.0 {
-            warn(
-                "poor_fit",
-                format!(
-                    "the best model leaves {r:.1}× the sensor's noise unexplained (the process changed during the test, or it is not linear here)"
-                ),
-            );
-        }
+        && r > 2.0
+    {
+        warn(
+            "poor_fit",
+            format!(
+                "the best model leaves {r:.1}× the sensor's noise unexplained (the process changed during the test, or it is not linear here)"
+            ),
+        );
+    }
     if let Some(h) = best.holdout_rmse
-        && h > 3.0 * best.fit.rmse.max(summary.noise.unwrap_or(0.0)) {
-            warn(
-                "holdout",
-                format!(
-                    "the model fitted without the last cycle predicts it poorly (RMS {h:.2} against {:.2})",
-                    best.fit.rmse
-                ),
-            );
-        }
+        && h > 3.0 * best.fit.rmse.max(summary.noise.unwrap_or(0.0))
+    {
+        warn(
+            "holdout",
+            format!(
+                "the model fitted without the last cycle predicts it poorly (RMS {h:.2} against {:.2})",
+                best.fit.rmse
+            ),
+        );
+    }
 
     // What to design on.
     let m = best.fit.model;
@@ -364,14 +366,15 @@ pub fn analyse(rec: Record, summary: &RelaySummary, dt: f64) -> Analysis {
     // A non-drifting bench process reads within about ±0.5 %/min over a 4-minute test (and a
     // little negative: the first cycles still settle), so only a clear trend is flagged.
     if let Some(d) = a.bias_drift_per_min
-        && d.abs() > 1.5 {
-            warn(
-                "drift",
-                format!(
-                    "the holding power moved {d:+.1} % a minute during the test: the process was changing (beans drying?)"
-                ),
-            );
-        }
+        && d.abs() > 1.5
+    {
+        warn(
+            "drift",
+            format!(
+                "the holding power moved {d:+.1} % a minute during the test: the process was changing (beans drying?)"
+            ),
+        );
+    }
 
     // The designs: SIMC at each stop, AMIGO, and the ultimate-point rules for comparison.
     for tc in TAU_C_STOPS {

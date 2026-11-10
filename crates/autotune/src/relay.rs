@@ -689,11 +689,7 @@ fn slope(s: &[(f64, f64)]) -> f64 {
     );
     let num: f64 = s.iter().map(|p| (p.0 - mt) * (p.1 - my)).sum();
     let den: f64 = s.iter().map(|p| (p.0 - mt).powi(2)).sum();
-    if den > 0.0 {
-        num / den
-    } else {
-        0.0
-    }
+    if den > 0.0 { num / den } else { 0.0 }
 }
 
 /// The signal's resolution: the coarsest of the usual steps (1, 0.5, 0.25 for a raw MAX6675,

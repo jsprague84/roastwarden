@@ -1,10 +1,10 @@
 //! Roasted coffee: resting and ready (`docs/roasted.md`).
 
 use axum::{
+    Json,
     extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};

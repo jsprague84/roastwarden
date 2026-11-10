@@ -2,10 +2,10 @@
 //! docs/esp32-fluid-bed.md): what this server can fill in, and the download.
 
 use axum::{
-    extract::State,
-    http::{header, StatusCode},
-    response::{IntoResponse, Response},
     Json,
+    extract::State,
+    http::{StatusCode, header},
+    response::{IntoResponse, Response},
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 

@@ -16,5 +16,5 @@ mod types;
 
 pub use service::ReplayService;
 pub use types::{
-    resolve_loop, EventOp, LoopPref, ReplayError, ReplayState, StartReplay, UpdateReplay,
+    EventOp, LoopPref, ReplayError, ReplayState, StartReplay, UpdateReplay, resolve_loop,
 };

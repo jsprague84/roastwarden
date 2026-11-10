@@ -1,11 +1,11 @@
 //! Orders from receipts (`docs/green-coffee.md`, "Orders"; `orders.rs`).
 
 use axum::{
+    Json,
     body::Bytes,
     extract::{DefaultBodyLimit, Path, Query, State},
-    http::{header, HeaderMap, StatusCode},
+    http::{HeaderMap, StatusCode, header},
     response::{IntoResponse, Response},
-    Json,
 };
 use serde::Deserialize;
 use utoipa::IntoParams;
@@ -14,8 +14,8 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::app::state::AppState;
 use crate::coffee::inventory::InventoryInputError;
 use crate::coffee::orders::{
-    OrderConflict, OrderImport, OrderImported, OrderService, OrdersQuery, PurchaseOrder, Receipt,
-    ReceivedRequest, ShippedRequest, MAX_RECEIPT_BYTES,
+    MAX_RECEIPT_BYTES, OrderConflict, OrderImport, OrderImported, OrderService, OrdersQuery,
+    PurchaseOrder, Receipt, ReceivedRequest, ShippedRequest,
 };
 use crate::http::errors::ErrorBody;
 use crate::http::opt_json::OptJson;

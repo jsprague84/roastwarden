@@ -5,7 +5,7 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use prometheus::IntGaugeVec;
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
-use tokio::sync::{broadcast, RwLock};
+use tokio::sync::{RwLock, broadcast};
 use uuid::Uuid;
 
 use roastwarden_core::Sample;
@@ -171,9 +171,10 @@ impl RorTracker {
     pub fn push(&mut self, t: f64, bean_temp: f64) {
         // Ignore out-of-order or duplicate timestamps.
         if let Some(&(last_t, _)) = self.samples.back()
-            && t <= last_t {
-                return;
-            }
+            && t <= last_t
+        {
+            return;
+        }
         self.samples.push_back((t, bean_temp));
         while let Some(&(t0, _)) = self.samples.front() {
             if t - t0 > ROR_HISTORY_SECS {
@@ -400,17 +401,19 @@ impl TelemetryService {
         .fetch_optional(&self.db)
         .await
             && let Ok(w) = v.parse::<f64>()
-                && (5.0..=120.0).contains(&w) {
-                    cfg.window_secs = w;
-                }
+            && (5.0..=120.0).contains(&w)
+        {
+            cfg.window_secs = w;
+        }
         if let Ok(Some(v)) = sqlx::query_scalar::<_, String>(
             "SELECT value FROM settings WHERE key = 'ror_smoothing_algorithm'",
         )
         .fetch_optional(&self.db)
         .await
-            && let Ok(a) = v.parse::<RorAlgorithm>() {
-                cfg.algorithm = a;
-            }
+            && let Ok(a) = v.parse::<RorAlgorithm>()
+        {
+            cfg.algorithm = a;
+        }
         tracing::info!(window_secs = cfg.window_secs, algorithm = ?cfg.algorithm, "RoR settings loaded");
         self.set_ror_config(cfg);
     }

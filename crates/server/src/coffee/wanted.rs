@@ -168,7 +168,9 @@ impl WantedService {
     /// first).
     pub async fn list(&self, all: bool) -> Result<Vec<Wanted>> {
         let q = if all {
-            format!("{SELECT} ORDER BY w.status = 'bought', CASE WHEN w.status = 'bought' THEN w.bought_at END DESC, w.created_at")
+            format!(
+                "{SELECT} ORDER BY w.status = 'bought', CASE WHEN w.status = 'bought' THEN w.bought_at END DESC, w.created_at"
+            )
         } else {
             format!("{SELECT} WHERE w.status IN ('wanted', 'ordered') ORDER BY w.created_at")
         };
@@ -446,14 +448,15 @@ mod tests {
             (Some("5 LB"), Some(42.09))
         );
         assert_eq!(w.weight_g, Some(2268.0));
-        assert!(svc
-            .add(WantedRequest {
+        assert!(
+            svc.add(WantedRequest {
                 draft: Some(d),
                 size: Some("7 lb".into()),
                 ..Default::default()
             })
             .await
-            .is_err());
+            .is_err()
+        );
         assert_eq!(svc.list(false).await.unwrap().len(), 1);
 
         let b = svc

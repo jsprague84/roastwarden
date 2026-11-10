@@ -25,7 +25,7 @@ use std::time::Duration;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
-use tokio::sync::{broadcast, Mutex};
+use tokio::sync::{Mutex, broadcast};
 
 use crate::analysis::alarms::{ActionDeps, AlarmEvent, AlarmService};
 use crate::analysis::telemetry::TelemetryService;
@@ -282,8 +282,8 @@ pub fn plan(
 
 /// Start settings that repeat a stopped run's, live.
 fn resume_request(c: &crate::replay::engine::RunConfig) -> StartReplay {
-    use crate::replay::engine::LoopAt;
     use crate::replay::LoopPref;
+    use crate::replay::engine::LoopAt;
     StartReplay {
         mode: Some(c.mode),
         trigger: Some(c.trigger),
@@ -845,18 +845,22 @@ mod tests {
             fan: None,
             ..Kind::DrumElectric.outputs()
         };
-        assert!(for_outputs(charge.clone(), &heater_only)
-            .iter()
-            .all(|a| !matches!(a, Act::Fan(_) | Act::Cool { .. })));
+        assert!(
+            for_outputs(charge.clone(), &heater_only)
+                .iter()
+                .all(|a| !matches!(a, Act::Fan(_) | Act::Cool { .. }))
+        );
         assert_eq!(
             for_outputs(charge.clone(), &Kind::FluidBedElectric.outputs()),
             charge
         );
         let manual = for_control(charge.clone(), Control::Manual);
         assert_ne!(manual, [] as [crate::control::sequence::Act; 0]);
-        assert!(manual
-            .iter()
-            .all(|a| matches!(a, Act::Fan(_) | Act::HeaterPower(_) | Act::Heater(_))));
+        assert!(
+            manual
+                .iter()
+                .all(|a| matches!(a, Act::Fan(_) | Act::HeaterPower(_) | Act::Heater(_)))
+        );
         assert_eq!(for_control(charge.clone(), Control::Full), charge);
         let drop = plan(Step::Drop, &c, true, true, Some(212.0));
         let manual_drop = for_control(drop, Control::Manual);
@@ -1000,7 +1004,7 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn an_autotune_start_ends_the_last_roasts_cooling() {
-        use crate::test_support::{eventually, Harness};
+        use crate::test_support::{Harness, eventually};
         use serde_json::json;
         let h = Harness::new().await;
         let vr = crate::sim::virtual_roaster::DEVICE_ID;
@@ -1058,7 +1062,7 @@ mod tests {
     /// until the chamber is cold, then COOL END lands on the completed roast.
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn complete_while_cooling_keeps_the_trend_to_cool_end() {
-        use crate::test_support::{eventually, Harness};
+        use crate::test_support::{Harness, eventually};
         use serde_json::json;
         let h = Harness::new().await;
         let vr = crate::sim::virtual_roaster::DEVICE_ID;

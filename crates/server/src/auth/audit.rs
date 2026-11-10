@@ -9,10 +9,10 @@
 
 use axum::body::{Body, Bytes};
 use axum::extract::{Query, Request, State};
-use axum::http::{header, HeaderMap, Method, StatusCode};
+use axum::http::{HeaderMap, Method, StatusCode, header};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Json, Response};
-use futures_util::{stream, StreamExt};
+use futures_util::{StreamExt, stream};
 use serde::{Deserialize, Serialize};
 use sqlx::AssertSqlSafe;
 use sqlx::SqlitePool;
@@ -332,9 +332,10 @@ fn summarise_body(path: &str, headers: &HeaderMap, bytes: &[u8]) -> Option<Strin
             mask_secrets(&mut v);
             let setting = path.strip_prefix("/api/settings/");
             if setting.is_some_and(crate::auth::settings::is_secret)
-                && let Some(val) = v.get_mut("value").filter(|val| !val.is_null()) {
-                    *val = serde_json::Value::String("***".into());
-                }
+                && let Some(val) = v.get_mut("value").filter(|val| !val.is_null())
+            {
+                *val = serde_json::Value::String("***".into());
+            }
             Some(truncate(&v.to_string(), BODY_MAX))
         }
         Err(_) => {
@@ -495,9 +496,9 @@ async fn query(db: &SqlitePool, q: &AuditQuery) -> Result<Vec<AuditEntry>, Query
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::auth::{require_api_key, AuthConfig};
-    use axum::routing::{get, post};
+    use crate::auth::{AuthConfig, require_api_key};
     use axum::Router;
+    use axum::routing::{get, post};
     use tower::ServiceExt;
 
     async fn test_db() -> (SqlitePool, std::path::PathBuf) {
@@ -825,7 +826,9 @@ mod tests {
         let kinds: Vec<String> = rows(&db).await.into_iter().map(|e| e.kind).collect();
         assert_eq!(
             kinds,
-            ["control", "access", "roaster", "roast", "beans", "settings", "backup", "other"]
+            [
+                "control", "access", "roaster", "roast", "beans", "settings", "backup", "other"
+            ]
         );
         let paths = |r: Vec<AuditEntry>| r.into_iter().map(|e| e.path).collect::<Vec<_>>();
         let q = |f: fn(&mut AuditQuery)| {
@@ -842,9 +845,11 @@ mod tests {
             paths(filtered(&db, q(|q| q.q = Some("100% guji_".into()))).await),
             ["/api/beans/b1/stock"]
         );
-        assert!(filtered(&db, q(|q| q.q = Some("guji%lot".into())))
-            .await
-            .is_empty());
+        assert!(
+            filtered(&db, q(|q| q.q = Some("guji%lot".into())))
+                .await
+                .is_empty()
+        );
         assert_eq!(filtered(&db, q(|q| q.q = Some("\\".into()))).await.len(), 1);
         assert_eq!(
             filtered(&db, q(|q| q.q = Some("SETPOINT".into())))

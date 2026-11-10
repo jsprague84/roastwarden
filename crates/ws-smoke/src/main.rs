@@ -1,5 +1,5 @@
 use futures_util::{SinkExt, StreamExt};
-use tokio::time::{timeout, Duration};
+use tokio::time::{Duration, timeout};
 use tokio_tungstenite::connect_async;
 
 #[tokio::main]

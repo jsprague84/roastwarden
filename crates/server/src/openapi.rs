@@ -160,9 +160,10 @@ fn plain_operation_ids(doc: &mut utoipa::openapi::OpenApi) {
         ];
         for op in ops.into_iter().flatten() {
             if let Some(id) = op.operation_id.as_mut()
-                && let Some(rest) = id.strip_prefix("api_") {
-                    *id = rest.to_string();
-                }
+                && let Some(rest) = id.strip_prefix("api_")
+            {
+                *id = rest.to_string();
+            }
         }
     }
 }
@@ -182,15 +183,16 @@ fn describe_responses(doc: &mut utoipa::openapi::OpenApi) {
         for op in ops.into_iter().flatten() {
             for (status, response) in &mut op.responses.responses {
                 if let RefOr::T(r) = response
-                    && r.description.is_empty() {
-                        r.description = status
-                            .parse::<u16>()
-                            .ok()
-                            .and_then(|s| axum::http::StatusCode::from_u16(s).ok())
-                            .and_then(|s| s.canonical_reason())
-                            .unwrap_or("Response")
-                            .to_string();
-                    }
+                    && r.description.is_empty()
+                {
+                    r.description = status
+                        .parse::<u16>()
+                        .ok()
+                        .and_then(|s| axum::http::StatusCode::from_u16(s).ok())
+                        .and_then(|s| s.canonical_reason())
+                        .unwrap_or("Response")
+                        .to_string();
+                }
             }
         }
     }

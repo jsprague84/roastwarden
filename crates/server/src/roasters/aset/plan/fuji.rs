@@ -6,7 +6,7 @@ use crate::roasters::setup::{Kind, Outputs};
 use crate::roasters::types::{CreateRegisterMapEntry, ModbusDataType, ModbusRegisterType};
 
 use super::inputs::Reads;
-use super::{finish, serial_config, Plan};
+use super::{Plan, finish, serial_config};
 use crate::roasters::aset::ini::Ini;
 use crate::roasters::aset::machines::{fuji, fuji_pid};
 

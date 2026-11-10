@@ -46,10 +46,10 @@ use std::time::Duration;
 
 use roastwarden_core::{ControlMode, DeviceCommand};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncWrite, AsyncWriteExt};
 
-use crate::transports::ingest::{f_to_c, Column, Kind, Units};
+use crate::transports::ingest::{Column, Kind, Units, f_to_c};
 use crate::transports::transport::TransportError;
 use crate::transports::types::SerialTc4ConnectionConfig;
 
@@ -191,7 +191,7 @@ pub async fn read_sample_seen<R: AsyncBufRead + Unpin>(
                 return Err(std::io::Error::new(
                     std::io::ErrorKind::UnexpectedEof,
                     "serial port closed",
-                ))
+                ));
             }
             Ok(Ok(_)) => {
                 let t = line.trim();
@@ -501,10 +501,12 @@ mod tests {
         let s = Tc4Setup::from_config(&c);
         assert_eq!(s.chan_line(), "CHAN;1234");
         assert_eq!((s.reply, s.fan), (ReplyFormat::Active, FanOutput::Ot2));
-        assert!(serde_json::from_value::<SerialTc4ConnectionConfig>(
-            json!({"port": "x", "fan_output": "io4"})
-        )
-        .is_err());
+        assert!(
+            serde_json::from_value::<SerialTc4ConnectionConfig>(
+                json!({"port": "x", "fan_output": "io4"})
+            )
+            .is_err()
+        );
     }
 
     #[test]

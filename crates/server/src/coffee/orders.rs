@@ -23,10 +23,10 @@ use sqlx::AssertSqlSafe;
 use sqlx::{FromRow, SqlitePool};
 use uuid::Uuid;
 
-use crate::coffee::import::{label_grams, Draft};
+use crate::coffee::import::{Draft, label_grams};
 use crate::coffee::inventory::{
-    bad, clean, currency_code, insert_move, money, purchase_time, BeanRequest, InventoryService,
-    NewMove,
+    BeanRequest, InventoryService, NewMove, bad, clean, currency_code, insert_move, money,
+    purchase_time,
 };
 
 /// The largest receipt kept (a forwarded email with its images, a PDF invoice)
@@ -1125,7 +1125,7 @@ impl OrderService {
             s => {
                 return Err(bad(format!(
                     "status is open, all, ordered, shipped, received or cancelled, not {s:?}"
-                )))
+                )));
             }
         }
         if q.number.is_some() {
@@ -1740,10 +1740,11 @@ mod tests {
         // 8.99 split 453.6 : 440
         assert_eq!(m.shipping, Some(4.56));
         assert_eq!(inv.bean(&guji).await.unwrap().unwrap().stock_g, 440.0);
-        assert!(svc
-            .received(&o.id, ReceivedRequest::default())
-            .await
-            .is_err());
+        assert!(
+            svc.received(&o.id, ReceivedRequest::default())
+                .await
+                .is_err()
+        );
 
         // Removing it takes its purchases with it
         assert!(svc.delete(&o.id).await.unwrap());
@@ -1859,10 +1860,12 @@ mod tests {
             (b.name.as_str(), b.process.as_deref()),
             ("Honduras Organic Copan", Some("Washed"))
         );
-        assert!(wanted
-            .bought(&w.id, crate::coffee::wanted::BoughtRequest::default())
-            .await
-            .is_err());
+        assert!(
+            wanted
+                .bought(&w.id, crate::coffee::wanted::BoughtRequest::default())
+                .await
+                .is_err()
+        );
         svc.received(&o.id, ReceivedRequest::default())
             .await
             .unwrap();
@@ -1898,10 +1901,11 @@ mod tests {
             .await
             .unwrap_err();
         assert!(twice.downcast_ref::<OrderConflict>().is_some());
-        assert!(svc
-            .add_receipt(&o.id, None, None, Some("a.exe"), None, b"MZ")
-            .await
-            .is_err());
+        assert!(
+            svc.add_receipt(&o.id, None, None, Some("a.exe"), None, b"MZ")
+                .await
+                .is_err()
+        );
         let (meta, body) = svc.receipt(&o.id, &r.id).await.unwrap().unwrap();
         assert_eq!((meta.sha256.len(), body.as_slice()), (64, &eml[..]));
         // A second import naming that receipt is a duplicate, whatever its number says

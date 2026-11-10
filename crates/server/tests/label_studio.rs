@@ -10,7 +10,7 @@
 )]
 
 use roastwarden_server::test_support::Harness;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 fn lines(report: &Value) -> String {
     report["lines"]
@@ -54,10 +54,12 @@ async fn the_gallery_reads_built_in_names_settings_and_the_coffees_using_a_desig
     };
     let cherry = find("cherry");
     assert_eq!(cherry["name"], "Cherry", "the manifest's short name");
-    assert!(cherry["description"]
-        .as_str()
-        .unwrap()
-        .contains("coffee branch"));
+    assert!(
+        cherry["description"]
+            .as_str()
+            .unwrap()
+            .contains("coffee branch")
+    );
     assert_eq!(cherry["params"], json!(["art", "ink"]));
     assert_eq!(cherry["used_by"], json!(["Ethiopia Guji"]));
     let shop = find("shop");

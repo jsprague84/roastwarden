@@ -9,10 +9,10 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use axum::http::header::CONTENT_TYPE;
 use axum::http::StatusCode;
+use axum::http::header::CONTENT_TYPE;
 use axum::response::Response;
-use axum::{routing::get, Router};
+use axum::{Router, routing::get};
 use roastwarden_mqtt::MqttService;
 use sqlx::SqlitePool;
 use tokio::sync::RwLock;

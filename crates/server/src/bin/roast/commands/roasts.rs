@@ -6,11 +6,11 @@ use std::time::Duration;
 
 use clap::Args;
 use reqwest::Method;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use crate::api::{self, enc, Api};
-use crate::out::{code, for_finding, Failure, Out};
-use crate::text::{clock, parse_clock, parse_weight, roast_text, roasts_text, RoastRow};
+use crate::api::{self, Api, enc};
+use crate::out::{Failure, Out, code, for_finding};
+use crate::text::{RoastRow, clock, parse_clock, parse_weight, roast_text, roasts_text};
 
 /// `roast roasts`: the newest roasts with their numbers.
 pub async fn list(
@@ -54,26 +54,27 @@ pub async fn show(api: &Api, out: &Out, a: ShowArgs) -> Result<u8, Failure> {
     } = a;
     let id = enc(&roast_id(api, &roast, roaster.as_deref()).await?);
     let mut one = api.get(&format!("/api/sessions/{id}")).await?;
-    if !telemetry
-        && let Some(o) = one.as_object_mut() {
-            let samples = o
-                .get("telemetry")
-                .and_then(Value::as_array)
-                .map_or(0, Vec::len);
-            o.remove("telemetry");
-            o.insert("samples".into(), json!(samples));
-        }
+    if !telemetry && let Some(o) = one.as_object_mut() {
+        let samples = o
+            .get("telemetry")
+            .and_then(Value::as_array)
+            .map_or(0, Vec::len);
+        o.remove("telemetry");
+        o.insert("samples".into(), json!(samples));
+    }
     let events = api.get(&format!("/api/sessions/{id}/events")).await?;
     one["events"] = events;
     // Known when the roast has a bean with a priced purchase before it (else `null`).
     if let Ok(cost) = api.get(&format!("/api/sessions/{id}/cost")).await
-        && !cost.is_null() {
-            one["cost"] = cost;
-        }
+        && !cost.is_null()
+    {
+        one["cost"] = cost;
+    }
     if let Ok(c) = api.get(&format!("/api/sessions/{id}/cupping")).await
-        && !c.is_null() {
-            one["cupping"] = c;
-        }
+        && !c.is_null()
+    {
+        one["cupping"] = c;
+    }
     out.emit(&one, roast_text);
     Ok(code::OK)
 }
@@ -336,7 +337,7 @@ pub fn landmark_kind(s: &str) -> Result<&'static str, String> {
         _ => {
             return Err(format!(
                 "unknown landmark '{s}': charge, tp, dry, fc, fc-end, sc, sc-end, drop or cool"
-            ))
+            ));
         }
     })
 }

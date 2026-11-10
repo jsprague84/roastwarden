@@ -67,11 +67,13 @@ async fn an_agent_makes_bag_labels() {
         .filter_map(|s| s["id"].as_str())
         .collect();
     assert_eq!(sheets, ["5163", "6874", "5294"]);
-    assert!(r.json["designs"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .any(|d| d["id"] == "gift"));
+    assert!(
+        r.json["designs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|d| d["id"] == "gift")
+    );
     let cal = dir.join("c.pdf");
     let r = roast(
         &url,
@@ -176,11 +178,13 @@ async fn an_agent_checks_a_label_design_and_makes_a_one_off() {
     assert_eq!(r.json["ok"], true);
     assert_eq!(r.json["data"], id);
     assert_eq!(r.json["report"]["manifest"]["name"], "Cup");
-    assert!(r.json["report"]["lines"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .any(|l| l["font"] == "JetBrains Mono NL"));
+    assert!(
+        r.json["report"]["lines"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|l| l["font"] == "JetBrains Mono NL")
+    );
     assert!(std::fs::read(&png).unwrap().starts_with(b"\x89PNG"));
     assert_eq!(r.json["png"], png.display().to_string());
 

@@ -5,12 +5,12 @@
 use std::collections::BTreeMap;
 
 use chrono::{DateTime, Datelike, Duration, Utc};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sqlx::SqlitePool;
 
 use super::chart;
 use super::period::Range;
-use super::{long_date, meta, money, short_date, Options, ReportError, DASH};
+use super::{DASH, Options, ReportError, long_date, meta, money, short_date};
 use crate::coffee::inventory::StockMove;
 
 pub struct Input {
@@ -240,7 +240,7 @@ mod tests {
     use crate::labels::Renderer;
     use crate::reports::period::tests::moves;
     use crate::reports::roast::tests::options;
-    use crate::reports::{kind, render, Format, Paper, Units};
+    use crate::reports::{Format, Paper, Units, kind, render};
 
     #[tokio::test]
     async fn orders_with_their_shipping_and_landed_cost() {

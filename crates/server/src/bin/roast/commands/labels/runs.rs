@@ -6,15 +6,15 @@ use std::time::Duration;
 
 use clap::{Args, Subcommand};
 use reqwest::Method;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use super::{body, read_file, tz, Fill, Via};
-use crate::api::{enc, Api};
+use super::{Fill, Via, body, read_file, tz};
+use crate::api::{Api, enc};
 use crate::cli::Wait;
 use crate::commands::approvals::held_or_done;
 use crate::commands::records::save_file;
 use crate::commands::roasts::roast_id;
-use crate::out::{code, Failure, Out};
+use crate::out::{Failure, Out, code};
 
 #[derive(Args, Debug)]
 pub struct RunArgs {

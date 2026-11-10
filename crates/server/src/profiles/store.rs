@@ -1,7 +1,7 @@
 //! Roast profiles stored: created, listed, read with their points, events and curves, updated
 //! (events and curves only when the request carries them), deleted.
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
 use sqlx::AssertSqlSafe;
 use sqlx::{Row, SqlitePool};

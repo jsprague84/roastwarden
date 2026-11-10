@@ -4,7 +4,7 @@
 //! The owner key still does everything. The whole server (`test_support::Harness`).
 
 use axum::http::StatusCode;
-use roastwarden_server::test_support::{Harness, DEMO_WRITE_LIMIT};
+use roastwarden_server::test_support::{DEMO_WRITE_LIMIT, Harness};
 use serde_json::json;
 
 #[tokio::test]

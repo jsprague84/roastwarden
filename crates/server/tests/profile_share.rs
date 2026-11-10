@@ -10,10 +10,10 @@
     reason = "test code: a panic is the failure, and the helpers are not #[test] functions"
 )]
 
-use axum::body::{to_bytes, Body};
-use axum::http::{header, Request, StatusCode};
-use roastwarden_server::test_support::{call, Harness};
-use serde_json::{json, Value};
+use axum::body::{Body, to_bytes};
+use axum::http::{Request, StatusCode, header};
+use roastwarden_server::test_support::{Harness, call};
+use serde_json::{Value, json};
 use tower::ServiceExt;
 
 async fn profile(h: &Harness) -> String {
@@ -83,10 +83,12 @@ async fn a_shared_profile_is_public_imports_and_revokes() {
     // The page: no login, nothing loaded, not indexed; the profile and its files, not its id
     let (st, hd, html) = get(&h, &format!("/P/{code}")).await;
     assert_eq!(st, StatusCode::OK);
-    assert!(hd[header::CONTENT_SECURITY_POLICY]
-        .to_str()
-        .unwrap()
-        .starts_with("default-src 'none'"));
+    assert!(
+        hd[header::CONTENT_SECURITY_POLICY]
+            .to_str()
+            .unwrap()
+            .starts_with("default-src 'none'")
+    );
     assert_eq!(hd["x-robots-tag"], "noindex, nofollow");
     assert!(html.contains("Kenya light filter") && html.contains("Light roast for filter"));
     assert!(html.contains("an electric fluid bed") && html.contains("<svg"));

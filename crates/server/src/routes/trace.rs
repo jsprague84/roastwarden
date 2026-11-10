@@ -2,10 +2,10 @@
 //! green lot and where its coffee went, or a green coffee to every bag. Reads: any token.
 
 use axum::{
+    Json,
     extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde::Deserialize;
 use utoipa::IntoParams;

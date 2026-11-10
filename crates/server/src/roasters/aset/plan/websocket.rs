@@ -1,14 +1,14 @@
 //! A machine on Artisan's WebSocket (device 141): the frames it sends as a poll message and
 //! command templates, its channels as an ingest mapping.
 
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
 use crate::roasters::setup::{Kind, Outputs};
 use crate::roasters::types::Protocol;
 
-use super::inputs::{Etypes, EXTRAS_WEBSOCKET};
+use super::inputs::{EXTRAS_WEBSOCKET, Etypes};
 use super::sliders::{py_format, sliders, slot};
-use super::{channel_fields, finish, poll_ms, Plan};
+use super::{Plan, channel_fields, finish, poll_ms};
 use crate::roasters::aset::ini::Ini;
 
 /// Placeholders in a JSON frame, swapped for `{value}` and `{id}` once it is text.

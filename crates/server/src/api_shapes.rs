@@ -8,10 +8,10 @@
 //! `UPDATE_API_SHAPES=1 cargo test -p roastwarden-server api_shapes`
 //! and read the diff.
 
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::test_support::{eventually, Harness, Reply, ReplyBody};
+use crate::test_support::{Harness, Reply, ReplyBody, eventually};
 
 const GOLDEN: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/testdata/api-shapes.json");
 const VR: &str = crate::sim::virtual_roaster::DEVICE_ID;

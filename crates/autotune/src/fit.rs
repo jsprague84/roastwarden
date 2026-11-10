@@ -14,7 +14,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::{simulate, Input, Model};
+use crate::model::{Input, Model, simulate};
 
 /// A recorded experiment. All three slices have the same length; `t` ascends.
 #[derive(Debug, Clone, Copy)]

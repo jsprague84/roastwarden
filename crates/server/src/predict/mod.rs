@@ -23,9 +23,9 @@ use utoipa::ToSchema;
 
 use crate::analysis::telemetry::TelemetryService;
 use crate::control::schedule::GainScheduler;
+use crate::replay::ReplayService;
 use crate::replay::auto_drop::{AutoDrop, DropBy};
 use crate::replay::engine::{LoopAt, PidGains};
-use crate::replay::ReplayService;
 use crate::roasts::types::{RoastEventType, SessionStatus};
 use live::{DropTarget, FcHistory, LiveInput, Plan, PlanKind, Prediction};
 use model::{FitQuality, HorizonError, ThermalModel, Tick};
@@ -416,9 +416,10 @@ impl PredictService {
             // A roast whose telemetry is too short is left out of a fit, so the fit's list
             // can differ from the candidates: refit only when the candidates change.
             if want != got
-                && let Err(e) = self.fit_now(&d).await {
-                    tracing::warn!(error = %e, device_id = d, "prediction: fit failed");
-                }
+                && let Err(e) = self.fit_now(&d).await
+            {
+                tracing::warn!(error = %e, device_id = d, "prediction: fit failed");
+            }
             self.checked.lock().await.insert(d, want);
         }
         Ok(())
@@ -927,16 +928,17 @@ fn drop_target(
         return Some((target, format!("auto DROP {}", a.describe())));
     }
     if let (Some(total), Some(fc)) = (p.target_total_time, p.target_first_crack)
-        && total > fc {
-            let dev = f64::from(total - fc);
-            return Some((
-                DropTarget::Development(dev),
-                format!(
-                    "the profile's development, {} after first crack",
-                    live::mmss(dev)
-                ),
-            ));
-        }
+        && total > fc
+    {
+        let dev = f64::from(total - fc);
+        return Some((
+            DropTarget::Development(dev),
+            format!(
+                "the profile's development, {} after first crack",
+                live::mmss(dev)
+            ),
+        ));
+    }
     p.target_end_temp.map(|c| {
         (
             DropTarget::Bt(f64::from(c)),
@@ -1126,7 +1128,7 @@ async fn pool(db: &SqlitePool, recent: &[RecentScore]) -> Result<PooledScore> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::{eventually, Harness};
+    use crate::test_support::{Harness, eventually};
     use serde_json::json;
 
     /// A completed roast stored as the server stores one: CHARGE at 5 s, DROP at 5 + len, BT

@@ -1,11 +1,11 @@
 //! Fan assist inside the drive: the profile's fan (or the operator's, when the profile does not
 //! drive it) is the ceiling, trimmed while the heater is pinned (`docs/fan-assist.md`).
 
+use super::Engine;
 use super::config::{Channel, LoopAt, RunConfig};
 use super::plan::interpolate;
 use super::tick::TickInput;
 use super::view::{LogEntry, LogKind};
-use super::Engine;
 use crate::control::fan_assist::{AssistStatus, FanAssistConfig};
 
 impl Engine {

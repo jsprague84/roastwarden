@@ -125,12 +125,13 @@ pub(super) fn builtin_sheets() -> Vec<Sheet> {
 pub async fn sheets(db: &SqlitePool) -> Vec<Sheet> {
     let mut all = builtin_sheets();
     if let Some(own) = crate::auth::settings::get(db, "label_sheets").await
-        && let Ok(list) = serde_json::from_str::<Vec<Sheet>>(&own) {
-            for s in list.into_iter().filter(|s| s.check().is_ok()) {
-                all.retain(|b| b.id != s.id);
-                all.push(s);
-            }
+        && let Ok(list) = serde_json::from_str::<Vec<Sheet>>(&own)
+    {
+        for s in list.into_iter().filter(|s| s.check().is_ok()) {
+            all.retain(|b| b.id != s.id);
+            all.push(s);
         }
+    }
     all
 }
 

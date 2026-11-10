@@ -28,7 +28,7 @@ use std::collections::{BTreeMap, VecDeque};
 
 pub use config::{AlignOn, Channel, Hold, LoopAt, ReplayMode, RunConfig, TriggerPolicy};
 pub use pid::{PidGains, ServerPid};
-pub use plan::{interpolate, Plan};
+pub use plan::{Plan, interpolate};
 pub use tick::{Mark, TickInput};
 pub use view::{
     AlignView, Clock, EngineView, EventStatus, EventView, LogEntry, LogKind, PlanAhead,

@@ -1,10 +1,10 @@
 //! The device's PID gain schedule by fan % (`docs/autotune-2.md`, "Gain schedule").
 
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde::Serialize;
 use utoipa::ToSchema;

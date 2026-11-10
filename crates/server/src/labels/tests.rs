@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use serde_bytes::ByteBuf;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use super::designs::*;
 use super::facts::*;

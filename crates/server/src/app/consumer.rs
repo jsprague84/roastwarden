@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use roastwarden_mqtt::MqttService;
-use tokio::sync::{broadcast, RwLock};
+use tokio::sync::{RwLock, broadcast};
 
 use sqlx::SqlitePool;
 
@@ -167,38 +167,39 @@ pub(crate) async fn mqtt_consumer_loop(
                                 .await;
                         }
                     } else if kind == "status"
-                        && let Ok(val) = serde_json::from_slice::<serde_json::Value>(&payload) {
-                            metrics
-                                .status_last_seen
-                                .with_label_values(&[&device_id])
-                                .set(now as i64);
-                            let mut reg = device_registry.write().await;
-                            let entry = reg.entry(device_id.clone()).or_insert(DeviceInfo {
-                                device_id: device_id.clone(),
-                                last_seen: now,
-                                id: None,
-                                ip: None,
-                                version: None,
-                                rssi: None,
-                                status_raw: None,
-                            });
-                            entry.last_seen = now;
-                            caps.update_from_status(&device_id, &val);
-                            entry.status_raw = Some(val.clone());
-                            entry.id = val
-                                .get("id")
-                                .and_then(|v| v.as_str())
-                                .map(std::string::ToString::to_string);
-                            entry.ip = val
-                                .get("ip")
-                                .and_then(|v| v.as_str())
-                                .map(std::string::ToString::to_string);
-                            entry.version = val
-                                .get("version")
-                                .and_then(|v| v.as_str())
-                                .map(std::string::ToString::to_string);
-                            entry.rssi = val.get("rssi").and_then(serde_json::Value::as_i64);
-                        }
+                        && let Ok(val) = serde_json::from_slice::<serde_json::Value>(&payload)
+                    {
+                        metrics
+                            .status_last_seen
+                            .with_label_values(&[&device_id])
+                            .set(now as i64);
+                        let mut reg = device_registry.write().await;
+                        let entry = reg.entry(device_id.clone()).or_insert(DeviceInfo {
+                            device_id: device_id.clone(),
+                            last_seen: now,
+                            id: None,
+                            ip: None,
+                            version: None,
+                            rssi: None,
+                            status_raw: None,
+                        });
+                        entry.last_seen = now;
+                        caps.update_from_status(&device_id, &val);
+                        entry.status_raw = Some(val.clone());
+                        entry.id = val
+                            .get("id")
+                            .and_then(|v| v.as_str())
+                            .map(std::string::ToString::to_string);
+                        entry.ip = val
+                            .get("ip")
+                            .and_then(|v| v.as_str())
+                            .map(std::string::ToString::to_string);
+                        entry.version = val
+                            .get("version")
+                            .and_then(|v| v.as_str())
+                            .map(std::string::ToString::to_string);
+                        entry.rssi = val.get("rssi").and_then(serde_json::Value::as_i64);
+                    }
                 }
             }
             Ok(roastwarden_mqtt::MqttEvent::PubAck(_)) => { /* ack observed */ }

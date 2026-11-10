@@ -6,7 +6,7 @@ use crate::roasters::setup::{Kind, Output, Outputs};
 use crate::roasters::types::ModbusDataType;
 
 use super::inputs::{
-    extra_curves, formula_scale, rate_name, Etypes, Input, Reads, EXTRAS_MODBUS, EXTRAS_WEBSOCKET,
+    EXTRAS_MODBUS, EXTRAS_WEBSOCKET, Etypes, Input, Reads, extra_curves, formula_scale, rate_name,
 };
 use super::names::{key_of, output_role, setpoint_name, temp_name, unit_in};
 use super::phidget::thermocouple_of;
