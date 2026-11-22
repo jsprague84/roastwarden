@@ -20,7 +20,7 @@ screen. Any small screen that can make two web requests works the same way.
 | **DONE** | Completes the roast. Weigh it and add notes later, in the dashboard or by asking your agent. |
 | **CANCEL** | Discards the roast. It asks "Sure?" first. |
 | **STOP** | Heater off and fan to full, at once. |
-| **− +** | Fan, in steps of 5 %. A tap on the label switches them to the heater when no profile drives it. |
+| **− +** | Fan, in steps of 5 %; hold **−** for off or **+** for full. A tap on the label switches them to the heater when no profile drives it (hold **−** for heater off; the heater never jumps to full). |
 
 The screen shows only the buttons that do something now. A refusal (the roaster's control is
 off, say) appears on the status line in words.

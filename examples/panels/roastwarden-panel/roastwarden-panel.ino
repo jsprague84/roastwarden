@@ -22,8 +22,9 @@
 // TFT_eSPI is told about the board with build flags: docs/panel.md has the PlatformIO lines,
 // and the same values go into its User_Setup.h for the Arduino IDE. Board: ESP32 Dev Module.
 //
-// The serial monitor (115200) says what it is doing: Wi-Fi, each answer that is not a 200,
-// each tap with what the touch read and where on the screen that is. Never the token.
+// The serial monitor (115200) says what it is doing: Wi-Fi, the server's answer when it changes
+// (with the free memory, which https needs some 40 kB of), each press, and each tap with what
+// the touch read and where on the screen that is. Never the token.
 
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
@@ -59,6 +60,8 @@ const unsigned long STALE_MS = 5000;     // no answer for this long: the numbers
 const unsigned long CONFIRM_MS = 3000;   // Cancel asks "Sure?" for this long
 const unsigned long MESSAGE_MS = 5000;   // how long a refusal stays on the status line
 const int STEP_PCT = 5;                  // what - and + change the fan or heater by
+const unsigned long HOLD_MS = 700;       // - or + held this long jumps to the end
+const unsigned long ASKED_MS = 4000;     // how long a change stands in for the roaster's report
 
 // ---- Colours (RGB565) ----
 const uint16_t C_BG = 0x0000, C_TEXT = 0xFFFF, C_DIM = 0x7BEF, C_BAR = 0x2104;
@@ -92,6 +95,11 @@ unsigned long answeredAt = 0;   // millis() of the server's last answer
 unsigned long lastPoll = 0;
 int picked = 0;                 // which of the queue Start starts
 bool adjustHeater = false;      // - and + move the heater instead of the fan
+// What - and + last asked for (fan, heater) and when: the roaster reports it a second or two
+// later, and taps in a row must add up meanwhile.
+float asked[2] = {NAN, NAN};
+unsigned long askedAt[2] = {0, 0};
+int holding = 0;                // the tap still down is on - (-1) or + (1)
 unsigned long confirmUntil = 0; // Cancel was tapped once
 String message;                 // a refusal, shown for a while
 unsigned long messageUntil = 0;
@@ -222,7 +230,9 @@ void poll() {
   int status = request("GET", "/api/roaster/" RW_ROASTER "/panel", "", answer);
   if (status != last) {
     // below 0: no connection (HTTPClient's error); 200: the panel's state; else the server's refusal
-    Serial.printf("server: %d %s\n", status, status == 200 ? "ok" : status < 0 ? http.errorToString(status).c_str() : answer.c_str());
+    Serial.printf("server: %d %s (free memory %u, largest block %u)\n", status,
+                  status == 200 ? "ok" : status < 0 ? http.errorToString(status).c_str() : answer.c_str(),
+                  (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getMaxAllocHeap());
     last = status;
   }
   if (status == 200) {
@@ -233,23 +243,24 @@ void poll() {
   }
 }
 
-// Press a button: the answer is the next screen, or why not.
-void press(const char* action, const String& body) {
+// Press a button: the answer is the next screen, or why not. Whether the server said yes.
+bool press(const char* action, const String& body) {
   String answer;
   int status = request("POST", String("/api/roaster/" RW_ROASTER "/panel/") + action, body, answer);
   Serial.printf("press %s %s: %d %s\n", action, body.c_str(), status, status == 200 ? "ok" : answer.c_str());
   if (status == 200) {
     take(answer);
     answeredAt = millis();
-    return;
+    return true;
   }
   if (status < 0) {
     say("No answer from the server");
-    return;
+    return false;
   }
   JsonDocument doc;
   deserializeJson(doc, answer);
   say(ascii(doc["error"]["message"] | "The server refused"));
+  return false;
 }
 
 // ---------------------------------------------------------------- drawing --
@@ -317,6 +328,14 @@ void drawStatus() {
   line(text, 8, 122, 2, colour, 304);
 }
 
+// The fan or heater as the label shows it and as - and + count from: what was just asked
+// for, until the roaster has had time to report it.
+float level(bool heater) {
+  int i = heater ? 1 : 0;
+  if (askedAt[i] && millis() - askedAt[i] < ASKED_MS) return asked[i];
+  return heater ? panel.heater : panel.fan;
+}
+
 void box(int x, int y, int w, int h, const char* label, uint16_t colour, int font) {
   tft.fillRoundRect(x, y, w, h, 4, colour);
   tft.setTextDatum(MC_DATUM);
@@ -332,7 +351,7 @@ void drawAdjust() {
     return;
   }
   bool heater = adjustHeater || !panel.canFan;
-  String label = String(heater ? "Heater " : "Fan ") + reading(heater ? panel.heater : panel.fan, 0) + " %";
+  String label = String(heater ? "Heater " : "Fan ") + reading(level(heater), 0) + " %";
   line(label, 8, ADJ_Y + 6, 4, C_TEXT, 184);
   box(MINUS_X, ADJ_Y, ADJ_W, ADJ_H, "-", C_PLAIN, 4);
   box(PLUS_X, ADJ_Y, ADJ_W, ADJ_H, "+", C_PLAIN, 4);
@@ -393,18 +412,41 @@ void draw() {
 
 // ---------------------------------------------------------------- touch --
 
+void adjustTo(bool heater, int to) {
+  int i = heater ? 1 : 0;
+  if (press(heater ? "heater" : "fan", String("{\"percent\":") + to + "}")) {
+    asked[i] = to;
+    askedAt[i] = millis();
+  } else {
+    askedAt[i] = 0;
+  }
+}
+
 void adjust(int by) {
   bool heater = adjustHeater || !panel.canFan;
-  float now = heater ? panel.heater : panel.fan;
-  int to = constrain((int)lroundf(isnan(now) ? 0 : now) + by, 0, 100);
-  press(heater ? "heater" : "fan", String("{\"percent\":") + to + "}");
+  float now = level(heater);
+  adjustTo(heater, constrain((int)lroundf(isnan(now) ? 0 : now) + by, 0, 100));
+}
+
+// - or + held: the fan to off or to full, the heater to off. Never the heater to full: a hand
+// resting on the screen must not do that.
+void held(int which) {
+  bool heater = adjustHeater || !panel.canFan;
+  if (heater && which > 0) return;
+  adjustTo(heater, which < 0 ? 0 : 100);
 }
 
 void tapped(int x, int y) {
   if (y >= ADJ_Y && y < ADJ_Y + ADJ_H && (panel.canFan || panel.canHeater)) {
-    if (x >= PLUS_X) adjust(STEP_PCT);
-    else if (x >= MINUS_X) adjust(-STEP_PCT);
-    else if (panel.canFan && panel.canHeater && !panel.drive) adjustHeater = !adjustHeater;
+    if (x >= PLUS_X) {
+      holding = 1;
+      adjust(STEP_PCT);
+    } else if (x >= MINUS_X) {
+      holding = -1;
+      adjust(-STEP_PCT);
+    } else if (panel.canFan && panel.canHeater && !panel.drive) {
+      adjustHeater = !adjustHeater;
+    }
     return;
   }
   if (y < ROW_Y) return;
@@ -426,11 +468,22 @@ void tapped(int x, int y) {
   }
 }
 
-// A tap, once per press: where on the screen.
+// A tap, once per press: where on the screen. - or + still down after HOLD_MS: once more, held.
 void readTouch() {
   static bool down = false;
+  static unsigned long downAt = 0;
   bool now = touch.tirqTouched() && touch.touched();
+  if (now && down && holding && millis() - downAt >= HOLD_MS) {
+    int which = holding;
+    holding = 0;
+    Serial.printf("held: %s\n", which < 0 ? "-" : "+");
+    held(which);
+    draw();
+  }
+  if (!now) holding = 0;
   if (now && !down) {
+    downAt = millis();
+    holding = 0;
     TS_Point p = touch.getPoint();
 #ifdef CALIBRATE
     say(String("raw x ") + p.x + "  y " + p.y);
