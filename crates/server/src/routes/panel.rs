@@ -181,12 +181,18 @@ struct PanelCurve {
     bt: Vec<f64>,
     /// The rate of rise at the same times, °C/min
     ror: Vec<f64>,
+    /// ET at the same times, °C; empty when the roaster sends none
+    et: Vec<f64>,
+    /// The heater at the same times, %
+    heater: Vec<f64>,
+    /// The fan at the same times, %
+    fan: Vec<f64>,
     /// The profile's BT at the same times and on to its end, °C; empty without a profile
     target: Vec<f64>,
     /// The profile's own rate of rise at those times, °C/min: its BT a minute apart
     target_ror: Vec<f64>,
     marks: CurveMarks,
-    /// The lowest and the highest value of `bt` and `target`, °C
+    /// The lowest and the highest value of `bt`, `et` and `target`, °C
     min: f64,
     max: f64,
     /// The highest rate of rise, the roast's or the profile's, °C/min: the graph's second scale
@@ -433,6 +439,9 @@ async fn panel_curve(state: &AppState, device_id: &str, of: &CurveOf) -> PanelCu
         step_s: 5,
         bt: Vec::new(),
         ror: Vec::new(),
+        et: Vec::new(),
+        heater: Vec::new(),
+        fan: Vec::new(),
         target: Vec::new(),
         target_ror: Vec::new(),
         marks: CurveMarks::default(),
@@ -470,18 +479,16 @@ async fn panel_curve(state: &AppState, device_id: &str, of: &CurveOf) -> PanelCu
     let rows = crate::roasts::telemetry_store::get_session_telemetry(&state.db, &session.id)
         .await
         .unwrap_or_default();
-    let series = |value: fn(&crate::roasts::types::SessionTelemetry) -> Option<f32>| {
+    let series = |value: fn(&crate::roasts::types::SessionTelemetry) -> Option<f64>| {
         rows.iter()
             .filter_map(|r| {
                 let t = f64::from(r.elapsed_seconds) - zero;
-                value(r)
-                    .map(|v| (t, f64::from(v)))
-                    .filter(|(t, _)| *t <= now)
+                value(r).map(|v| (t, v)).filter(|(t, _)| *t <= now)
             })
             .collect::<Vec<(f64, f64)>>()
     };
-    let points = series(|r| r.bean_temp);
-    let rates = series(|r| r.rate_of_rise);
+    let points = series(|r| r.bean_temp.map(f64::from));
+    let rates = series(|r| r.rate_of_rise.map(f64::from));
     // The drive may have moved the profile against the roast's clock (its alignment)
     let offset = state
         .replay
@@ -497,8 +504,11 @@ async fn panel_curve(state: &AppState, device_id: &str, of: &CurveOf) -> PanelCu
     let step = curve_step(profile_end.max(now).max(60.0));
     let bt = sampled(&points, step, now.max(0.0));
     let ror = sampled(&rates, step, now.max(0.0));
+    let et = sampled(&series(|r| r.env_temp.map(f64::from)), step, now.max(0.0));
+    let heater = sampled(&series(|r| r.heater), step, now.max(0.0));
+    let fan = sampled(&series(|r| r.fan), step, now.max(0.0));
     let (target, target_ror) = profile_curves(plan.as_ref(), step, offset);
-    let all = || bt.iter().chain(&target).copied();
+    let all = || bt.iter().chain(&et).chain(&target).copied();
     let mark = |t: &RoastEventType| at(&events, t).map(|e| (e - zero).round() as i64);
     let mut curve = empty(Some(session.id.clone()));
     curve.step_s = step;
@@ -515,6 +525,9 @@ async fn panel_curve(state: &AppState, device_id: &str, of: &CurveOf) -> PanelCu
     curve.ror_max = ror.iter().chain(&target_ror).copied().fold(0.0, f64::max);
     curve.bt = bt;
     curve.ror = ror;
+    curve.et = et;
+    curve.heater = heater;
+    curve.fan = fan;
     curve.target = target;
     curve.target_ror = target_ror;
     curve
@@ -1474,6 +1487,7 @@ mod tests {
         assert!(none["roast"].is_null(), "{none}");
         assert_eq!(none["bt"], json!([]));
         assert_eq!(none["ror"], json!([]));
+        assert_eq!(none["heater"], json!([]));
         assert_eq!(none["target"], json!([]));
         assert_eq!(none["target_ror"], json!([]));
 
@@ -1565,6 +1579,15 @@ mod tests {
         assert!(mid > 1.0 && mid < 60.0, "{c}");
         let (lo, hi) = (c["min"].as_f64().unwrap(), c["max"].as_f64().unwrap());
         assert!(lo < hi && lo >= 0.0 && hi < 300.0, "{c}");
+        // ET, the heater and the fan come with it, for the graph's second page
+        let len = |k: &str| c[k].as_array().unwrap().len();
+        assert!(len("et") > 0 && len("et") <= len("bt"), "{c}");
+        assert!(len("heater") > 0 && len("fan") > 0, "{c}");
+        for k in ["heater", "fan"] {
+            for v in c[k].as_array().unwrap() {
+                assert!((0.0..=100.0).contains(&v.as_f64().unwrap()), "{c}");
+            }
+        }
         for v in c["bt"]
             .as_array()
             .unwrap()

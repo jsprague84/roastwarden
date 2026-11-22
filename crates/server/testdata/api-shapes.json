@@ -3809,6 +3809,15 @@
       "bt": [
         "empty"
       ],
+      "et": [
+        "empty"
+      ],
+      "fan": [
+        "empty"
+      ],
+      "heater": [
+        "empty"
+      ],
       "marks": {
         "drop": "null",
         "dry_end": "null",

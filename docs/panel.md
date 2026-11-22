@@ -32,13 +32,16 @@ Beside ET and the rate of rise, a small **Δ** with a number says how far the be
 the profile: `+1.8` is 1.8 °C above it. It is green within 3 °C, amber within 6 and red
 beyond, from Charge to Drop on a roast that has a profile.
 
-**Tap the readings** and they become a graph; tap the graph to go back. The buttons stay.
+**Tap the readings** and they become a graph; the buttons stay. The numbers above the graph
+are in their lines' colours.
 
-- **During a roast**: the bean temperature (yellow) over the profile's (grey), and the rate of
-  rise (cyan) over the profile's (darker cyan), with degrees on the left, the rate of rise's
-  scale on the right and minutes along the bottom. Dry end, first crack and Drop show as
-  dotted lines marked `D`, `FC` and `X`. The rate of rise's scale stops at 40 °C/min, so the
-  first minute of a cold charge runs off the top and the rest of the roast stays readable.
+- **During a roast**: the bean temperature (yellow) over the profile's (grey), the rate of
+  rise (cyan) over the profile's (darker cyan), and ET (orange), with degrees on the left,
+  the rate of rise's scale on the right and minutes along the bottom. Dry end, first crack
+  and Drop show as dotted lines marked `D`, `FC` and `X`. The rate of rise's scale stops at
+  40 °C/min, so the first minute of a cold charge runs off the top and the rest of the roast
+  stays readable. **Tap again** for the heater (red) and the fan (blue) over the same
+  minutes, in percent, and once more for the readings.
 - **Before a roast**: the profile of the roast picked, to look at before you start it. **◀ ▶**
   step through the roasts and the graph follows.
 
@@ -102,7 +105,8 @@ settings.
 
 When something does not work, the serial monitor (115200) says what the panel is doing: its
 Wi-Fi and address, each answer of the server that is not a plain yes, and each tap with where
-on the screen it landed. It never prints the token.
+on the screen it landed. It never prints the token. Send it an `S` and it answers with a
+picture of its screen, read back from the display.
 
 Try it on the [simulated roaster](virtual-roaster.md) first: make a panel token for
 `virtual_roaster` and roast there.
@@ -140,9 +144,9 @@ Any screen that speaks HTTP can be a panel. It makes two calls, both with the pa
   (`target`) and how far BT is from it (`delta`), the `actions` that do something now, and the
   `queue` Start can start. Ask once a second.
 - `GET /api/roaster/<roaster>/panel/curve` answers the open roast for a graph, at most 150
-  values each, one every `step_s` seconds from Charge: `bt` and `ror` so far, the profile's
-  `target` and `target_ror` to its end, the `marks`, and the ranges (`min`, `max`,
-  `ror_max`). With no roast open, `?plan=<id>` or `?again=<id>` from the queue answers that
+  values each, one every `step_s` seconds from Charge: `bt`, `ror`, `et`, `heater` and `fan`
+  so far, the profile's `target` and `target_ror` to its end, the `marks`, and the ranges
+  (`min`, `max`, `ror_max`). With no roast open, `?plan=<id>` or `?again=<id>` from the queue answers that
   roast's profile alone. Ask every few seconds while the graph shows.
 - `POST /api/roaster/<roaster>/panel/<button>` presses `start`, `charge`, `dry_end`,
   `first_crack`, `drop`, `complete`, `cancel`, `stop`, `fan` or `heater`. `start` takes
@@ -204,7 +208,11 @@ and redraws the plot every five seconds; the newest reading comes with the state
 profile read at the roast clock, so a roast by hand against a profile shows its distance too.
 
 The sketch draws the profile's lines first and duller, the roast's over them, and keeps every
-number outside the plot. Its buttons are as wide as their words: on a row of four, `CRACK` and
+number outside the plot. The heater and the fan have a page of their own: a third scale and
+two more lines on a plot 276 pixels wide would hide the roast. The sketch answers an `S` on
+its serial port with the screen as the display holds it (`readRect`, 240 rows of RGB565),
+which is how its layout is checked from a desk: a helper keeps the port open (opening it
+resets the board), sends `G` for a tap on the readings and writes the picture. Its buttons are as wide as their words: on a row of four, `CRACK` and
 `CANCEL` in the large font ran into each other on the board, hence `FC` and the small `CANCEL`.
 
 ## The queue

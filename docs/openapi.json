@@ -23451,6 +23451,9 @@
           "step_s",
           "bt",
           "ror",
+          "et",
+          "heater",
+          "fan",
           "target",
           "target_ror",
           "marks",
@@ -23488,6 +23491,30 @@
             },
             "description": "The rate of rise at the same times, °C/min"
           },
+          "et": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            },
+            "description": "ET at the same times, °C; empty when the roaster sends none"
+          },
+          "heater": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            },
+            "description": "The heater at the same times, %"
+          },
+          "fan": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            },
+            "description": "The fan at the same times, %"
+          },
           "target": {
             "type": "array",
             "items": {
@@ -23510,7 +23537,7 @@
           "min": {
             "type": "number",
             "format": "double",
-            "description": "The lowest and the highest value of `bt` and `target`, °C"
+            "description": "The lowest and the highest value of `bt`, `et` and `target`, °C"
           },
           "max": {
             "type": "number",

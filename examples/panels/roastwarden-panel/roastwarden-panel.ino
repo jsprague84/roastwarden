@@ -3,7 +3,8 @@
 // roaster. It shows the bean temperature and the roast clock, how far the beans are from the
 // profile, and the buttons that do something now: Start, Charge, Dry end, First crack, Drop,
 // Complete, Stop, fan and heater. A tap on the readings turns them into a graph of the roast:
-// bean temperature and rate of rise against the profile's. Before a roast the same tap shows
+// bean temperature and rate of rise against the profile's, with ET; a second tap shows the
+// heater and the fan over the roast, a third the readings again. Before a roast the tap shows
 // the profile of the roast picked. No browser needed.
 //
 // The server does the work. Once a second the panel asks what to show,
@@ -28,7 +29,10 @@
 //
 // The serial monitor (115200) says what it is doing: Wi-Fi, the server's answer when it changes
 // (with the free memory, which https needs some 40 kB of), each press, and each tap with what
-// the touch read and where on the screen that is. Never the token.
+// the touch read and where on the screen that is. Never the token. Send it an S and it answers
+// with its screen, read back from the display: "SHOT 320 240", 240 rows of 320 pixels (two
+// bytes each, RGB565), "END": a picture of the panel without a camera. A G is a tap on the
+// readings.
 
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
@@ -75,6 +79,7 @@ const uint16_t C_GO = 0x0560, C_MARK = 0x1A7F, C_STOP = 0xE000, C_PLAIN = 0x4208
 const uint16_t C_OK = 0x07E0, C_BAD = 0xF800;                       // near the profile, far from it
 const uint16_t C_BT = 0xFFE0, C_ROR = 0x07FF, C_GRID = 0x2945;      // the graph: BT, its rate of rise
 const uint16_t C_PROFILE = 0x9CF3, C_PROFILE_ROR = 0x0410;          // the profile's two, duller
+const uint16_t C_ET = 0xFB20, C_HEAT = 0xFA08, C_FAN = 0x5DDF;      // ET; the heater and the fan
 
 TFT_eSPI tft;
 SPIClass touchSpi(VSPI);
@@ -119,11 +124,14 @@ String drawnButtons;            // the row as drawn, to redraw it only when it c
 // from CHARGE, in tenths (of a degree, of a degree a minute).
 const int CURVE_MAX = 160;
 int16_t curveBt[CURVE_MAX], curveRor[CURVE_MAX], curveTarget[CURVE_MAX], curveTargetRor[CURVE_MAX];
+int16_t curveEt[CURVE_MAX], curveHeater[CURVE_MAX], curveFan[CURVE_MAX];
 int curveBtLen = 0, curveRorLen = 0, curveTargetLen = 0, curveTargetRorLen = 0, curveStep = 5;
+int curveEtLen = 0, curveHeaterLen = 0, curveFanLen = 0;
 float curveMin = 0, curveMax = 0, curveRorMax = 0;
 long markDry = -1, markCrack = -1, markDrop = -1;   // seconds on the curve's clock; -1: not marked
 bool graph = false;             // the readings are a graph
-bool graphDrawn = false;        // which of the two is on the screen
+int page = 1;                   // which: 1 the roast against its profile, 2 the heater and the fan
+int viewDrawn = 0;              // what is on the screen: 0 the readings, else the graph's page
 bool graphStale = true;         // the curve changed since it was drawn
 unsigned long curveAt = 0;      // millis() of the last curve
 String curveOf;                 // whose it is: "roast", or the queue's roast picked ("plan=<id>")
@@ -304,6 +312,9 @@ void fetchCurve() {
   curveRorLen = take(doc["ror"].as<JsonArrayConst>(), curveRor);
   curveTargetLen = take(doc["target"].as<JsonArrayConst>(), curveTarget);
   curveTargetRorLen = take(doc["target_ror"].as<JsonArrayConst>(), curveTargetRor);
+  curveEtLen = take(doc["et"].as<JsonArrayConst>(), curveEt);
+  curveHeaterLen = take(doc["heater"].as<JsonArrayConst>(), curveHeater);
+  curveFanLen = take(doc["fan"].as<JsonArrayConst>(), curveFan);
   curveMin = doc["min"] | 0.0f;
   curveMax = doc["max"] | 0.0f;
   curveRorMax = doc["ror_max"] | 0.0f;
@@ -434,25 +445,31 @@ void drawStatus() {
 const int GX = 0, GY = 58, GW = 320, GH = 122;
 const int PX = 26, PY = GY + 10, PW = 276, PH = GH - 22;
 
-// The graph view's top line: BT, how far from the profile, the rate of rise and the clock
-// while a roast is open; the roast picked before one. A refusal takes the line while it shows.
+// The graph view's top line, each number in its line's colour: BT, how far from the profile,
+// the rate of rise and ET, the clock; on the second page the heater and the fan; before a
+// roast the roast picked. A refusal takes the line while it shows.
 void drawGraphReadings(bool stale) {
   static int shown = -1;
-  int now = messageUntil && millis() < messageUntil ? 1 : roastOpen() ? 0 : 2;
-  if (now != shown) tft.fillRect(0, 26, 320, 30, C_BG);
+  int now = messageUntil && millis() < messageUntil ? 1 : !roastOpen() ? 2 : page == 2 ? 3 : 0;
+  if (now != shown) tft.fillRect(0, 26, 320, 32, C_BG);
   shown = now;
+  bool dim = stale || !panel.online;
   if (now == 1) {
     line(fit(message, 2, 308), 6, 32, 2, C_WARN, 308);
   } else if (now == 2) {
     String text = panel.queueLen == 0 ? String("Nothing to start")
       : String(picked + 1) + "/" + panel.queueLen + "  " + panel.queueName[picked];
     line(fit(text, 2, 308), 6, 32, 2, C_TEXT, 308);
+  } else if (now == 3) {
+    line("Heater " + reading(panel.heater, 0) + " %", 6, 34, 2, dim ? C_DIM : C_HEAT, 112);
+    line("Fan " + reading(panel.fan, 0) + " %", 124, 34, 2, dim ? C_DIM : C_FAN, 100);
+    line(clock(panel.timeS), 314, 28, 4, dim ? C_DIM : C_TEXT, 64, TR_DATUM);
   } else {
-    uint16_t colour = stale || !panel.online ? C_DIM : C_TEXT;
-    line(reading(panel.bt, 1), 6, 28, 4, colour, 76);
+    line(reading(panel.bt, 1), 6, 28, 4, dim ? C_DIM : C_BT, 76);
     drawDelta(84, 28, 78);
-    line("RoR " + reading(panel.ror, 1), 166, 34, 2, stale ? C_DIM : C_ROR, 82);
-    line(clock(panel.timeS), 314, 28, 4, colour, 64, TR_DATUM);
+    line("RoR " + reading(panel.ror, 1), 166, 26, 2, dim ? C_DIM : C_ROR, 82);
+    line("ET " + reading(panel.et, 0), 166, 41, 2, dim ? C_DIM : C_ET, 82);
+    line(clock(panel.timeS), 314, 28, 4, dim ? C_DIM : C_TEXT, 64, TR_DATUM);
   }
 }
 
@@ -484,27 +501,12 @@ void drawMark(long at, const char* letters, int points) {
   tft.drawString(letters, constrain(x, PX + 6, PX + PW - 7), PY - 1, 1);
 }
 
-// The roast as a graph. The profile's two lines are the duller ones: its BT (grey) under the
-// roast's (yellow), its rate of rise (dark cyan) under the roast's (cyan). Degrees on the
-// left, the rate of rise's scale on the right, minutes along the bottom.
-void drawGraph() {
-  graphStale = false;
-  tft.fillRect(GX, GY, GW, GH, C_BG);
-  if (curveBtLen == 0 && curveTargetLen == 0) {
-    tft.setTextDatum(MC_DATUM);
-    tft.setTextColor(C_DIM, C_BG);
-    tft.drawString(roastOpen() ? "The roast's curve appears here" : "No profile: a plain roast", GX + GW / 2, GY + GH / 2, 2);
-    return;
-  }
-  int points = max(max(curveBtLen, curveTargetLen), 2);
-  float lo = floorf(curveMin / 25) * 25, hi = ceilf(curveMax / 25) * 25;
-  if (hi - lo < 50) hi = lo + 50;
-  // The first minute's rate of rise runs off the top (a cold charge on a fluid bed passes 60):
-  // the scale is for the rest of the roast, where 5 and 15 have to be told apart.
-  float rorTop = constrain(ceilf(curveRorMax / 10) * 10, 20.0f, 40.0f);
+// The plot's frame: a line and its number on the left every `every` between `lo` and `hi`,
+// the minutes along the bottom, the landmarks.
+void drawFrame(int points, float lo, float hi, float every) {
   tft.setTextColor(C_DIM, C_BG);
   tft.setTextDatum(MR_DATUM);
-  for (float v = ceilf(lo / 50) * 50; v <= hi; v += 50) {
+  for (float v = ceilf(lo / every) * every; v <= hi; v += every) {
     int y = PY + PH - 1 - (int)((v - lo) / (hi - lo) * (PH - 1));
     tft.drawFastHLine(PX, y, PW, C_GRID);
     tft.drawString(String((int)v), PX - 4, y, 1);
@@ -516,16 +518,45 @@ void drawGraph() {
     tft.drawFastVLine(x, PY + PH, 3, C_DIM);
     tft.drawString(String(t / 60), x, PY + PH + 4, 1);
   }
+  drawMark(markDry, "D", points);
+  drawMark(markCrack, "FC", points);
+  drawMark(markDrop, "X", points);
+}
+
+// The roast as a graph. The profile's two lines are the duller ones: its BT (grey) under the
+// roast's (yellow), its rate of rise (dark cyan) under the roast's (cyan); ET is the thin
+// orange one. Degrees on the left, the rate of rise's scale on the right, minutes below. The
+// second page is the heater (red) and the fan (blue) over the same minutes, in percent.
+void drawGraph() {
+  graphStale = false;
+  tft.fillRect(GX, GY, GW, GH, C_BG);
+  if (curveBtLen == 0 && curveTargetLen == 0) {
+    tft.setTextDatum(MC_DATUM);
+    tft.setTextColor(C_DIM, C_BG);
+    tft.drawString(roastOpen() ? "The roast's curve appears here" : "No profile: a plain roast", GX + GW / 2, GY + GH / 2, 2);
+    return;
+  }
+  int points = max(max(curveBtLen, curveTargetLen), 2);
+  if (page == 2 && roastOpen()) {
+    drawFrame(points, 0, 100, 50);
+    drawCurve(curveFan, curveFanLen, points, 0, 100, C_FAN, true);
+    drawCurve(curveHeater, curveHeaterLen, points, 0, 100, C_HEAT, true);
+    return;
+  }
+  float lo = floorf(curveMin / 25) * 25, hi = ceilf(curveMax / 25) * 25;
+  if (hi - lo < 50) hi = lo + 50;
+  // The first minute's rate of rise runs off the top (a cold charge on a fluid bed passes 60):
+  // the scale is for the rest of the roast, where 5 and 15 have to be told apart.
+  float rorTop = constrain(ceilf(curveRorMax / 10) * 10, 20.0f, 40.0f);
+  drawFrame(points, lo, hi, 50);
   tft.setTextColor(C_ROR, C_BG);
   tft.setTextDatum(ML_DATUM);
   tft.drawString(String((int)rorTop), PX + PW + 3, PY + 3, 1);
   tft.drawString(String((int)(rorTop / 2)), PX + PW + 3, PY + PH / 2, 1);
   tft.drawString("0", PX + PW + 3, PY + PH - 4, 1);
-  drawMark(markDry, "D", points);
-  drawMark(markCrack, "FC", points);
-  drawMark(markDrop, "X", points);
   drawCurve(curveTargetRor, curveTargetRorLen, points, 0, rorTop, C_PROFILE_ROR, false);
   drawCurve(curveTarget, curveTargetLen, points, lo, hi, C_PROFILE, false);
+  drawCurve(curveEt, curveEtLen, points, lo, hi, C_ET, false);
   drawCurve(curveRor, curveRorLen, points, 0, rorTop, C_ROR, false);
   drawCurve(curveBt, curveBtLen, points, lo, hi, C_BT, true);
 }
@@ -618,9 +649,11 @@ void draw() {
   bool stale = !panel.known || millis() - answeredAt > STALE_MS;
   // The graph is the open roast's, or the picked roast's profile: with neither, the readings
   if (panel.known && curveWanted().length() == 0) graph = false;
-  if (graph != graphDrawn) {
+  if (!roastOpen()) page = 1;   // the heater and the fan are an open roast's
+  int view = graph ? page : 0;
+  if (view != viewDrawn) {
     tft.fillRect(0, 24, 320, ROW_Y - 24, C_BG);
-    graphDrawn = graph;
+    viewDrawn = view;
     graphStale = true;
   }
   drawHeader(stale);
@@ -663,10 +696,17 @@ void held(int which) {
 
 void tapped(int x, int y) {
   // A tap on the readings turns them into the graph (the open roast's, or the profile of the
-  // roast picked), a tap on the graph back
+  // roast picked); a tap on an open roast's graph into its heater and fan; the next one back
   if (curveWanted().length() && y >= 24 && y < (graph ? ROW_Y : ADJ_Y)) {
-    graph = !graph;
-    if (graph) fetchCurve();
+    if (!graph) {
+      graph = true;
+      page = 1;
+      fetchCurve();
+    } else if (page == 1 && roastOpen()) {
+      page = 2;
+    } else {
+      graph = false;
+    }
     return;
   }
   if (graph && y < ROW_Y) return;
@@ -731,6 +771,17 @@ void readTouch() {
   down = now;
 }
 
+// The screen as the display holds it, to the serial monitor (the header comment has the format).
+void screenshot() {
+  static uint16_t row[320];
+  Serial.println("\nSHOT 320 240");
+  for (int y = 0; y < 240; y++) {
+    tft.readRect(0, y, 320, 1, row);
+    Serial.write((const uint8_t*)row, sizeof row);
+  }
+  Serial.println("\nEND");
+}
+
 // ---------------------------------------------------------------- setup and loop --
 
 void setup() {
@@ -760,6 +811,14 @@ void loop() {
     else Serial.printf("wifi: not connected (status %d)\n", (int)wifi);
   }
   readTouch();
+  if (Serial.available()) {
+    char key = Serial.read();
+    if (key == 'S') screenshot();
+    if (key == 'G') {   // as a tap on the readings
+      tapped(160, 60);
+      draw();
+    }
+  }
   if (confirmUntil && millis() >= confirmUntil) confirmUntil = 0;
   if (millis() - lastPoll >= POLL_MS) {
     lastPoll = millis();
