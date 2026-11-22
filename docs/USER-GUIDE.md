@@ -485,9 +485,10 @@ or roaster until you answer: the request arrives as a notification with a link t
 
 ![Settings → Tokens](images/guide-tokens.png)
 
-A **touch panel** is a small screen beside the roaster with Start, Charge, First crack, Drop
-and Stop, for roasting without a browser open ([touch panel](panel.md)). Its token is the
-Panel preset, made for that one roaster.
+A **touch panel** is optional extra hardware: a small screen beside the roaster with Start,
+Charge, First crack, Drop and Stop, for roasting without a browser open
+([touch panel](panel.md)). Nothing needs one. Its token is the Panel preset, made for that
+one roaster.
 
 ### Audit
 

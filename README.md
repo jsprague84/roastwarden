@@ -37,9 +37,6 @@ maintainer's design and review.
   behind each QR code (`docs/labels.md`); PDF reports of a roast, two roasts compared, a
   profile, a coffee, a period, the plan, inventory, purchases and the shopping list
   (`docs/reports.md`).
-- **A touch panel at the roaster** (`docs/panel.md`): a cheap ESP32 touch screen with Start,
-  Charge, First crack, Drop and Stop, for roasting with no browser open; its token works that
-  one roaster's panel and nothing else.
 - **Agents and scripts**: the `roast` CLI (`docs/cli.md`) and its Agent Skill
   (`skills/roastwarden/`, built into `roast`), scoped API tokens, approvals and an audit log
   (`docs/agents.md`). An agent is set up in three commands: `roast login <server>`,
@@ -67,6 +64,9 @@ maintainer's design and review.
   register roles, command templates), so a Tasmota or ESPHome board or an Artisan WebSocket
   roaster works without reflashing (`docs/ingest-mapping.md`). A simulated roaster runs in the
   server for testing control (`docs/virtual-roaster.md`).
+  **Optional, and nothing needs it:** a touch panel at the roaster (`docs/panel.md`), a cheap
+  ESP32 touch screen with Start, Charge, First crack, Drop and Stop for roasting with no
+  browser open; its token works that one roaster's panel and nothing else.
 - **Connect your roaster, choose the control**: each roaster has a kind (fluid bed, drum electric or gas, logger), a
   control level (off logs only, manual, full) and its outputs (heater, fan, and a drum's speed
   and damper when declared) with ranges and a fan floor; one

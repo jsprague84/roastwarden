@@ -9,8 +9,9 @@ matching section (`docs/DEVELOPMENT.md`, "Releases").
 
 ### Added
 
-- A touch panel at the roaster (`docs/panel.md`): a small screen with Start, Charge, Dry end,
-  First crack, Drop, Complete, Stop, fan and heater, for roasting with no browser open. The
+- An optional touch panel at the roaster (`docs/panel.md`), extra hardware nothing needs: a
+  small screen with Start, Charge, Dry end, First crack, Drop, Complete, Stop, fan and heater,
+  for roasting with no browser open. The
   server answers what the screen shows and which buttons do something now
   (`GET /api/roaster/{id}/panel`) and takes a button's name
   (`POST /api/roaster/{id}/panel/{button}`). Start offers the planned roasts, then the

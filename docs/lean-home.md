@@ -35,7 +35,7 @@ Settings → Modules: pick a preset, or switch modules one by one ("Your own mix
 | Reports | PDF reports: the Reports section and a roast's Report button |
 | Cupping | the cupping form and its scores on a roast |
 | Tuning | autotune, the gain schedule and fan assist on a roaster's pages. The PID and Profile drive stay: they follow the roaster's control level |
-| Agents & access | Settings → Tokens, Approvals and Audit, for scripts and agents |
+| Agents & access | Settings → Tokens, Approvals and Audit, for scripts and agents (and a [touch panel](panel.md)'s token) |
 | Costs | prices on purchases, cost per kg and per roast, spending and the shopping list |
 | Labels | the Labels section (Label Studio), a roast's labels and the share pages their QR codes open |
 

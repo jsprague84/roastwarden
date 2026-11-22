@@ -8,6 +8,10 @@ roast, records it and follows the profile; the panel is one more screen for it, 
 and it looks like one: the dashboard's colours and typeface, and the same colour for each
 signal as on the dashboard's scope. A tap on the top bar switches between dark and light.
 
+**It is optional.** Roastwarden needs no panel: everything on it is on the dashboard, in any
+browser or on a phone. A panel is extra hardware for those who want buttons at the roaster,
+and nothing about it is installed or switched on until you make its token.
+
 The example is an ESP32 "Cheap Yellow Display", one of the cheapest boards with a touch
 screen. Any small screen that can make two web requests works the same way.
 
@@ -60,8 +64,9 @@ are in their lines' colours, the dashboard's.
 ## Setting it up
 
 1. **Make the panel's token.** Settings → Tokens → **Panel**, a name ("Roast room panel"),
-   the roaster, and an expiry (never, for a panel that stays). The page shows the token once,
-   as three lines for the sketch:
+   the roaster, and an expiry (never, for a panel that stays). Tokens is part of the Agents &
+   access [module](lean-home.md): with the Home preset, switch it on in Settings → Modules
+   first. The page shows the token once, as three lines for the sketch:
 
    ```cpp
    #define RW_SERVER  "http://192.168.1.50:8080"
