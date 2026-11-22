@@ -3807,16 +3807,16 @@
   "GET /api/roaster/{id}/panel/curve": {
     "body": {
       "bt": [
-        "empty"
+        "number"
       ],
       "et": [
-        "empty"
+        "number"
       ],
       "fan": [
-        "empty"
+        "number"
       ],
       "heater": [
-        "empty"
+        "number"
       ],
       "marks": {
         "drop": "null",
@@ -3827,7 +3827,7 @@
       "min": "number",
       "roast": "string",
       "ror": [
-        "empty"
+        "number"
       ],
       "ror_max": "number",
       "step_s": "integer",

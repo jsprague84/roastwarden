@@ -1047,13 +1047,21 @@ async fn api_shapes_are_unchanged() {
         None,
     )
     .await;
-    r.owner(
-        "GET /api/roaster/{id}/panel/curve",
-        "GET",
-        &format!("{panel}/curve"),
-        None,
-    )
-    .await;
+    // Once the roast has a stored sample of each series (each fills on its own: the first
+    // sample may carry BT before its rate of rise), so the shape does not depend on timing
+    let curve = format!("{panel}/curve");
+    assert!(
+        eventually(|| async {
+            let c = h.owner("GET", &curve, None).await.json();
+            ["bt", "ror", "et", "heater", "fan"]
+                .iter()
+                .all(|k| c[*k].as_array().is_some_and(|a| !a.is_empty()))
+        })
+        .await,
+        "the roast's curve has a sample of each series"
+    );
+    r.owner("GET /api/roaster/{id}/panel/curve", "GET", &curve, None)
+        .await;
     r.owner(
         "PATCH /api/sessions/{id}/replay",
         "PATCH",
