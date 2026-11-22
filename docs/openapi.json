@@ -10091,6 +10091,123 @@
         }
       }
     },
+    "/api/roaster/{device_id}/panel": {
+      "get": {
+        "tags": [
+          "panel"
+        ],
+        "summary": "What a touch panel at this roaster shows: its readings, the roast's stage and clock, the\nbuttons that do something now, and what Start can start (docs/panel.md).",
+        "operationId": "get_panel",
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanelState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roaster/{device_id}/panel/{action}": {
+      "post": {
+        "tags": [
+          "panel"
+        ],
+        "summary": "Press a button of this roaster's panel: `start`, `charge`, `dry_end`, `first_crack`,\n`drop`, `complete`, `cancel`, `stop`, `fan` or `heater` (docs/panel.md). Each does what\nthe Roast page's button does; the answer is what the panel shows next. The owner's and a\npanel token's alone.",
+        "operationId": "press",
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Action"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "`start`: `plan` or `again`; `fan`, `heater`: `percent`",
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Press"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanelState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A percent that is none",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such button, planned roast or roast to repeat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`NO_ROAST`, `ROAST_OPEN`, `ALREADY_MARKED`, `OTHER_ROASTER`, or the control gate's `CONTROL_OFF`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/roaster/{device_id}/prediction": {
       "get": {
         "tags": [
@@ -13690,6 +13807,16 @@
               }
             }
           },
+          "400": {
+            "description": "A panel token never asks first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Not Found",
             "content": {
@@ -14545,6 +14672,22 @@
           }
         }
       },
+      "Action": {
+        "type": "string",
+        "description": "A panel's buttons.",
+        "enum": [
+          "start",
+          "charge",
+          "dry_end",
+          "first_crack",
+          "drop",
+          "complete",
+          "cancel",
+          "stop",
+          "fan",
+          "heater"
+        ]
+      },
       "Agreement": {
         "type": "object",
         "required": [
@@ -14867,6 +15010,13 @@
           "require_approval": {
             "type": "boolean",
             "description": "Starting a roast on a physical roaster and deletes wait for the owner's approval\n(docs/control.md, \"Approvals\")"
+          },
+          "roaster": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A panel token's roaster, the only one it acts on (docs/panel.md); null otherwise"
           }
         }
       },
@@ -17725,7 +17875,7 @@
           },
           "preset": {
             "type": "string",
-            "description": "`read_only`, `roast`, `inventory` or `admin` (docs/control.md, \"Tokens\")"
+            "description": "`read_only`, `roast`, `inventory`, `admin`, or `panel` (docs/control.md, \"Tokens\")"
           },
           "expires_in_days": {
             "type": [
@@ -17741,7 +17891,14 @@
               "boolean",
               "null"
             ],
-            "description": "Starting a roast on a physical roaster and deletes wait for the owner's approval\n(docs/control.md, \"Approvals\"). Default true."
+            "description": "Starting a roast on a physical roaster and deletes wait for the owner's approval\n(docs/control.md, \"Approvals\"). Default true; a panel never asks."
+          },
+          "roaster": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`panel`: the roaster the touch panel is at, the only one its token acts on\n(docs/panel.md). No other preset takes one."
           }
         }
       },
@@ -23211,6 +23368,193 @@
           }
         }
       },
+      "PanelRoast": {
+        "type": "object",
+        "description": "The roast open on the roaster.",
+        "required": [
+          "id",
+          "name",
+          "time_s",
+          "charged",
+          "dry_end",
+          "first_crack",
+          "dropped",
+          "drive"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "batch": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "profile": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Its profile's name"
+          },
+          "time_s": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Seconds since CHARGE (since the roast started, before CHARGE); stands still at DROP"
+          },
+          "charged": {
+            "type": "boolean"
+          },
+          "dry_end": {
+            "type": "boolean"
+          },
+          "first_crack": {
+            "type": "boolean"
+          },
+          "dropped": {
+            "type": "boolean"
+          },
+          "drive": {
+            "type": "boolean",
+            "description": "Profile drive runs it"
+          }
+        }
+      },
+      "PanelState": {
+        "type": "object",
+        "description": "What a touch panel shows.",
+        "required": [
+          "device_id",
+          "name",
+          "online",
+          "control",
+          "stage",
+          "phase",
+          "cooling",
+          "actions",
+          "queue"
+        ],
+        "properties": {
+          "device_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "description": "The roaster's name (Roasters)"
+          },
+          "online": {
+            "type": "boolean",
+            "description": "It reported in the last ten seconds"
+          },
+          "age_s": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Seconds since its newest reading; null before the first",
+            "minimum": 0
+          },
+          "bt": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "°C"
+          },
+          "et": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "°C"
+          },
+          "ror": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "°C/min"
+          },
+          "heater": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "%"
+          },
+          "fan": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "%"
+          },
+          "setpoint": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "°C"
+          },
+          "heater_on": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Heater power"
+          },
+          "control": {
+            "$ref": "#/components/schemas/Control",
+            "description": "What the server may send this roaster (docs/roaster-setup.md)"
+          },
+          "stage": {
+            "$ref": "#/components/schemas/Stage"
+          },
+          "phase": {
+            "$ref": "#/components/schemas/Phase"
+          },
+          "cooling": {
+            "type": "boolean",
+            "description": "The fan runs until the chamber is cold (docs/roast-sequence.md)"
+          },
+          "roast": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PanelRoast"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Action"
+            },
+            "description": "The buttons that do something now"
+          },
+          "queue": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Recipe"
+            },
+            "description": "What Start can start, the first by default: the planned roasts, then roasts to repeat.\nEmpty while a roast is open."
+          }
+        }
+      },
       "PasswordSource": {
         "type": "string",
         "description": "Where a roaster's password comes from.",
@@ -24022,8 +24366,37 @@
           "read_only",
           "roast",
           "inventory",
-          "admin"
+          "admin",
+          "panel"
         ]
+      },
+      "Press": {
+        "type": "object",
+        "description": "A button's body; every field optional.",
+        "properties": {
+          "plan": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`start`: the planned roast to start"
+          },
+          "again": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`start`: the finished roast to repeat"
+          },
+          "percent": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "`fan`, `heater`: 0–100 %"
+          }
+        }
       },
       "PreviewField": {
         "type": "object",
@@ -25327,6 +25700,48 @@
           }
         ],
         "description": "One recent roast's score."
+      },
+      "Recipe": {
+        "type": "object",
+        "description": "A roast a panel can start: a planned one, or one roasted before, again.",
+        "required": [
+          "kind",
+          "id",
+          "name"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "description": "`plan`: a planned roast; `again`: a finished roast's coffee, profile and weight"
+          },
+          "id": {
+            "type": "string",
+            "description": "The planned roast's id, or the finished roast's: what Start takes"
+          },
+          "name": {
+            "type": "string",
+            "description": "The line to show"
+          },
+          "bean": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "profile": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "green_g": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          }
+        }
       },
       "ReorderRequest": {
         "type": "object",
@@ -29340,6 +29755,16 @@
             "description": "The shop's own id for this bag (a Shopify variant, a WooCommerce product): what a\ncart link takes (`docs/green-coffee.md`, \"Cart links\")"
           }
         }
+      },
+      "Stage": {
+        "type": "string",
+        "description": "Where the roast on this roaster is, as a panel shows it.",
+        "enum": [
+          "idle",
+          "ready",
+          "roasting",
+          "dropped"
+        ]
       },
       "StartFollowRequest": {
         "type": "object",

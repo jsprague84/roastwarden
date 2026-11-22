@@ -37,6 +37,7 @@ const BROWSER_LOGIN: &str =
     "a browser signs itself in for a cookie; `roast` sends its token with every call";
 const TEST: &str = "a test hook";
 const VIRTUAL: &str = "the simulator, for tests (docs/virtual-roaster.md)";
+const PANEL: &str = "a touch panel's buttons are for the person at the roaster: the owner key's and that roaster's panel token's alone (docs/panel.md)";
 const ROASTER_PAGE: &str = "a roaster's own settings, set on its page while trying them on a roast";
 
 /// Every operation of the OpenAPI document, by method and path template.
@@ -735,6 +736,16 @@ pub const SURFACE: &[(&str, &str, Via)] = &[
     ),
     (
         "GET",
+        "/api/roaster/{device_id}/panel",
+        Via::Cmd("roaster panel", R),
+    ),
+    (
+        "POST",
+        "/api/roaster/{device_id}/panel/{action}",
+        Via::None(PANEL),
+    ),
+    (
+        "GET",
         "/api/roaster/{device_id}/fan_assist",
         Via::Cmd("roaster show", R),
     ),
@@ -1154,7 +1165,8 @@ mod tests {
                         ));
                     }
                     let less: &[Preset] = match preset {
-                        Preset::ReadOnly => &[],
+                        // No command needs a panel's token: its buttons are no agent's
+                        Preset::ReadOnly | Preset::Panel => &[],
                         Preset::Roast | Preset::Inventory => &[Preset::ReadOnly],
                         Preset::Admin => &[Preset::ReadOnly, Preset::Roast, Preset::Inventory],
                     };

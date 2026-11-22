@@ -5,8 +5,16 @@
 	 */
 	import { auth, isOwnerCredential, type AuthStatus, type TokenPreset } from '#lib/api/auth.js';
 	import { tokens, type ApiToken } from '#lib/api/tokens.js';
+	import { listDevices } from '#lib/api/devices.js';
 	import { resolve } from '$app/paths';
-	import { PRESETS, presetLabel, tokenState, ago, agentSetup } from '#lib/tokens/state.js';
+	import {
+		PRESETS,
+		presetLabel,
+		tokenState,
+		ago,
+		agentSetup,
+		panelSetup
+	} from '#lib/tokens/state.js';
 	import { notifications } from '#lib/stores/notifications.js';
 	import { Copy, Check } from '@lucide/svelte';
 
@@ -16,8 +24,11 @@
 	let preset = $state<TokenPreset>('read_only');
 	let expiry = $state('90');
 	let askFirst = $state(true);
+	/** A panel token's roaster, and the roasters to pick it from */
+	let roaster = $state('');
+	let roasters = $state<{ device_id: string; name: string }[]>([]);
 	let busy = $state(false);
-	let secret = $state<{ name: string; value: string } | null>(null);
+	let secret = $state<{ name: string; value: string; roaster: string | null } | null>(null);
 	let copied = $state(false);
 
 	const owner = $derived(isOwnerCredential(status?.credential));
@@ -33,22 +44,30 @@
 			notifications.add(`Could not read the tokens: ${msg(e)}`, 'error');
 		}
 	}
+	// The roasters a panel can be for; without them the Panel preset says to add one
+	$effect(() => {
+		listDevices()
+			.then((all) => {
+				roasters = all.filter((d) => d.status === 'active' || d.status === 'pending');
+				if (!roaster && roasters.length) roaster = roasters[0].device_id;
+			})
+			.catch(() => {});
+	});
 	$effect(() => {
 		void load();
 	});
 
 	async function create(e: SubmitEvent) {
 		e.preventDefault();
-		if (!name.trim()) return;
+		if (!name.trim() || (preset === 'panel' && !roaster)) return;
 		busy = true;
 		try {
-			const r = await tokens.create(
-				name.trim(),
-				preset,
-				expiry === 'never' ? null : Number(expiry),
-				askFirst
-			);
-			secret = { name: r.token.name, value: r.secret };
+			const days = expiry === 'never' ? null : Number(expiry);
+			const r =
+				preset === 'panel'
+					? await tokens.createPanel(name.trim(), roaster, days)
+					: await tokens.create(name.trim(), preset, days, askFirst);
+			secret = { name: r.token.name, value: r.secret, roaster: r.token.roaster };
 			copied = false;
 			name = '';
 			await load();
@@ -109,7 +128,9 @@
 <p class="text-sm text-muted-foreground">
 	Tokens let scripts and agents use the API with less than the owner key can do. Send one as
 	<code class="rounded bg-background px-1 text-xs">Authorization: Bearer rr_…</code>. A token never
-	controls a physical roaster unless you allow it on that roaster's Control page.
+	controls a physical roaster unless you allow it on that roaster's Control page. A Panel token is
+	the one exception: you make it for one roaster's touch panel, and it works that roaster's panel
+	and nothing else.
 </p>
 
 {#if status && !status.auth_enabled}
@@ -177,19 +198,38 @@
 						{PRESETS.find((p) => p.id === preset)?.line}
 					</p>
 				</div>
-				<label class="flex items-start gap-2 text-sm text-foreground">
-					<input type="checkbox" bind:checked={askFirst} class="mt-0.5" />
-					<span
-						>Ask me first <span class="text-muted-foreground"
-							>before it starts a roast on a physical roaster or deletes a roast, bean, profile or
-							roaster (<a href={resolve('/settings/approvals')} class="underline">Approvals</a
-							>)</span
-						></span
-					>
-				</label>
+				{#if preset === 'panel'}
+					<label class="flex max-w-xs flex-col gap-1 text-xs text-muted-foreground">
+						Roaster
+						<select bind:value={roaster} class={input} data-testid="panel-roaster">
+							{#each roasters as r (r.device_id)}
+								<option value={r.device_id}>{r.name} ({r.device_id})</option>
+							{/each}
+						</select>
+					</label>
+					<p class="text-xs text-muted-foreground">
+						{#if roasters.length}
+							A panel never asks first: the person pressing Start stands at the roaster. The
+							roaster's control level still decides what is sent.
+						{:else}
+							Add a roaster first (<a href={resolve('/roasters')} class="underline">Roasters</a>).
+						{/if}
+					</p>
+				{:else}
+					<label class="flex items-start gap-2 text-sm text-foreground">
+						<input type="checkbox" bind:checked={askFirst} class="mt-0.5" />
+						<span
+							>Ask me first <span class="text-muted-foreground"
+								>before it starts a roast on a physical roaster or deletes a roast, bean, profile or
+								roaster (<a href={resolve('/settings/approvals')} class="underline">Approvals</a
+								>)</span
+							></span
+						>
+					</label>
+				{/if}
 				<button
 					type="submit"
-					disabled={busy || !name.trim()}
+					disabled={busy || !name.trim() || (preset === 'panel' && !roaster)}
 					class="rounded-md bg-action px-4 py-1.5 text-sm font-medium text-action-foreground hover:bg-action-hover disabled:opacity-50"
 				>
 					Create token
@@ -210,16 +250,33 @@
 							{#if copied}<Check class="h-4 w-4" />{:else}<Copy class="h-4 w-4" />{/if}
 						</button>
 					</div>
-					<p class="mt-3 text-sm text-foreground">
-						For an AI agent, on its machine (with <code class="font-mono text-xs">roast</code> installed):
-					</p>
-					<pre
-						class="mt-1 max-w-xl overflow-x-auto rounded bg-background px-2 py-1.5 font-mono text-xs text-foreground"
-						data-testid="agent-setup">{agentSetup(window.location.origin)}</pre>
-					<p class="mt-1 text-xs text-muted-foreground">
-						The skill teaches the agent the commands and the rules. Setting up an agent: docs,
-						"Agents".
-					</p>
+					{#if secret.roaster}
+						<p class="mt-3 text-sm text-foreground">
+							For the panel's sketch, at the top of its settings:
+						</p>
+						<pre
+							class="mt-1 max-w-xl overflow-x-auto rounded bg-background px-2 py-1.5 font-mono text-xs text-foreground"
+							data-testid="panel-setup">{panelSetup(
+								window.location.origin,
+								secret.roaster,
+								secret.value
+							)}</pre>
+						<p class="mt-1 text-xs text-muted-foreground">
+							The address is this page's; use the one the panel reaches the server at. Building a
+							panel: docs, "Touch panel".
+						</p>
+					{:else}
+						<p class="mt-3 text-sm text-foreground">
+							For an AI agent, on its machine (with <code class="font-mono text-xs">roast</code> installed):
+						</p>
+						<pre
+							class="mt-1 max-w-xl overflow-x-auto rounded bg-background px-2 py-1.5 font-mono text-xs text-foreground"
+							data-testid="agent-setup">{agentSetup(window.location.origin)}</pre>
+						<p class="mt-1 text-xs text-muted-foreground">
+							The skill teaches the agent the commands and the rules. Setting up an agent: docs,
+							"Agents".
+						</p>
+					{/if}
 					<button
 						type="button"
 						class="mt-2 text-xs text-muted-foreground underline"
@@ -242,21 +299,25 @@
 									<span class="ml-2 font-mono text-xs text-muted-foreground">{t.prefix}…</span>
 								</p>
 								<p class="mt-0.5 text-xs text-muted-foreground">
-									{presetLabel(t.preset)}{t.require_approval ? ' · asks first' : ''} ·
+									{presetLabel(t.preset)}{t.roaster ? ` for ${t.roaster}` : ''}{t.require_approval
+										? ' · asks first'
+										: ''} ·
 									<span class={st.kind === 'active' ? '' : 'text-red-400'}>{st.text}</span>
 									· used {ago(t.last_used_at)}{t.last_used_ip ? ` from ${t.last_used_ip}` : ''} · created
 									{when(t.created_at)}
 								</p>
 							</div>
 							{#if st.kind === 'active'}
-								<button
-									class="{secondary} shrink-0 py-1 text-xs"
-									title={t.require_approval
-										? 'Let it start roasts on a physical roaster and delete without asking'
-										: 'Ask before it starts a roast on a physical roaster or deletes'}
-									onclick={() => setAskFirst(t, !t.require_approval)}
-									>{t.require_approval ? 'Stop asking' : 'Ask first'}</button
-								>
+								{#if t.preset !== 'panel'}
+									<button
+										class="{secondary} shrink-0 py-1 text-xs"
+										title={t.require_approval
+											? 'Let it start roasts on a physical roaster and delete without asking'
+											: 'Ask before it starts a roast on a physical roaster or deletes'}
+										onclick={() => setAskFirst(t, !t.require_approval)}
+										>{t.require_approval ? 'Stop asking' : 'Ask first'}</button
+									>
+								{/if}
 								<button class="{secondary} shrink-0 py-1 text-xs" onclick={() => revoke(t)}
 									>Revoke</button
 								>

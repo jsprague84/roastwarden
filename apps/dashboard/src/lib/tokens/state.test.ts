@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { agentSetup, ago, browserName, presetLabel, tokenState } from './state.js';
+import { agentSetup, ago, browserName, panelSetup, presetLabel, tokenState } from './state.js';
 
 const now = Date.parse('2026-10-24T12:00:00Z');
 
@@ -34,7 +34,17 @@ describe('ago', () => {
 	it('labels presets', () => {
 		expect(presetLabel('read_only')).toBe('Read-only');
 		expect(presetLabel('inventory')).toBe('Inventory');
+		expect(presetLabel('panel')).toBe('Panel');
 		expect(presetLabel('other')).toBe('other');
+	});
+	it("writes a panel sketch's settings", () => {
+		expect(panelSetup('https://roast.example/', 'drum_1', 'rr_abc')).toBe(
+			[
+				'#define RW_SERVER  "https://roast.example"',
+				'#define RW_ROASTER "drum_1"',
+				'#define RW_TOKEN   "rr_abc"'
+			].join('\n')
+		);
 	});
 });
 

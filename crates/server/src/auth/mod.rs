@@ -949,7 +949,22 @@ pub async fn require_api_key(
                     actor.clone(),
                 );
             }
-            if let Some(res) = hardware_check(&auth, &method, &path, &actor).await {
+            if let Some(own) = tokens::other_roaster(t, &path) {
+                return refuse(
+                    StatusCode::FORBIDDEN,
+                    "TOKEN_SCOPE",
+                    format!(
+                        "The {} token \"{}\" is for {own} alone: it may not {method} {path}.",
+                        t.preset.label(),
+                        t.name
+                    ),
+                    actor.clone(),
+                );
+            }
+            // A token made for this roaster needs no switch for it (tokens::own_roaster)
+            if !tokens::own_roaster(t, &path)
+                && let Some(res) = hardware_check(&auth, &method, &path, &actor).await
+            {
                 return res;
             }
             let gate = crate::auth::approvals::gated(&method, &path)

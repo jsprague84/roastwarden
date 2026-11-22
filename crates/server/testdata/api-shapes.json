@@ -3730,6 +3730,78 @@
     },
     "status": 200
   },
+  "GET /api/roaster/{id}/panel": {
+    "body": {
+      "actions": [
+        "string"
+      ],
+      "age_s": "integer",
+      "bt": "number",
+      "control": "string",
+      "cooling": "boolean",
+      "device_id": "string",
+      "et": "number",
+      "fan": "number",
+      "heater": "number",
+      "heater_on": "boolean",
+      "name": "string",
+      "online": "boolean",
+      "phase": "string",
+      "queue": [
+        {
+          "bean": "null|string",
+          "green_g": "null|number",
+          "id": "string",
+          "kind": "string",
+          "name": "string",
+          "profile": "null|string"
+        }
+      ],
+      "roast": "null",
+      "ror": "number",
+      "setpoint": "number",
+      "stage": "string"
+    },
+    "status": 200
+  },
+  "GET /api/roaster/{id}/panel (a roast open)": {
+    "body": {
+      "actions": [
+        "string"
+      ],
+      "age_s": "integer",
+      "bt": "number",
+      "control": "string",
+      "cooling": "boolean",
+      "device_id": "string",
+      "et": "number",
+      "fan": "number",
+      "heater": "number",
+      "heater_on": "boolean",
+      "name": "string",
+      "online": "boolean",
+      "phase": "string",
+      "queue": [
+        "empty"
+      ],
+      "roast": {
+        "batch": "integer",
+        "charged": "boolean",
+        "drive": "boolean",
+        "dropped": "boolean",
+        "dry_end": "boolean",
+        "first_crack": "boolean",
+        "id": "string",
+        "name": "string",
+        "profile": "string",
+        "time_s": "integer"
+      },
+      "ror": "number",
+      "setpoint": "number",
+      "stage": "string"
+    },
+    "status": 200
+  },
   "GET /api/roaster/{id}/prediction (no roast)": {
     "body": {
       "error": {
@@ -4625,7 +4697,8 @@
         "prefix": "string",
         "preset": "string",
         "require_approval": "boolean",
-        "revoked_at": "null"
+        "revoked_at": "null",
+        "roaster": "null"
       }
     ],
     "status": 200
@@ -7190,6 +7263,44 @@
     },
     "status": 422
   },
+  "POST /api/roaster/{id}/panel/{action}": {
+    "body": {
+      "actions": [
+        "string"
+      ],
+      "age_s": "integer",
+      "bt": "number",
+      "control": "string",
+      "cooling": "boolean",
+      "device_id": "string",
+      "et": "number",
+      "fan": "number",
+      "heater": "number",
+      "heater_on": "boolean",
+      "name": "string",
+      "online": "boolean",
+      "phase": "string",
+      "queue": [
+        "empty"
+      ],
+      "roast": {
+        "batch": "integer",
+        "charged": "boolean",
+        "drive": "boolean",
+        "dropped": "boolean",
+        "dry_end": "boolean",
+        "first_crack": "boolean",
+        "id": "string",
+        "name": "string",
+        "profile": "null",
+        "time_s": "integer"
+      },
+      "ror": "number",
+      "setpoint": "number",
+      "stage": "string"
+    },
+    "status": 200
+  },
   "POST /api/roaster/{id}/tune/start (bad level)": {
     "body": {
       "error": {
@@ -8079,7 +8190,8 @@
         "prefix": "string",
         "preset": "string",
         "require_approval": "boolean",
-        "revoked_at": "null"
+        "revoked_at": "null",
+        "roaster": "null"
       }
     },
     "status": 201
@@ -8095,7 +8207,8 @@
       "prefix": "string",
       "preset": "string",
       "require_approval": "boolean",
-      "revoked_at": "string"
+      "revoked_at": "string",
+      "roaster": "null"
     },
     "status": 200
   },
@@ -8934,7 +9047,8 @@
       "prefix": "string",
       "preset": "string",
       "require_approval": "boolean",
-      "revoked_at": "null"
+      "revoked_at": "null",
+      "roaster": "null"
     },
     "status": 200
   },

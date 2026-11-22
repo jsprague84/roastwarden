@@ -16,6 +16,7 @@ pub mod labels;
 pub mod mqtt_passwords;
 pub mod notifications;
 pub mod orders;
+pub mod panel;
 pub mod predict;
 pub mod profile_share;
 pub mod profiles;

@@ -63,6 +63,16 @@ async fn read_outs_of_roasters_settings_and_notifications() {
     let r = roast(&url, Some(&read), &["roaster", "contract", "nope"]).await;
     assert_eq!(r.code, 4);
 
+    // What a touch panel at the roaster shows (docs/panel.md): a read, any token's
+    let r = roast(&url, Some(&read), &["roaster", "panel", "virtual_roaster"]).await;
+    assert_eq!(r.code, 0, "{:?} {}", r.json, r.stderr);
+    assert_eq!(r.json["device_id"], "virtual_roaster");
+    assert_eq!(r.json["stage"], "idle");
+    assert_eq!(r.json["bt"], 150.0, "{}", r.json);
+    assert_eq!(r.json["actions"][0], "start");
+    let r = roast(&url, Some(&read), &["roaster", "panel", "nope"]).await;
+    assert_eq!(r.code, 4);
+
     // Busy: the virtual roaster's heater (40 %) is listed and holds nothing...
     let r = roast(&url, Some(&read), &["busy"]).await;
     assert_eq!(r.code, 0, "{:?} {}", r.json, r.stderr);
@@ -73,6 +83,7 @@ async fn read_outs_of_roasters_settings_and_notifications() {
         &["roasters"][..],
         &["roaster", "show", "virtual_roaster"],
         &["roaster", "contract", "virtual_roaster"],
+        &["roaster", "panel", "virtual_roaster"],
         &["roaster", "tuning", "virtual_roaster"],
         &["live"],
         &["live", "--roaster", "virtual_roaster"],

@@ -216,8 +216,13 @@ async fn api_resume_session(State(state): State<AppState>, Path(id): Path<String
     responses((status = 200, body = RoastSession),
         (status = 404, description = "No such roast, or not active or paused", body = ErrorBody)))]
 async fn api_complete_session(State(state): State<AppState>, Path(id): Path<String>) -> Response {
-    state.replay.stop(&id, "session completed").await;
-    match crate::roasts::sessions::complete_session(&state.db, &id).await {
+    complete(&state, &id).await
+}
+
+/// Finish a roast: the Roast page's button and a touch panel's (`panel.rs`).
+pub(crate) async fn complete(state: &AppState, id: &str) -> Response {
+    state.replay.stop(id, "session completed").await;
+    match crate::roasts::sessions::complete_session(&state.db, id).await {
         Ok(Some(session)) => Json(session).into_response(),
         Ok(None) => (
             StatusCode::NOT_FOUND,

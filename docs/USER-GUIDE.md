@@ -472,6 +472,7 @@ name, a preset and an expiry; the secret is shown once.
 | inventory | beans, stock, purchases, the shopping list, roasted coffee used or given, and the roast plan; nothing on a roaster |
 | roast | what the Roast page does during a roast (start, events, Profile drive, setpoint, fan, heater) and the plan |
 | admin | also PID, autotune, fan assist, the roast sequence, profiles, roasters, settings, backups |
+| panel | one roaster's [touch panel](panel.md) and nothing else: what it shows and its buttons |
 
 Tokens themselves, restoring a backup and the per-roaster switch below are the owner key's
 alone.
@@ -483,6 +484,10 @@ or roaster until you answer: the request arrives as a notification with a link t
 **Approvals**, where you Approve or Deny ([control](control.md)).
 
 ![Settings → Tokens](images/guide-tokens.png)
+
+A **touch panel** is a small screen beside the roaster with Start, Charge, First crack, Drop
+and Stop, for roasting without a browser open ([touch panel](panel.md)). Its token is the
+Panel preset, made for that one roaster.
 
 ### Audit
 

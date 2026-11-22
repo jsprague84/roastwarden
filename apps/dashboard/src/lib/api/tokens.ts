@@ -16,6 +16,8 @@ export interface ApiToken {
 	revoked_at: string | null;
 	/** Starting a roast on a physical roaster and deletes wait for the owner's approval. */
 	require_approval: boolean;
+	/** A panel token's roaster, the only one it acts on; null for every other token. */
+	roaster: string | null;
 }
 
 export interface RoasterTokenAccess {
@@ -42,6 +44,12 @@ export const tokens = {
 				expires_in_days: expiresInDays,
 				require_approval: requireApproval
 			})
+		}),
+	/** A touch panel's token, for the one roaster it is at (docs/panel.md). */
+	createPanel: (name: string, roaster: string, expiresInDays: number | null) =>
+		request<{ token: ApiToken; secret: string }>('/api/tokens', {
+			method: 'POST',
+			body: JSON.stringify({ name, preset: 'panel', roaster, expires_in_days: expiresInDays })
 		}),
 	setRequireApproval: (id: number, on: boolean) =>
 		request<ApiToken>(`/api/tokens/${id}`, {

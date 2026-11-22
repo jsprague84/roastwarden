@@ -37,6 +37,9 @@ maintainer's design and review.
   behind each QR code (`docs/labels.md`); PDF reports of a roast, two roasts compared, a
   profile, a coffee, a period, the plan, inventory, purchases and the shopping list
   (`docs/reports.md`).
+- **A touch panel at the roaster** (`docs/panel.md`): a cheap ESP32 touch screen with Start,
+  Charge, First crack, Drop and Stop, for roasting with no browser open; its token works that
+  one roaster's panel and nothing else.
 - **Agents and scripts**: the `roast` CLI (`docs/cli.md`) and its Agent Skill
   (`skills/roastwarden/`, built into `roast`), scoped API tokens, approvals and an audit log
   (`docs/agents.md`). An agent is set up in three commands: `roast login <server>`,

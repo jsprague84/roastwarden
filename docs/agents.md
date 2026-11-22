@@ -20,8 +20,9 @@ match.
 - **After a roast**: its weight, when first crack really was, notes, a rating, cupping scores.
 - **Reading roasts**: a roast's numbers against its profile and history, two roasts compared,
   what the roaster's own model predicts, a new bean's first roast.
-- **Planning and paper**: planned roasts for the week, bag labels for today's roasts, a PDF
-  report of a roast, a coffee or a month.
+- **Planning and paper**: planned roasts for the week (a [touch panel](panel.md) at the
+  roaster then offers them at Start), bag labels for today's roasts, a PDF report of a roast,
+  a coffee or a month.
 - **Looking after it**: status, backups, notifications, a support bundle, adding a roaster
   and checking it.
 

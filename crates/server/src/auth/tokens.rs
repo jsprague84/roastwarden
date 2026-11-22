@@ -16,6 +16,10 @@
 //! On top of the preset, a token may change nothing under `/api/roaster/{d}/…` or
 //! `/api/sessions/{id}/…` for a roaster other than `virtual_roaster` unless the owner allowed
 //! tokens for that roaster ([`hardware_refusal`]).
+//!
+//! A touch panel's token ([`Preset::Panel`], docs/panel.md) is the other way round: made for
+//! one roaster, it may use that roaster's panel and nothing else, and needs no switch for it
+//! ([`other_roaster`], [`own_roaster`]).
 
 use serde::{Deserialize, Serialize};
 use sqlx::AssertSqlSafe;
@@ -90,6 +94,9 @@ pub enum Preset {
     /// Everything except the owner's own (managing tokens, the per-roaster switch, restoring
     /// a backup), and the audit log.
     Admin,
+    /// A touch panel at one roaster (docs/panel.md): what its screen shows and its buttons,
+    /// for the roaster the token was made for. No other read, no other roaster.
+    Panel,
 }
 
 /// Paths every preset may GET (and HEAD). `*` is one path segment.
@@ -125,6 +132,8 @@ const READ: &[&str] = &[
     "/api/roaster/*/prediction",
     "/api/sessions/*/prediction",
     "/api/roaster/*/sequence",
+    // What a touch panel at the roaster shows (docs/panel.md)
+    "/api/roaster/*/panel",
     "/api/roaster/*/token-access",
     "/api/roaster/*/setup",
     "/api/devices",
@@ -434,6 +443,20 @@ const ADMIN: &[(&str, &str)] = &[
     ("POST", "/api/push/test"),
 ];
 
+/// Every read a "panel" token has: the server's health, who it is, and its roaster's panel.
+/// Nothing of [`READ`]: a panel hangs on a wall with its token in its flash.
+const PANEL_READ: &[&str] = &[
+    "/healthz",
+    "/readyz",
+    "/version",
+    "/api/auth/status",
+    "/api/roaster/*/panel",
+];
+
+/// A panel's buttons (docs/panel.md): the "panel" preset's alone, beside the owner. Not in
+/// "roast": Start here asks no one, which an agent's token that asks first must not get round.
+const PANEL: &[(&str, &str)] = &[("POST", "/api/roaster/*/panel/*")];
+
 /// What a visitor to a public demo (`ROASTWARDEN_DEMO=1`, docs/DEPLOY.md "A public demo") may
 /// do beyond the roast, plan, beans, labels and print rules: profiles and Artisan files, a
 /// roast deleted, and the simulated roaster's own tuning and settings. The real-hardware rule
@@ -550,11 +573,12 @@ fn named(rules: &[(&str, &str)], method: &str, path: &str) -> bool {
 }
 
 impl Preset {
-    pub const ALL: [Preset; 4] = [
+    pub const ALL: [Preset; 5] = [
         Preset::ReadOnly,
         Preset::Roast,
         Preset::Inventory,
         Preset::Admin,
+        Preset::Panel,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -563,6 +587,7 @@ impl Preset {
             Preset::Roast => "roast",
             Preset::Inventory => "inventory",
             Preset::Admin => "admin",
+            Preset::Panel => "panel",
         }
     }
 
@@ -576,6 +601,7 @@ impl Preset {
             Preset::Roast => "roast",
             Preset::Inventory => "inventory",
             Preset::Admin => "admin",
+            Preset::Panel => "panel",
         }
     }
 
@@ -583,6 +609,10 @@ impl Preset {
     /// and every path segment must match a rule exactly (`*` is one non-empty segment).
     pub fn allows(self, method: &str, path: &str) -> bool {
         let method = get_like(method);
+        if self == Preset::Panel {
+            return (method == "GET" && PANEL_READ.iter().any(|p| path_matches(p, path)))
+                || named(PANEL, method, path);
+        }
         let read = (method == "GET" && READ.iter().any(|p| path_matches(p, path)))
             || named(COMPUTE, method, path);
         match self {
@@ -602,6 +632,7 @@ impl Preset {
                     .iter()
                     .any(|rules| named(rules, method, path))
             }
+            Preset::Panel => false,
         }
     }
 }
@@ -640,6 +671,8 @@ pub struct TokenAuth {
     pub preset: Preset,
     /// Its gated calls wait for the owner (`approvals.rs`)
     pub require_approval: bool,
+    /// The one roaster it was made for (a panel's); `None` for every other token
+    pub roaster: Option<String>,
 }
 
 /// What became of a presented token.
@@ -679,10 +712,12 @@ pub struct ApiToken {
     /// Starting a roast on a physical roaster and deletes wait for the owner's approval
     /// (docs/control.md, "Approvals")
     pub require_approval: bool,
+    /// A panel token's roaster, the only one it acts on (docs/panel.md); null otherwise
+    pub roaster: Option<String>,
 }
 
 const COLUMNS: &str = "id, name, prefix, preset, created_at, expires_at, last_used_at, \
-     last_used_ip, revoked_at, require_approval";
+     last_used_ip, revoked_at, require_approval, roaster";
 
 fn parse_time(s: &str) -> Option<chrono::DateTime<chrono::Utc>> {
     chrono::DateTime::parse_from_rfc3339(s)
@@ -747,6 +782,11 @@ fn judge(row: ApiToken, now: chrono::DateTime<chrono::Utc>) -> TokenCheck {
         tracing::error!(token_id = row.id, preset = %row.preset, "API token has an unknown preset");
         return TokenCheck::Error;
     };
+    // A panel with no roaster would be a panel for every roaster: refuse it.
+    if preset == Preset::Panel && row.roaster.as_deref().is_none_or(str::is_empty) {
+        tracing::error!(token_id = row.id, "a panel token has no roaster");
+        return TokenCheck::Error;
+    }
     let touch = row
         .last_used_at
         .as_deref()
@@ -758,6 +798,7 @@ fn judge(row: ApiToken, now: chrono::DateTime<chrono::Utc>) -> TokenCheck {
             name: row.name,
             preset,
             require_approval: row.require_approval,
+            roaster: row.roaster,
         },
         touch,
     }
@@ -793,13 +834,57 @@ pub enum CreateError {
     Db(anyhow::Error),
 }
 
-/// Create a token; the secret is in the result and nowhere else.
+/// Create a token; the secret is in the result and nowhere else. Not a panel's, which needs
+/// its roaster ([`create_panel`]).
 pub async fn create(
     db: &SqlitePool,
     name: &str,
     preset: Preset,
     expires_at: Option<chrono::DateTime<chrono::Utc>>,
     require_approval: bool,
+) -> Result<(ApiToken, String), CreateError> {
+    if preset == Preset::Panel {
+        return Err(CreateError::Invalid(
+            "a panel token needs the roaster it is for".into(),
+        ));
+    }
+    insert(db, name, preset, expires_at, require_approval, None).await
+}
+
+/// Create a touch panel's token for `roaster` (docs/panel.md). It never asks first: the
+/// person pressing Start stands at the roaster.
+pub async fn create_panel(
+    db: &SqlitePool,
+    name: &str,
+    roaster: &str,
+    expires_at: Option<chrono::DateTime<chrono::Utc>>,
+) -> Result<(ApiToken, String), CreateError> {
+    let roaster = roaster.trim();
+    if roaster.is_empty() {
+        return Err(CreateError::Invalid(
+            "a panel token needs the roaster it is for".into(),
+        ));
+    }
+    // The token is held to its roaster by the request's path as it was sent ([`other_roaster`]):
+    // an id a URL would write differently (`%`, a space) could name another roaster there.
+    if !roaster
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.' | '~'))
+    {
+        return Err(CreateError::Invalid(format!(
+            "a panel cannot be for \"{roaster}\": its id has characters a URL writes differently"
+        )));
+    }
+    insert(db, name, Preset::Panel, expires_at, false, Some(roaster)).await
+}
+
+async fn insert(
+    db: &SqlitePool,
+    name: &str,
+    preset: Preset,
+    expires_at: Option<chrono::DateTime<chrono::Utc>>,
+    require_approval: bool,
+    roaster: Option<&str>,
 ) -> Result<(ApiToken, String), CreateError> {
     let name = name.trim();
     if name.is_empty() || name.chars().count() > 60 {
@@ -811,7 +896,7 @@ pub async fn create(
     let expires = expires_at.map(|t| t.to_rfc3339_opts(chrono::SecondsFormat::Millis, true));
     let rows = sqlx::query_as::<_, ApiToken>(AssertSqlSafe(format!(
         "INSERT INTO api_tokens (name, prefix, token_hash, preset, created_at, expires_at,
-         require_approval) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING {COLUMNS}"
+         require_approval, roaster) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING {COLUMNS}"
     )))
     .bind(name)
     .bind(&new.prefix)
@@ -820,6 +905,7 @@ pub async fn create(
     .bind(now_text())
     .bind(expires)
     .bind(require_approval)
+    .bind(roaster)
     .fetch_all(db)
     .await;
     match rows {
@@ -938,6 +1024,32 @@ pub async fn set_roaster_access(
     .execute(db)
     .await?;
     roaster_access(db, device_id).await
+}
+
+/// The roaster a path is under: `/api/roaster/{d}/…`.
+fn roaster_segment(path: &str) -> Option<&str> {
+    let mut seg = path.trim_start_matches('/').split('/');
+    match (seg.next(), seg.next(), seg.next()) {
+        (Some("api"), Some("roaster"), Some(d)) if !d.is_empty() => Some(d),
+        _ => None,
+    }
+}
+
+/// For a token made for one roaster (a panel's): its roaster, when `path` is another's. The
+/// request is refused.
+pub fn other_roaster<'a>(token: &'a TokenAuth, path: &str) -> Option<&'a str> {
+    let own = token.roaster.as_deref()?;
+    roaster_segment(path).filter(|d| *d != own).map(|_| own)
+}
+
+/// Whether `path` is under the roaster this token was made for. The real-hardware rule does
+/// not hold such a request back: the owner made the token for that roaster, which is the yes
+/// the "tokens may control this roaster" switch asks of every other token.
+pub fn own_roaster(token: &TokenAuth, path: &str) -> bool {
+    token
+        .roaster
+        .as_deref()
+        .is_some_and(|own| roaster_segment(path) == Some(own))
 }
 
 /// The real-hardware rule. For a token's request that changes something, the roaster it
@@ -1147,11 +1259,23 @@ mod tests {
         let plan: &[Preset] = &[Roast, Inventory, Admin];
         let beans: &[Preset] = &[Inventory, Admin];
         let admin: &[Preset] = &[Admin];
+        let every: &[Preset] = &[ReadOnly, Roast, Inventory, Admin, Panel];
+        let panel: &[Preset] = &[Panel];
         let none: &[Preset] = &[];
         let cases: &[(&str, &str, &[Preset])] = &[
             ("GET", "/api/sessions", all),
             ("HEAD", "/api/sessions", all),
-            ("GET", "/version", all),
+            ("GET", "/version", every),
+            ("GET", "/api/auth/status", every),
+            // A panel: what it shows is any token's to read, its buttons its own
+            ("GET", "/api/roaster/virtual_roaster/panel", every),
+            ("POST", "/api/roaster/virtual_roaster/panel/charge", panel),
+            ("POST", "/api/roaster/virtual_roaster/panel", none),
+            (
+                "POST",
+                "/api/roaster/virtual_roaster/panel/charge/now",
+                none,
+            ),
             ("GET", "/ws/v2/telemetry", all),
             ("GET", "/api/audit", admin),
             ("GET", "/api/roaster/virtual_roaster/token-access", all),
@@ -1291,6 +1415,7 @@ mod tests {
             include_str!("../routes/label_printers.rs"),
             include_str!("../routes/notifications.rs"),
             include_str!("../routes/orders.rs"),
+            include_str!("../routes/panel.rs"),
             include_str!("../routes/predict.rs"),
             include_str!("../routes/profiles.rs"),
             include_str!("../routes/profile_share.rs"),
@@ -1413,13 +1538,14 @@ mod tests {
                 .any(|(m, t)| m == method && path_matches(pattern, &concrete(t)))
         };
         let mut stale = Vec::new();
-        for p in READ {
+        for p in READ.iter().chain(PANEL_READ) {
             if !exists("GET", p) {
                 stale.push(format!("GET {p}"));
             }
         }
         for (m, p) in ROAST
             .iter()
+            .chain(PANEL)
             .chain(COMPUTE)
             .chain(LABELS)
             .chain(PRINT)
@@ -1456,6 +1582,7 @@ mod tests {
         for (method, pattern) in reads
             .iter()
             .chain(ROAST)
+            .chain(PANEL)
             .chain(PLAN)
             .chain(BEANS)
             .chain(ADMIN)
@@ -1507,6 +1634,57 @@ mod tests {
             last_used_ip: None,
             revoked_at: revoked_at.map(Into::into),
             require_approval: false,
+            roaster: None,
+        }
+    }
+
+    /// A panel's token is for one roaster: another's path is refused, its own needs no
+    /// switch, and one stored without a roaster is refused outright.
+    #[test]
+    fn a_panel_token_is_for_its_roaster_alone() {
+        let now = parse_time("2026-10-24T12:00:00Z").unwrap();
+        let mut panel = row(None, None, None);
+        panel.preset = "panel".into();
+        assert!(matches!(judge(panel.clone(), now), TokenCheck::Error));
+        panel.roaster = Some(String::new());
+        assert!(matches!(judge(panel.clone(), now), TokenCheck::Error));
+        panel.roaster = Some("drum_1".into());
+        let TokenCheck::Valid { token, .. } = judge(panel, now) else {
+            panic!("a panel with a roaster is good");
+        };
+        assert_eq!(token.preset, Preset::Panel);
+        assert_eq!(other_roaster(&token, "/api/roaster/drum_1/panel"), None);
+        assert_eq!(
+            other_roaster(&token, "/api/roaster/drum_1/panel/charge"),
+            None
+        );
+        assert_eq!(other_roaster(&token, "/api/auth/status"), None);
+        assert_eq!(
+            other_roaster(&token, "/api/roaster/drum_2/panel"),
+            Some("drum_1")
+        );
+        assert_eq!(
+            other_roaster(&token, "/api/roaster/virtual_roaster/panel/stop"),
+            Some("drum_1")
+        );
+        assert!(own_roaster(&token, "/api/roaster/drum_1/panel/charge"));
+        assert!(!own_roaster(&token, "/api/roaster/drum_2/panel/charge"));
+        assert!(!own_roaster(&token, "/api/sessions/abc/start"));
+        // Any other token is bound to no roaster
+        let TokenCheck::Valid { token: agent, .. } = judge(row(None, None, None), now) else {
+            panic!("a roast token is good");
+        };
+        assert_eq!(other_roaster(&agent, "/api/roaster/drum_2/panel"), None);
+        assert!(!own_roaster(&agent, "/api/roaster/drum_1/panel/charge"));
+        // Nothing of the reads the other presets share
+        for path in [
+            "/api/sessions",
+            "/api/beans",
+            "/api/settings",
+            "/api/costs",
+            "/metrics",
+        ] {
+            assert!(!Preset::Panel.allows("GET", path), "{path}");
         }
     }
 

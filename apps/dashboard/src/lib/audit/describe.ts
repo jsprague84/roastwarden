@@ -47,6 +47,20 @@ const CONTROL: Record<string, string> = {
 	emergency_stop: 'Emergency stop'
 };
 
+/** A touch panel's buttons (docs/panel.md) */
+const PANEL: Record<string, string> = {
+	start: 'start roast',
+	charge: 'CHARGE',
+	dry_end: 'DRY END',
+	first_crack: 'FIRST CRACK',
+	drop: 'DROP',
+	complete: 'complete roast',
+	cancel: 'cancel roast',
+	stop: 'emergency stop',
+	fan: 'fan',
+	heater: 'heater'
+};
+
 const SESSION: Record<string, string> = {
 	start: 'Start roast',
 	pause: 'Pause roast',
@@ -94,6 +108,11 @@ export function describe(e: Pick<AuditEntry, 'method' | 'path' | 'body'>): strin
 		const v = valueOf(b);
 		return v ? `${label} ${v}` : label;
 	}
+	m = p.match(/^\/api\/roaster\/[^/]+\/panel\/(.+)$/);
+	if (m) {
+		const v = valueOf(b);
+		return `Panel: ${PANEL[m[1]] ?? m[1]}${v ? ` ${v}` : ''}`;
+	}
 	m = p.match(/^\/api\/sessions\/[^/]+\/(.+)$/);
 	if (m) {
 		const what = SESSION[m[1]] ?? m[1].replace(/\//g, ' ');
@@ -108,7 +127,9 @@ export function describe(e: Pick<AuditEntry, 'method' | 'path' | 'body'>): strin
 	m = p.match(/^\/api\/sessions\/[^/]+$/);
 	if (m) return e.method === 'DELETE' ? 'Delete roast' : 'Edit roast details';
 	if (p === '/api/tokens' && e.method === 'POST') {
-		const preset = typeof b?.preset === 'string' ? ` (${b.preset.replace('_', '-')})` : '';
+		const roaster = typeof b?.roaster === 'string' ? ` for ${b.roaster}` : '';
+		const preset =
+			typeof b?.preset === 'string' ? ` (${b.preset.replace('_', '-')}${roaster})` : '';
 		return b?.name ? `New token “${b.name}”${preset}` : 'New token';
 	}
 	if (/^\/api\/tokens\/[^/]+\/revoke$/.test(p)) return 'Revoke token';

@@ -992,6 +992,20 @@ async fn api_shapes_are_unchanged() {
     )
     .await;
 
+    // ── A touch panel (docs/panel.md): what it shows with roasts planned, and a button
+    let panel = format!("/api/roaster/{VR}/panel");
+    r.owner("GET /api/roaster/{id}/panel", "GET", &panel, None)
+        .await;
+    r.owner(
+        "POST /api/roaster/{id}/panel/{action}",
+        "POST",
+        "/api/roaster/test_roaster/panel/start",
+        Some(json!({})),
+    )
+    .await;
+    h.owner("POST", "/api/roaster/test_roaster/panel/cancel", None)
+        .await;
+
     // ── A roast on the virtual roaster, driven by the profile
     let session = r
         .owner(
@@ -1026,6 +1040,13 @@ async fn api_shapes_are_unchanged() {
     );
     r.owner("GET /api/sessions/{id}/replay", "GET", &replay, None)
         .await;
+    r.owner(
+        "GET /api/roaster/{id}/panel (a roast open)",
+        "GET",
+        &panel,
+        None,
+    )
+    .await;
     r.owner(
         "PATCH /api/sessions/{id}/replay",
         "PATCH",

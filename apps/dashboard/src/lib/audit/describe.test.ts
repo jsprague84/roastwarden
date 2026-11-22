@@ -93,6 +93,19 @@ group('audit describe', () => {
 				body: '{"name":"agent","preset":"read_only"}'
 			})
 		).toBe('New token “agent” (read-only)');
+		expect(
+			describe({
+				method: 'POST',
+				path: '/api/tokens',
+				body: '{"name":"roast room","preset":"panel","roaster":"drum_1"}'
+			})
+		).toBe('New token “roast room” (panel for drum_1)');
+		expect(describe({ method: 'POST', path: '/api/roaster/drum_1/panel/charge', body: '{}' })).toBe(
+			'Panel: CHARGE'
+		);
+		expect(
+			describe({ method: 'POST', path: '/api/roaster/drum_1/panel/fan', body: '{"percent":85}' })
+		).toBe('Panel: fan 85 %');
 		expect(describe({ method: 'POST', path: '/api/tokens/3/revoke', body: null })).toBe(
 			'Revoke token'
 		);

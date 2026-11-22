@@ -56,6 +56,11 @@ can control it (Roasters → the roaster → Control). A token that asks first w
 approval before it starts a roast on a physical roaster or deletes; printing labels and
 switching a roaster's control on always wait. Details in [Agents](docs/agents.md).
 
+A **Panel** token is for a [touch panel](docs/panel.md) at one roaster. You make it for that
+roaster, and it works that roaster's panel and nothing else: it reads no roasts, coffees or
+settings, reaches no other roaster, and needs no switch, since naming the roaster is your yes.
+Whoever holds the panel can roast on that roaster, as whoever stands at it can.
+
 Ten refused keys or tokens from one address within a minute block it for the rest of the
 minute (429).
 
@@ -84,7 +89,7 @@ asked and the result. Fields named like a secret are masked. Rows are kept a yea
 
 ## What it does not do
 
-- There are no user accounts and no custom token scopes: the four presets are fixed.
+- There are no user accounts and no custom token scopes: the five presets are fixed.
 - A share link shows its roast (coffee, dates, notes, curve, brand) to anyone who has it,
   past your proxy's login. A QR code on a bag can be photographed. Never the roast's cost or
   stock.
@@ -149,10 +154,14 @@ publishes only the part above.
   drive the heater. `owner.key` is not in the database backups: keep the data directory.
 - **API tokens** for scripts and agents (`docs/control.md`, "Tokens"; Settings → Tokens):
   `rr_` and 40 random characters, stored as a SHA-256 and shown once, with an expiry and a
-  preset (read-only, roast, inventory, admin) that names what it may do by method and path;
-  anything else is refused. The audit log is the admin preset's (and the owner's), not the
+  preset (read-only, roast, inventory, admin, panel) that names what it may do by method and
+  path; anything else is refused. The audit log is the admin preset's (and the owner's), not the
   others'. Revoking one stops it at once. Only the owner key lists, creates and
   revokes tokens, sets the per-roaster switch below, and restores a backup.
+- **A panel token** (`docs/panel.md`, "The panel preset") is bound to the one roaster it was
+  made for: it shares none of the other presets' reads, a path under another roaster is
+  refused, and under its own it passes the real-hardware rule without the switch. Its token
+  sits in a device's flash: revoke it when the device leaves the house.
 - **Approvals.** A token that asks first (the default for new tokens) cannot start a roast on
   a physical roaster or delete a roast, bean, profile or roaster until the owner approves it
   (Settings → Approvals; the link goes out through the notification channels). Only the owner
@@ -254,4 +263,7 @@ publishes only the part above.
   loads nothing (its own CSP), and is not indexed.
 - The owner key is one shared secret: there are no accounts. A browser keeps a login cookie,
   not the key; give scripts and agents a token instead.
-- Token presets are fixed (read-only, roast, inventory, admin); there are no custom scopes.
+- Token presets are fixed (read-only, roast, inventory, admin, panel); there are no custom
+  scopes.
+- A touch panel's STOP is a network call like the dashboard's: no safety device
+  (`docs/panel.md`, "Safety").

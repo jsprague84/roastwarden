@@ -41,7 +41,7 @@ export class LoginRefused extends Error {
 
 export type Credential = 'open' | 'owner key' | 'owner login' | 'token' | 'demo' | 'none';
 
-export type TokenPreset = 'read_only' | 'roast' | 'inventory' | 'admin';
+export type TokenPreset = 'read_only' | 'roast' | 'inventory' | 'admin' | 'panel';
 
 export interface AuthStatus {
 	/** Whether the server has an owner key: writes need a credential. */

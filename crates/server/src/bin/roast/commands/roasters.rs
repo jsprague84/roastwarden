@@ -26,6 +26,10 @@ pub enum RoasterCommand {
     /// what it can do (caps), and whether its PID gains are the ones the server holds, with
     /// the last check after a boot. Only reads
     Contract { roaster: String },
+    /// What a touch panel at the roaster shows now (docs/panel.md): its readings, the
+    /// roast's stage and clock, the buttons that do something, and what Start can start.
+    /// Only reads: the buttons are for the person at the roaster
+    Panel { roaster: String },
     /// Add a roaster (docs/add-roaster.md): the roaster, its connection and, with --kind, its
     /// setup at control off (admin). It never raises control (`roaster control` asks the
     /// owner). Then `roaster map --try`, `roaster map`, `roaster check`
@@ -139,6 +143,7 @@ pub async fn run(api: &Api, out: &Out, cmd: RoasterCommand) -> Result<u8, Failur
     match cmd {
         RoasterCommand::Show { roaster } => roaster_show(api, out, roaster).await,
         RoasterCommand::Contract { roaster } => roaster_contract(api, out, roaster).await,
+        RoasterCommand::Panel { roaster } => roaster_panel(api, out, roaster).await,
         RoasterCommand::Add(a) => adding::add(api, out, a).await,
         RoasterCommand::Map(m) => adding::map(api, out, m).await,
         RoasterCommand::Machines { query, all } => {
@@ -678,6 +683,105 @@ pub async fn roaster_contract(api: &Api, out: &Out, roaster: String) -> Result<u
                     format!("sent {}", gains_text(&b["sent"]))
                 }
             ));
+        }
+        lines.join("\n")
+    });
+    Ok(code::OK)
+}
+
+/// `roast roaster panel`: what a touch panel at the roaster shows (docs/panel.md).
+pub async fn roaster_panel(api: &Api, out: &Out, roaster: String) -> Result<u8, Failure> {
+    let r = api.roaster(&roaster).await?;
+    let device_id = r["device_id"].as_str().unwrap_or_default().to_string();
+    let p = api
+        .get(&format!("/api/roaster/{}/panel", enc(&device_id)))
+        .await?;
+    out.emit(&p, |p| {
+        let n = |k: &str, places: usize| {
+            p[k].as_f64()
+                .map_or("-".to_string(), |v| format!("{v:.places$}"))
+        };
+        let words = |v: &Value| {
+            v.as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .collect::<Vec<_>>()
+                .join(", ")
+        };
+        let mut lines = vec![
+            format!(
+                "{} ({}): {}, control {}",
+                p["device_id"].as_str().unwrap_or("?"),
+                p["name"].as_str().unwrap_or("?"),
+                if p["online"] == json!(true) {
+                    "online"
+                } else {
+                    "offline"
+                },
+                p["control"].as_str().unwrap_or("?"),
+            ),
+            format!(
+                "  BT {}  ET {}  RoR {}  heater {} %  fan {} %",
+                n("bt", 1),
+                n("et", 1),
+                n("ror", 1),
+                n("heater", 0),
+                n("fan", 0),
+            ),
+        ];
+        let roast = &p["roast"];
+        lines.push(if roast.is_null() {
+            format!(
+                "  {}{}",
+                p["stage"].as_str().unwrap_or("?"),
+                if p["cooling"] == json!(true) {
+                    ", cooling"
+                } else {
+                    ""
+                }
+            )
+        } else {
+            format!(
+                "  {} {} ({}): {}{}{}",
+                p["stage"].as_str().unwrap_or("?"),
+                crate::text::mmss(roast["time_s"].as_i64()),
+                p["phase"].as_str().unwrap_or("?"),
+                roast["name"].as_str().unwrap_or("?"),
+                roast["profile"]
+                    .as_str()
+                    .map(|n| format!(", profile {n}"))
+                    .unwrap_or_default(),
+                if roast["drive"] == json!(true) {
+                    ", Profile drive on"
+                } else {
+                    ""
+                },
+            )
+        });
+        lines.push(format!("  buttons: {}", words(&p["actions"])));
+        let queue: Vec<String> = p["queue"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(|q| {
+                format!(
+                    "{}{} ({})",
+                    q["name"].as_str().unwrap_or("?"),
+                    q["green_g"]
+                        .as_f64()
+                        .map(|g| format!(" {g:.0} g"))
+                        .unwrap_or_default(),
+                    q["kind"].as_str().unwrap_or("?"),
+                )
+            })
+            .collect();
+        if roast.is_null() {
+            lines.push(if queue.is_empty() {
+                "  Start begins a plain roast: nothing is planned and none to repeat".into()
+            } else {
+                format!("  Start offers: {}", queue.join("; "))
+            });
         }
         lines.join("\n")
     });

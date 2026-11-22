@@ -334,6 +334,11 @@ pub const MIGRATIONS: &[Migration] = &[
         sql: include_str!("../migrations/061_combined_lots.sql"),
         legacy_marker: None,
     },
+    Migration {
+        name: "062_token_roaster",
+        sql: include_str!("../migrations/062_token_roaster.sql"),
+        legacy_marker: None,
+    },
 ];
 
 /// Apply all pending migrations. Safe to call on every start.

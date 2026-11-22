@@ -49,13 +49,44 @@ async fn list(State(state): State<AppState>) -> Response {
 #[derive(Deserialize, ToSchema)]
 struct CreateBody {
     name: String,
-    /// `read_only`, `roast`, `inventory` or `admin` (docs/control.md, "Tokens")
+    /// `read_only`, `roast`, `inventory`, `admin`, or `panel` (docs/control.md, "Tokens")
     preset: String,
     /// Days until it expires; absent or null: never.
     expires_in_days: Option<u32>,
     /// Starting a roast on a physical roaster and deletes wait for the owner's approval
-    /// (docs/control.md, "Approvals"). Default true.
+    /// (docs/control.md, "Approvals"). Default true; a panel never asks.
     require_approval: Option<bool>,
+    /// `panel`: the roaster the touch panel is at, the only one its token acts on
+    /// (docs/panel.md). No other preset takes one.
+    roaster: Option<String>,
+}
+
+/// The roaster a panel token is for, checked: one the server knows. `Err` is the refusal's
+/// status and words.
+async fn panel_roaster(
+    state: &AppState,
+    roaster: Option<&str>,
+) -> Result<String, (StatusCode, String)> {
+    let bad = |msg: String| (StatusCode::BAD_REQUEST, msg);
+    let Some(id) = roaster.map(str::trim).filter(|r| !r.is_empty()) else {
+        return Err(bad(
+            "a panel token needs `roaster`: the roaster the panel is at".into(),
+        ));
+    };
+    if crate::sim::virtual_roaster::is_simulated(id) || id == crate::sim::virtual_drum::DEVICE_ID {
+        return Ok(id.to_string());
+    }
+    match crate::roasters::registry::get_device_by_device_id(&state.db, id).await {
+        Ok(Some(_)) => Ok(id.to_string()),
+        Ok(None) => Err(bad(format!("no roaster \"{id}\" (Roasters lists them)"))),
+        Err(e) => {
+            tracing::error!(error = %e, "token request failed");
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "the token store failed".into(),
+            ))
+        }
+    }
 }
 
 /// Make a token. Owner key only; needs `ROASTWARDEN_API_KEY` set.
@@ -75,10 +106,17 @@ async fn create(State(state): State<AppState>, Json(b): Json<CreateBody>) -> Res
     let Some(preset) = Preset::parse(&b.preset) else {
         return (
             StatusCode::BAD_REQUEST,
-            "preset must be read_only, roast, inventory or admin",
+            "preset must be read_only, roast, inventory, admin or panel",
         )
             .into_response();
     };
+    if preset != Preset::Panel && b.roaster.is_some() {
+        return (
+            StatusCode::BAD_REQUEST,
+            "only a panel token is for one roaster: leave `roaster` out",
+        )
+            .into_response();
+    }
     let expires_at = match b.expires_in_days {
         None => None,
         Some(d @ 1..=3650) => Some(chrono::Utc::now() + chrono::Duration::days(d as i64)),
@@ -90,8 +128,17 @@ async fn create(State(state): State<AppState>, Json(b): Json<CreateBody>) -> Res
                 .into_response();
         }
     };
-    let require_approval = b.require_approval.unwrap_or(true);
-    match tokens::create(&state.db, &b.name, preset, expires_at, require_approval).await {
+    let made = if preset == Preset::Panel {
+        let roaster = match panel_roaster(&state, b.roaster.as_deref()).await {
+            Ok(r) => r,
+            Err(refusal) => return refusal.into_response(),
+        };
+        tokens::create_panel(&state.db, &b.name, &roaster, expires_at).await
+    } else {
+        let require_approval = b.require_approval.unwrap_or(true);
+        tokens::create(&state.db, &b.name, preset, expires_at, require_approval).await
+    };
+    match made {
         Ok((token, secret)) => {
             (StatusCode::CREATED, Json(CreatedToken { token, secret })).into_response()
         }
@@ -126,12 +173,27 @@ struct UpdateBody {
 /// Change a token: whether its gated calls wait for approval. Owner key only.
 #[utoipa::path(put, path = "/api/tokens/{id}", tag = "tokens", operation_id = "update_token",
     params(("id" = i64, Path)), request_body = UpdateBody,
-    responses((status = 200, body = ApiToken), (status = 404, body = ErrorBody)))]
+    responses((status = 200, body = ApiToken),
+        (status = 400, description = "A panel token never asks first", body = ErrorBody),
+        (status = 404, body = ErrorBody)))]
 async fn update(
     State(state): State<AppState>,
     Path(id): Path<i64>,
     Json(b): Json<UpdateBody>,
 ) -> Response {
+    if b.require_approval {
+        match tokens::get(&state.db, id).await {
+            Ok(Some(t)) if t.preset == Preset::Panel.as_str() => {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    "a panel never asks first: the person pressing Start stands at the roaster",
+                )
+                    .into_response();
+            }
+            Ok(_) => {}
+            Err(e) => return failed(e),
+        }
+    }
     match tokens::set_require_approval(&state.db, id, b.require_approval).await {
         Ok(Some(t)) => Json(t).into_response(),
         Ok(None) => (StatusCode::NOT_FOUND, "no such token").into_response(),

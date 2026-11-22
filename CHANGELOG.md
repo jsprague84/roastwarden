@@ -7,6 +7,21 @@ matching section (`docs/DEVELOPMENT.md`, "Releases").
 
 ## [Unreleased]
 
+### Added
+
+- A touch panel at the roaster (`docs/panel.md`): a small screen with Start, Charge, Dry end,
+  First crack, Drop, Complete, Stop, fan and heater, for roasting with no browser open. The
+  server answers what the screen shows and which buttons do something now
+  (`GET /api/roaster/{id}/panel`) and takes a button's name
+  (`POST /api/roaster/{id}/panel/{button}`). Start offers the planned roasts, then the
+  coffees the roaster roasted last, to repeat. An example sketch for the ESP32 "Cheap Yellow
+  Display" is in `examples/panels/`; `roast roaster panel <roaster>` prints what a panel
+  shows.
+- A Panel token (Settings → Tokens): made for one roaster, it works that roaster's panel and
+  nothing else, reads nothing of the other presets, needs no "Tokens may control this
+  roaster" switch and never asks first. The roaster's control level still decides what is
+  sent, and every press is in the audit log under the panel's name.
+
 ### Changed
 
 - sqlx 0.9: every query built at run time is marked as audited (`AssertSqlSafe`), with only

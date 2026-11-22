@@ -22,6 +22,11 @@ export const PRESETS: { id: TokenPreset; label: string; line: string }[] = [
 		id: 'admin',
 		label: 'Admin',
 		line: 'Everything except managing tokens, the per-roaster switch and restoring a backup, which stay with the owner key.'
+	},
+	{
+		id: 'panel',
+		label: 'Panel',
+		line: 'For a touch panel at one roaster: what its screen shows and its buttons (Start, Charge, Drop, Stop, fan, heater) on that roaster. Reads nothing else and reaches no other roaster.'
 	}
 ];
 
@@ -87,6 +92,19 @@ export function browserName(ua: string | null): string {
 							? 'Linux'
 							: '';
 	return system ? `${browser} on ${system}` : browser;
+}
+
+/**
+ * What goes into a touch panel's sketch after making its token (docs/panel.md): this server's
+ * address as the browser reaches it, the roaster and the token.
+ */
+export function panelSetup(origin: string, roaster: string, secret: string): string {
+	const url = origin.replace(/\/+$/, '');
+	return [
+		`#define RW_SERVER  "${url}"`,
+		`#define RW_ROASTER "${roaster}"`,
+		`#define RW_TOKEN   "${secret}"`
+	].join('\n');
 }
 
 /**

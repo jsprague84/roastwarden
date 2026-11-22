@@ -171,19 +171,21 @@ async fn api_set_heater(
     if !body.valid() {
         return bad_percent();
     }
+    set_heater(&state, &device_id, body.percent, &opts).await
+}
+
+/// A manual heater change: takes the heater channel from a running drive, then sends it.
+pub(crate) async fn set_heater(
+    state: &AppState,
+    device_id: &str,
+    percent: f64,
+    opts: &PublishOpts,
+) -> Response {
     state
         .replay
-        .manual_override(&device_id, &[Channel::Heater], "heater", None)
+        .manual_override(device_id, &[Channel::Heater], "heater", None)
         .await;
-    dispatch(
-        &state,
-        &device_id,
-        DeviceCommand::Heater {
-            percent: body.percent,
-        },
-        &opts,
-    )
-    .await
+    dispatch(state, device_id, DeviceCommand::Heater { percent }, opts).await
 }
 
 /// Drum speed, 0–100 % (a drum roaster's; docs/ingest-mapping.md, "Drum and damper"). Sent
@@ -365,11 +367,20 @@ async fn api_emergency_stop(
     State(state): State<AppState>,
     Query(opts): Query<PublishOpts>,
 ) -> Response {
+    emergency_stop(&state, &device_id, &opts).await
+}
+
+/// The roaster's emergency stop, then its drive.
+pub(crate) async fn emergency_stop(
+    state: &AppState,
+    device_id: &str,
+    opts: &PublishOpts,
+) -> Response {
     // Stop the device first; stopping the replay then releases its lease.
-    let res = dispatch(&state, &device_id, DeviceCommand::EmergencyStop, &opts).await;
+    let res = dispatch(state, device_id, DeviceCommand::EmergencyStop, opts).await;
     state
         .replay
-        .stop_for_device(&device_id, "emergency stop")
+        .stop_for_device(device_id, "emergency stop")
         .await;
     res
 }

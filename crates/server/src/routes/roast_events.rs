@@ -65,12 +65,21 @@ async fn api_create_roast_event(
     Path(session_id): Path<String>,
     Json(req): Json<CreateRoastEventRequest>,
 ) -> Response {
+    mark(&state, &session_id, req).await
+}
+
+/// Mark an event on a roast: the Roast page's button and a touch panel's (`panel.rs`).
+pub(crate) async fn mark(
+    state: &AppState,
+    session_id: &str,
+    req: CreateRoastEventRequest,
+) -> Response {
     // A page that missed an auto DROP (a hidden tab) still shows the DROP button: a
     // second DROP would end the roast again at the cooled BT.
     if matches!(
         req.event_type,
         RoastEventType::Charge | RoastEventType::Drop
-    ) && let Ok(events) = crate::roasts::events::get_roast_events(&state.db, &session_id).await
+    ) && let Ok(events) = crate::roasts::events::get_roast_events(&state.db, session_id).await
         && events.iter().any(|e| e.event_type == req.event_type)
     {
         let name = req.event_type.to_string().to_uppercase();
@@ -83,10 +92,10 @@ async fn api_create_roast_event(
             .insert(crate::http::errors::ErrorCode("ALREADY_MARKED"));
         return res;
     }
-    match crate::roasts::events::create_roast_event(&state.db, &session_id, req).await {
+    match crate::roasts::events::create_roast_event(&state.db, session_id, req).await {
         Ok(event) => {
-            state.alarms.invalidate_events(&session_id).await;
-            recompute(&state, &session_id).await;
+            state.alarms.invalidate_events(session_id).await;
+            recompute(state, session_id).await;
             (StatusCode::CREATED, Json(event)).into_response()
         }
         Err(e) => {

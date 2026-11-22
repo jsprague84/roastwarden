@@ -528,6 +528,7 @@ roast rm <roast-id>                            # delete a roast (by id), held fo
 roast roasters                 # set up, online, firmware, any waiting to be set up
 roast roaster show <roaster>    # connections (a TC4: CHAN, reply format, fan output; a mapping line when the device has its own field names, units, topics or command templates), setup (kind, control level, outputs incl. drum/damper, fan floor), CHARGE/DROP sequence, fan assist, token access
 roast roaster contract <roaster>  # firmware, readings, caps, gains reported vs held, last boot check
+roast roaster panel <roaster>     # what a touch panel at the roaster shows: stage, clock, its buttons, what Start offers
 roast roaster model <roaster>     # its own thermal model: error 2 min ahead vs the old projection, where BT settles
 roast roaster tuning <roaster>  # PID gains over time, gain schedule (and its advice), autotune runs, a test running
 roast roaster tuning <roaster> --run <id>            # one run; a server run: its model, checks and every PI design
@@ -776,6 +777,15 @@ the newest stored change). "I flashed / restarted the roaster, is it right?" is
 right), and `gains.last_boot` (`why` reboot or server_start, what it came up with, what was
 `sent`; `sent` null with `matches` true: it already had them). Report what you see; when the
 gains differ, say so and leave sending gains to the owner.
+
+**A touch panel** (`docs/panel.md`): a small screen beside the roaster with Start, Charge,
+First crack, Drop and Stop. `roast roaster panel <roaster>` prints what it shows now: `stage`
+(`idle`, `ready`, `roasting`, `dropped`), the roast and its clock (`roast.time_s`), `actions`
+(the buttons that do something) and `queue` (what Start offers: the planned roasts first,
+then the coffees roasted last, to repeat). "What will Start on the panel roast?" is the
+queue's first line; to change it, plan a roast for that roaster (`roast plan add`), which
+goes ahead of the repeats. You cannot press its buttons: they are the owner's and the panel's
+own token's, made under Settings → Tokens → Panel for one roaster.
 
 **Autotune runs** (`docs/autotune-2.md`): a run with `source: server` was the server's test
 (the only one now: firmware 3.5.0 has no autotune of its own, and older `source: firmware` runs

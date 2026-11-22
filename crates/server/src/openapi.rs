@@ -121,6 +121,7 @@ pub(crate) fn routes() -> OpenApiRouter<AppState> {
         .merge(routes::analysis::routes())
         .merge(routes::fan_assist::routes())
         .merge(routes::sequence::routes())
+        .merge(routes::panel::routes())
         .merge(routes::virtual_roaster::routes())
         .merge(routes::push::routes())
         .merge(routes::tokens::routes())

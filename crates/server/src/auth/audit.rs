@@ -61,6 +61,8 @@ pub const KINDS: &[(&str, &str)] = &[
     ("/modbus/*", "control"),
     ("/api/roaster/*/autotune/*", "control"),
     ("/api/roaster/*/tune/*", "control"),
+    // A touch panel's buttons (docs/panel.md)
+    ("/api/roaster/*/panel/*", "control"),
     ("/api/virtual-roaster*", "control"),
     // A demo visitor's own simulated roaster (demo.rs)
     ("/api/demo/*", "control"),

@@ -260,7 +260,7 @@ pub enum Command {
     Roasters,
     /// One roaster: `roaster show` (connections, CHARGE/DROP sequence, fan assist, whether
     /// tokens may control it), `roaster contract` (firmware, caps, are its gains the held
-    /// ones), `roaster model` (its thermal model and how well it predicts), `roaster tuning`
+    /// ones), `roaster panel` (what a touch panel at it shows now), `roaster model` (its thermal model and how well it predicts), `roaster tuning`
     /// (PID gains, gain schedule, autotune runs)
     #[command(subcommand)]
     Roaster(RoasterCommand),

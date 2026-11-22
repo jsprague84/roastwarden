@@ -202,7 +202,8 @@ One page per group, with a section menu:
 - **Modules** (`/settings/modules`): the three presets (Home, Enthusiast, Roastery) and the
   six switches, each with one line; saved at once (`lean-home.md`).
 - Under the heading **Agents & access**, only with the agents module:
-- **Tokens** (`/settings/tokens`): API tokens for scripts and agents; the owner key only
+- **Tokens** (`/settings/tokens`): API tokens for scripts and agents, and a touch panel's
+  (the Panel preset with its roaster, `panel.md`); the owner key only
   (`control.md`, "Tokens"). The per-roaster "Tokens may control this roaster" switch is on
   Roasters → the roaster → Control.
 - **Approvals** (`/settings/approvals`): a token's calls that wait for the owner (starting a

@@ -89,6 +89,9 @@ expiry, and are held back from real hardware:
 - **Settings → Audit** lists every change made through the API, who made it and whether it
   was refused, kept for a year.
 
+A **Panel** token is the other kind: made for one roaster's [touch panel](panel.md), it works
+that panel and nothing else, with no switch and no asking first.
+
 Live control (heater, fan, setpoint, mode, stop) has no `roast` command on purpose: it is for
 the person at the roaster. `roast audit` reads the audit log and `roast approval <id> --wait`
 waits for an answer ([the roast CLI](cli.md)).
@@ -416,6 +419,7 @@ or `X-API-Key`, never in a query string.
 | roast | reads, and what the Roast page does during a roast: create, start, pause, complete and cancel a roast, edit its details, mark events, Profile drive, setpoint, fan, heater, mode, heater power, emergency stop, cupping notes, the roast plan, the simulator's charge and dump |
 | inventory | reads, and the green coffee: add, edit and delete beans, record stock (purchases, orders and corrections, and edit or remove them), import a coffee from a supplier's link, the shopping list, roasted coffee used, given, thrown away or counted (`docs/roasted.md`), the roast plan; bag labels: saved designs and their versions, assets, brand kits, a coffee's own label (`docs/labels.md`). Nothing on a roaster or a roast: for an agent that records a purchase or designs labels (`docs/cli.md`) |
 | admin | everything the others may, and: the audit log, PID and RoR limit, autotune, gain schedule, fan assist, the roast sequence, profiles, beans, devices, settings, backups (not restoring one), deleting and importing roasts, the test and MQTT endpoints |
+| panel | none of the reads above: the server's health, who it is, and for the one roaster it was made for what a touch panel shows and its buttons (`GET /api/roaster/{d}/panel`, `POST /api/roaster/{d}/panel/{button}`; [`panel.md`](panel.md)) |
 
 Access is decided by method and path before any handler runs, deny by default: a route no
 rule names is refused to every token, and a test (`every_route_is_classified`) fails when a
@@ -441,8 +445,9 @@ restrict nothing, so the server refuses to create one.
 
 **The real-hardware rule.** Whatever its preset, a token may not change anything under
 `/api/roaster/{d}/…`, or `/api/sessions/{id}/…` for a roast on roaster `d`, unless `d` is
-`virtual_roaster` or the owner switched on **Tokens may control this roaster** under
-Roasters → the roaster → Control. The switch lives in its own table
+`virtual_roaster`, the owner switched on **Tokens may control this roaster** under
+Roasters → the roaster → Control, or the token is a panel's made for `d`
+([`panel.md`](panel.md), "The panel preset": the owner named the roaster when making it). The switch lives in its own table
 (`roaster_token_access`), not in `/api/settings`, which an admin token may write. The
 refusal is a 403 that says where to allow it. Reads are never affected.
 
