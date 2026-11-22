@@ -132,8 +132,9 @@ const READ: &[&str] = &[
     "/api/roaster/*/prediction",
     "/api/sessions/*/prediction",
     "/api/roaster/*/sequence",
-    // What a touch panel at the roaster shows (docs/panel.md)
+    // What a touch panel at the roaster shows, and the roast's curve for its graph (docs/panel.md)
     "/api/roaster/*/panel",
+    "/api/roaster/*/panel/curve",
     "/api/roaster/*/token-access",
     "/api/roaster/*/setup",
     "/api/devices",
@@ -451,6 +452,7 @@ const PANEL_READ: &[&str] = &[
     "/version",
     "/api/auth/status",
     "/api/roaster/*/panel",
+    "/api/roaster/*/panel/curve",
 ];
 
 /// A panel's buttons (docs/panel.md): the "panel" preset's alone, beside the owner. Not in
@@ -1269,6 +1271,7 @@ mod tests {
             ("GET", "/api/auth/status", every),
             // A panel: what it shows is any token's to read, its buttons its own
             ("GET", "/api/roaster/virtual_roaster/panel", every),
+            ("GET", "/api/roaster/virtual_roaster/panel/curve", every),
             ("POST", "/api/roaster/virtual_roaster/panel/charge", panel),
             ("POST", "/api/roaster/virtual_roaster/panel", none),
             (

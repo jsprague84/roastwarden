@@ -780,7 +780,8 @@ gains differ, say so and leave sending gains to the owner.
 
 **A touch panel** (`docs/panel.md`): a small screen beside the roaster with Start, Charge,
 First crack, Drop and Stop. `roast roaster panel <roaster>` prints what it shows now: `stage`
-(`idle`, `ready`, `roasting`, `dropped`), the roast and its clock (`roast.time_s`), `actions`
+(`idle`, `ready`, `roasting`, `dropped`), the roast and its clock (`roast.time_s`), how far BT is
+from the profile (`roast.delta`, °C; above is positive), `actions`
 (the buttons that do something) and `queue` (what Start offers: the planned roasts first,
 then the coffees roasted last, to repeat). "What will Start on the panel roast?" is the
 queue's first line; to change it, plan a roast for that roaster (`roast plan add`), which

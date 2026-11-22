@@ -1,12 +1,16 @@
 // A touch panel for Roastwarden (docs/panel.md): an ESP32 "Cheap Yellow Display"
 // (ESP32-2432S028R: a 2.8" 320x240 ILI9341 screen with a resistive XPT2046 touch) beside the
-// roaster. It shows the bean temperature and the roast clock, and the buttons that do
-// something now: Start, Charge, Dry end, First crack, Drop, Complete, Stop, fan and heater.
-// No browser needed.
+// roaster. It shows the bean temperature and the roast clock, how far the beans are from the
+// profile, and the buttons that do something now: Start, Charge, Dry end, First crack, Drop,
+// Complete, Stop, fan and heater. A tap on the readings turns them into a graph of the roast:
+// bean temperature and rate of rise against the profile's. Before a roast the same tap shows
+// the profile of the roast picked. No browser needed.
 //
 // The server does the work. Once a second the panel asks what to show,
 //
 //   GET  <server>/api/roaster/<roaster>/panel              readings, stage, clock, buttons
+//   GET  <server>/api/roaster/<roaster>/panel/curve        the roast so far and its profile,
+//                                                          for the graph
 //
 // and a tap sends the button's name; the answer is the next screen:
 //
@@ -62,10 +66,15 @@ const unsigned long MESSAGE_MS = 5000;   // how long a refusal stays on the stat
 const int STEP_PCT = 5;                  // what - and + change the fan or heater by
 const unsigned long HOLD_MS = 700;       // - or + held this long jumps to the end
 const unsigned long ASKED_MS = 4000;     // how long a change stands in for the roaster's report
+const unsigned long CURVE_MS = 5000;     // how often the graph asks for the roast's curve
+const float NEAR_C = 3, FAR_C = 6;       // off the profile by up to this: green, amber; more: red
 
 // ---- Colours (RGB565) ----
 const uint16_t C_BG = 0x0000, C_TEXT = 0xFFFF, C_DIM = 0x7BEF, C_BAR = 0x2104;
 const uint16_t C_GO = 0x0560, C_MARK = 0x1A7F, C_STOP = 0xE000, C_PLAIN = 0x4208, C_WARN = 0xFD20;
+const uint16_t C_OK = 0x07E0, C_BAD = 0xF800;                       // near the profile, far from it
+const uint16_t C_BT = 0xFFE0, C_ROR = 0x07FF, C_GRID = 0x2945;      // the graph: BT, its rate of rise
+const uint16_t C_PROFILE = 0x9CF3, C_PROFILE_ROR = 0x0410;          // the profile's two, duller
 
 TFT_eSPI tft;
 SPIClass touchSpi(VSPI);
@@ -82,6 +91,7 @@ struct {
   bool online = false;      // the roaster reports
   String name, stage, phase, roast;
   float bt = NAN, et = NAN, ror = NAN, heater = NAN, fan = NAN;
+  float delta = NAN;        // BT minus the profile's, while there is one to be off from
   long timeS = -1;
   bool cooling = false, drive = false;
   bool canStart = false, canCharge = false, canDryEnd = false, canFirstCrack = false;
@@ -105,11 +115,25 @@ String message;                 // a refusal, shown for a while
 unsigned long messageUntil = 0;
 String drawnButtons;            // the row as drawn, to redraw it only when it changes
 
+// The graph: the roast's curve as the server cut it down, one value every curveStep seconds
+// from CHARGE, in tenths (of a degree, of a degree a minute).
+const int CURVE_MAX = 160;
+int16_t curveBt[CURVE_MAX], curveRor[CURVE_MAX], curveTarget[CURVE_MAX], curveTargetRor[CURVE_MAX];
+int curveBtLen = 0, curveRorLen = 0, curveTargetLen = 0, curveTargetRorLen = 0, curveStep = 5;
+float curveMin = 0, curveMax = 0, curveRorMax = 0;
+long markDry = -1, markCrack = -1, markDrop = -1;   // seconds on the curve's clock; -1: not marked
+bool graph = false;             // the readings are a graph
+bool graphDrawn = false;        // which of the two is on the screen
+bool graphStale = true;         // the curve changed since it was drawn
+unsigned long curveAt = 0;      // millis() of the last curve
+String curveOf;                 // whose it is: "roast", or the queue's roast picked ("plan=<id>")
+
 // A button on the bottom row: the action it sends ("<" and ">" pick a roast here).
 struct Button {
   const char* action;
   const char* label;
   uint16_t colour;
+  int font;   // 4 for what the roast needs next, 2 for the way out (Cancel)
   int x, w;
 };
 Button buttons[5];
@@ -190,6 +214,7 @@ void take(const String& json) {
   panel.roast = roast.isNull() ? String() : ascii(roast["name"] | "");
   panel.timeS = roast.isNull() ? -1 : (roast["time_s"] | 0L);
   panel.drive = roast["drive"] | false;
+  panel.delta = number(roast["delta"]);
 
   panel.canStart = panel.canCharge = panel.canDryEnd = panel.canFirstCrack = false;
   panel.canDrop = panel.canComplete = panel.canCancel = panel.canStop = false;
@@ -243,6 +268,51 @@ void poll() {
   }
 }
 
+int take(JsonArrayConst values, int16_t* into) {
+  int n = 0;
+  for (JsonVariantConst v : values) {
+    if (n == CURVE_MAX) break;
+    into[n++] = (int16_t)lroundf(v.as<float>() * 10);
+  }
+  return n;
+}
+
+// A roast is open (recording, roasting or dropped).
+bool roastOpen() {
+  return panel.known && panel.stage != "idle";
+}
+
+// Whose curve the graph shows now: the open roast's, else the profile of the roast picked.
+String curveWanted() {
+  if (roastOpen()) return "roast";
+  if (panel.queueLen == 0) return "";
+  return panel.queueKind[picked] + "=" + panel.queueId[picked];
+}
+
+// The curve for the graph: the open roast with its profile, or a picked roast's profile alone.
+void fetchCurve() {
+  String answer, of = curveWanted();
+  curveAt = millis();
+  String path = "/api/roaster/" RW_ROASTER "/panel/curve";
+  if (of != "roast" && of.length()) path += "?" + of;
+  if (request("GET", path, "", answer) != 200) return;
+  JsonDocument doc;
+  if (deserializeJson(doc, answer)) return;
+  curveOf = of;
+  curveStep = max(1, doc["step_s"] | 5);
+  curveBtLen = take(doc["bt"].as<JsonArrayConst>(), curveBt);
+  curveRorLen = take(doc["ror"].as<JsonArrayConst>(), curveRor);
+  curveTargetLen = take(doc["target"].as<JsonArrayConst>(), curveTarget);
+  curveTargetRorLen = take(doc["target_ror"].as<JsonArrayConst>(), curveTargetRor);
+  curveMin = doc["min"] | 0.0f;
+  curveMax = doc["max"] | 0.0f;
+  curveRorMax = doc["ror_max"] | 0.0f;
+  markDry = doc["marks"]["dry_end"] | -1L;
+  markCrack = doc["marks"]["first_crack"] | -1L;
+  markDrop = doc["marks"]["drop"] | -1L;
+  graphStale = true;
+}
+
 // Press a button: the answer is the next screen, or why not. Whether the server said yes.
 bool press(const char* action, const String& body) {
   String answer;
@@ -276,6 +346,14 @@ String reading(float v, int places) {
   return isnan(v) ? "--" : String(v, places);
 }
 
+// The text cut to `width` pixels in `font`, ending in ".." when it was longer: a long name
+// must not run into what stands beside it.
+String fit(String text, int font, int width) {
+  if (tft.textWidth(text, font) <= width) return text;
+  while (text.length() > 1 && tft.textWidth(text + "..", font) > width) text.remove(text.length() - 1);
+  return text + "..";
+}
+
 // A line of text over what was there before, in a box of `width`.
 void line(const String& text, int x, int y, int font, uint16_t colour, int width, uint8_t datum = TL_DATUM) {
   tft.setTextDatum(datum);
@@ -289,7 +367,7 @@ void drawHeader(bool stale) {
   tft.fillRect(0, 0, 320, 24, C_BAR);
   tft.setTextDatum(ML_DATUM);
   tft.setTextColor(C_TEXT, C_BAR);
-  tft.drawString(panel.known ? panel.name : String(RW_ROASTER), 6, 12, 2);
+  tft.drawString(fit(panel.known ? panel.name : String(RW_ROASTER), 2, 190), 6, 12, 2);
   const char* state = WiFi.status() != WL_CONNECTED ? "no Wi-Fi"
     : stale ? "no server"
     : panel.online ? "online" : "roaster offline";
@@ -298,12 +376,27 @@ void drawHeader(bool stale) {
   tft.drawString(state, 314, 12, 2);
 }
 
+// How far BT is from the profile, with its sign and a small delta before it: green near the
+// profile, amber further, red far. Nothing while there is no profile to be off from.
+void drawDelta(int x, int y, int width) {
+  if (isnan(panel.delta)) {
+    tft.fillRect(x, y, width, 26, C_BG);
+    return;
+  }
+  float off = fabsf(panel.delta);
+  uint16_t colour = off <= NEAR_C ? C_OK : off <= FAR_C ? C_WARN : C_BAD;
+  line(String(panel.delta >= 0 ? "+" : "") + String(panel.delta, 1), x + 18, y, 4, colour, width - 18);
+  tft.fillRect(x, y, 18, 26, C_BG);
+  tft.drawTriangle(x + 1, y + 20, x + 7, y + 6, x + 13, y + 20, colour);
+}
+
 void drawReadings(bool stale) {
   uint16_t colour = stale || !panel.online ? C_DIM : C_TEXT;
   line(reading(panel.bt, 1), 8, 32, 7, colour, 170);
   line(panel.timeS < 0 ? "" : clock(panel.timeS), 314, 32, 6, colour, 136, TR_DATUM);
   String second = "ET " + reading(panel.et, 0) + "   RoR " + reading(panel.ror, 1);
-  line(second, 8, 90, 4, colour, 304);
+  line(second, 8, 90, 4, colour, 214);
+  drawDelta(226, 90, 90);
 }
 
 void drawStatus() {
@@ -325,7 +418,116 @@ void drawStatus() {
     if (panel.stage != "ready" && panel.roast.length()) text += "  " + panel.roast;
     if (panel.drive) text += "  (drive)";
   }
-  line(text, 8, 122, 2, colour, 304);
+  // A tap on the readings shows the roast's graph, or the picked roast's profile: say so at
+  // the line's end
+  bool hint = curveWanted().length() > 0;
+  int width = hint ? 240 : 304;
+  line(fit(text, 2, width), 8, 122, 2, colour, width);
+  if (hint) line(roastOpen() ? "graph >" : "profile >", 314, 122, 2, C_DIM, 62, TR_DATUM);
+}
+
+// ---------------------------------------------------------------- the graph --
+
+// The graph's area between the readings and the buttons, and the plot inside it: degrees to
+// its left, the rate of rise's scale to its right, the landmarks' letters above and the
+// minutes below, so no line is drawn over a number.
+const int GX = 0, GY = 58, GW = 320, GH = 122;
+const int PX = 26, PY = GY + 10, PW = 276, PH = GH - 22;
+
+// The graph view's top line: BT, how far from the profile, the rate of rise and the clock
+// while a roast is open; the roast picked before one. A refusal takes the line while it shows.
+void drawGraphReadings(bool stale) {
+  static int shown = -1;
+  int now = messageUntil && millis() < messageUntil ? 1 : roastOpen() ? 0 : 2;
+  if (now != shown) tft.fillRect(0, 26, 320, 30, C_BG);
+  shown = now;
+  if (now == 1) {
+    line(fit(message, 2, 308), 6, 32, 2, C_WARN, 308);
+  } else if (now == 2) {
+    String text = panel.queueLen == 0 ? String("Nothing to start")
+      : String(picked + 1) + "/" + panel.queueLen + "  " + panel.queueName[picked];
+    line(fit(text, 2, 308), 6, 32, 2, C_TEXT, 308);
+  } else {
+    uint16_t colour = stale || !panel.online ? C_DIM : C_TEXT;
+    line(reading(panel.bt, 1), 6, 28, 4, colour, 76);
+    drawDelta(84, 28, 78);
+    line("RoR " + reading(panel.ror, 1), 166, 34, 2, stale ? C_DIM : C_ROR, 82);
+    line(clock(panel.timeS), 314, 28, 4, colour, 64, TR_DATUM);
+  }
+}
+
+// One of the curves: `n` values in tenths, a step apart, between `lo` and `hi` on the plot's
+// height; `thick` draws it two pixels wide.
+void drawCurve(const int16_t* values, int n, int points, float lo, float hi, uint16_t colour, bool thick) {
+  int px = 0, py = 0;
+  for (int i = 0; i < n; i++) {
+    float v = constrain(values[i] / 10.0f, lo, hi);
+    int x = PX + (long)i * (PW - 1) / (points - 1);
+    int y = PY + PH - 1 - (int)((v - lo) / (hi - lo) * (PH - 1));
+    if (i > 0) {
+      tft.drawLine(px, py, x, y, colour);
+      if (thick) tft.drawLine(px, py - 1, x, y - 1, colour);
+    }
+    px = x;
+    py = y;
+  }
+}
+
+// A landmark: a dotted line down the plot with its letters above it.
+void drawMark(long at, const char* letters, int points) {
+  long span = (long)(points - 1) * curveStep;
+  if (at < 0 || at > span) return;
+  int x = PX + at * (PW - 1) / span;
+  for (int y = PY; y < PY + PH; y += 4) tft.drawPixel(x, y, C_TEXT);
+  tft.setTextDatum(BC_DATUM);
+  tft.setTextColor(C_TEXT, C_BG);
+  tft.drawString(letters, constrain(x, PX + 6, PX + PW - 7), PY - 1, 1);
+}
+
+// The roast as a graph. The profile's two lines are the duller ones: its BT (grey) under the
+// roast's (yellow), its rate of rise (dark cyan) under the roast's (cyan). Degrees on the
+// left, the rate of rise's scale on the right, minutes along the bottom.
+void drawGraph() {
+  graphStale = false;
+  tft.fillRect(GX, GY, GW, GH, C_BG);
+  if (curveBtLen == 0 && curveTargetLen == 0) {
+    tft.setTextDatum(MC_DATUM);
+    tft.setTextColor(C_DIM, C_BG);
+    tft.drawString(roastOpen() ? "The roast's curve appears here" : "No profile: a plain roast", GX + GW / 2, GY + GH / 2, 2);
+    return;
+  }
+  int points = max(max(curveBtLen, curveTargetLen), 2);
+  float lo = floorf(curveMin / 25) * 25, hi = ceilf(curveMax / 25) * 25;
+  if (hi - lo < 50) hi = lo + 50;
+  // The first minute's rate of rise runs off the top (a cold charge on a fluid bed passes 60):
+  // the scale is for the rest of the roast, where 5 and 15 have to be told apart.
+  float rorTop = constrain(ceilf(curveRorMax / 10) * 10, 20.0f, 40.0f);
+  tft.setTextColor(C_DIM, C_BG);
+  tft.setTextDatum(MR_DATUM);
+  for (float v = ceilf(lo / 50) * 50; v <= hi; v += 50) {
+    int y = PY + PH - 1 - (int)((v - lo) / (hi - lo) * (PH - 1));
+    tft.drawFastHLine(PX, y, PW, C_GRID);
+    tft.drawString(String((int)v), PX - 4, y, 1);
+  }
+  long span = (long)(points - 1) * curveStep;
+  tft.setTextDatum(TC_DATUM);
+  for (long t = 120; t < span; t += 120) {
+    int x = PX + t * (PW - 1) / span;
+    tft.drawFastVLine(x, PY + PH, 3, C_DIM);
+    tft.drawString(String(t / 60), x, PY + PH + 4, 1);
+  }
+  tft.setTextColor(C_ROR, C_BG);
+  tft.setTextDatum(ML_DATUM);
+  tft.drawString(String((int)rorTop), PX + PW + 3, PY + 3, 1);
+  tft.drawString(String((int)(rorTop / 2)), PX + PW + 3, PY + PH / 2, 1);
+  tft.drawString("0", PX + PW + 3, PY + PH - 4, 1);
+  drawMark(markDry, "D", points);
+  drawMark(markCrack, "FC", points);
+  drawMark(markDrop, "X", points);
+  drawCurve(curveTargetRor, curveTargetRorLen, points, 0, rorTop, C_PROFILE_ROR, false);
+  drawCurve(curveTarget, curveTargetLen, points, lo, hi, C_PROFILE, false);
+  drawCurve(curveRor, curveRorLen, points, 0, rorTop, C_ROR, false);
+  drawCurve(curveBt, curveBtLen, points, lo, hi, C_BT, true);
 }
 
 // The fan or heater as the label shows it and as - and + count from: what was just asked
@@ -357,12 +559,15 @@ void drawAdjust() {
   box(PLUS_X, ADJ_Y, ADJ_W, ADJ_H, "+", C_PLAIN, 4);
 }
 
-void add(const char* action, const char* label, uint16_t colour) {
-  if (buttonCount < 5) buttons[buttonCount++] = {action, label, colour, 0, 0};
+void add(const char* action, const char* label, uint16_t colour, int font = 4) {
+  if (buttonCount < 5) buttons[buttonCount++] = {action, label, colour, font, 0, 0};
 }
 
-// The bottom row for this stage: at most three of the roast's buttons, then STOP.
+// The bottom row for this stage: at most three of the roast's buttons, then STOP at the right.
+// Each is as wide as its word needs and the room left goes to the ones the roast needs next,
+// so no word runs into its neighbour; Cancel, the way out, is the small one.
 void layoutButtons() {
+  const int GAP = 4, PAD = 24, ARROW_W = 48, STOP_W = 76;
   buttonCount = 0;
   bool confirming = confirmUntil && millis() < confirmUntil;
   if (panel.canStart) {
@@ -372,41 +577,61 @@ void layoutButtons() {
   }
   if (panel.canCharge) add("charge", "CHARGE", C_GO);
   if (panel.canDryEnd) add("dry_end", "DRY", C_MARK);
-  if (panel.canFirstCrack) add("first_crack", "CRACK", C_MARK);
+  if (panel.canFirstCrack) add("first_crack", "FC", C_MARK);
   if (panel.canDrop) add("drop", "DROP", C_GO);
   if (panel.canComplete) add("complete", "DONE", C_GO);
-  if (panel.canCancel && buttonCount < 3) add("cancel", confirming ? "SURE?" : "CANCEL", C_PLAIN);
-  int stopW = panel.canStop ? 76 : 0;
-  int room = 320 - stopW, x = 0;
+  if (panel.canCancel && buttonCount < 3) add("cancel", confirming ? "SURE?" : "CANCEL", C_PLAIN, 2);
+  int room = 320 - (panel.canStop ? STOP_W + GAP : 0) - GAP * max(buttonCount - 1, 0);
+  int width[5], wide = 0, sum = 0;
   for (int i = 0; i < buttonCount; i++) {
-    bool arrow = buttons[i].action[0] == '<' || buttons[i].action[0] == '>';
-    int arrows = panel.canStart && panel.queueLen > 1 ? 2 : 0;
-    int w = arrow ? 48 : (room - arrows * 48) / (buttonCount - arrows);
-    buttons[i].x = x;
-    buttons[i].w = w - 4;
-    x += w;
+    char first = buttons[i].action[0];
+    bool arrow = first == '<' || first == '>';
+    width[i] = arrow ? ARROW_W : tft.textWidth(buttons[i].label, buttons[i].font) + PAD;
+    sum += width[i];
+    if (!arrow && buttons[i].font == 4) wide++;
   }
-  if (panel.canStop && buttonCount < 5) buttons[buttonCount++] = {"stop", "STOP", C_STOP, 320 - stopW + 2, stopW - 2};
+  int more = wide ? max(room - sum, 0) / wide : 0;
+  int x = 0;
+  for (int i = 0; i < buttonCount; i++) {
+    char first = buttons[i].action[0];
+    bool grows = first != '<' && first != '>' && buttons[i].font == 4;
+    buttons[i].x = x;
+    buttons[i].w = width[i] + (grows ? more : 0);
+    x += buttons[i].w + GAP;
+  }
+  if (panel.canStop && buttonCount < 5) buttons[buttonCount++] = {"stop", "STOP", C_STOP, 4, 320 - STOP_W, STOP_W};
 }
 
 void drawButtons() {
   layoutButtons();
   String row;
-  for (int i = 0; i < buttonCount; i++) row += String(buttons[i].label) + buttons[i].x + "|";
+  for (int i = 0; i < buttonCount; i++) row += String(buttons[i].label) + buttons[i].x + "+" + buttons[i].w + "|";
   if (row == drawnButtons) return;
   drawnButtons = row;
   tft.fillRect(0, ROW_Y, 320, ROW_H + 2, C_BG);
   for (int i = 0; i < buttonCount; i++) {
-    box(buttons[i].x, ROW_Y, buttons[i].w, ROW_H, buttons[i].label, buttons[i].colour, 4);
+    box(buttons[i].x, ROW_Y, buttons[i].w, ROW_H, buttons[i].label, buttons[i].colour, buttons[i].font);
   }
 }
 
 void draw() {
   bool stale = !panel.known || millis() - answeredAt > STALE_MS;
+  // The graph is the open roast's, or the picked roast's profile: with neither, the readings
+  if (panel.known && curveWanted().length() == 0) graph = false;
+  if (graph != graphDrawn) {
+    tft.fillRect(0, 24, 320, ROW_Y - 24, C_BG);
+    graphDrawn = graph;
+    graphStale = true;
+  }
   drawHeader(stale);
-  drawReadings(stale);
-  drawStatus();
-  drawAdjust();
+  if (graph) {
+    drawGraphReadings(stale);
+    if (graphStale) drawGraph();
+  } else {
+    drawReadings(stale);
+    drawStatus();
+    drawAdjust();
+  }
   drawButtons();
 }
 
@@ -437,6 +662,14 @@ void held(int which) {
 }
 
 void tapped(int x, int y) {
+  // A tap on the readings turns them into the graph (the open roast's, or the profile of the
+  // roast picked), a tap on the graph back
+  if (curveWanted().length() && y >= 24 && y < (graph ? ROW_Y : ADJ_Y)) {
+    graph = !graph;
+    if (graph) fetchCurve();
+    return;
+  }
+  if (graph && y < ROW_Y) return;
   if (y >= ADJ_Y && y < ADJ_Y + ADJ_H && (panel.canFan || panel.canHeater)) {
     if (x >= PLUS_X) {
       holding = 1;
@@ -456,6 +689,7 @@ void tapped(int x, int y) {
     if (b.action[0] == '<' || b.action[0] == '>') {
       int n = panel.queueLen;
       if (n > 0) picked = (picked + (b.action[0] == '<' ? n - 1 : 1)) % n;
+      if (graph) fetchCurve();   // the next roast's profile
     } else if (strcmp(b.action, "cancel") == 0 && !(confirmUntil && millis() < confirmUntil)) {
       confirmUntil = millis() + CONFIRM_MS;   // the roast is discarded: ask once
     } else if (strcmp(b.action, "start") == 0 && panel.queueLen > 0) {
@@ -529,7 +763,11 @@ void loop() {
   if (confirmUntil && millis() >= confirmUntil) confirmUntil = 0;
   if (millis() - lastPoll >= POLL_MS) {
     lastPoll = millis();
-    if (WiFi.status() == WL_CONNECTED) poll();
+    if (WiFi.status() == WL_CONNECTED) {
+      poll();
+      // The graph follows the roast every few seconds, and at once when it is another's
+      if (graph && (curveWanted() != curveOf || (roastOpen() && millis() - curveAt >= CURVE_MS))) fetchCurve();
+    }
     draw();
   }
 }

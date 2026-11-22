@@ -757,7 +757,10 @@ pub async fn roaster_panel(api: &Api, out: &Out, roaster: String) -> Result<u8, 
                 } else {
                     ""
                 },
-            )
+            ) + &roast["delta"]
+                .as_f64()
+                .map(|d| format!(", {d:+.1} °C from the profile"))
+                .unwrap_or_default()
         });
         lines.push(format!("  buttons: {}", words(&p["actions"])));
         let queue: Vec<String> = p["queue"]

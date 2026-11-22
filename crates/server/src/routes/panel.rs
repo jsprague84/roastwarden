@@ -7,14 +7,14 @@
 
 use axum::{
     Json,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
 use chrono::Utc;
 use roastwarden_core::DeviceCommand;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::app::dispatch::{PublishOpts, dispatch};
@@ -23,6 +23,8 @@ use crate::coffee::inventory::InventoryService;
 use crate::http::errors::{ErrorBody, ErrorCode};
 use crate::http::opt_json::OptJson;
 use crate::notify::home_assistant::{Phase, phase};
+use crate::replay::ReplayState;
+use crate::replay::engine::{Plan, interpolate};
 use crate::roasters::setup::{Control, Limits};
 use crate::roasts::types::{
     CreateRoastEventRequest, CreateSessionRequest, RoastEvent, RoastEventType, RoastSession,
@@ -31,6 +33,7 @@ use crate::roasts::types::{
 pub fn routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(get_panel))
+        .routes(routes!(get_curve))
         .routes(routes!(press))
 }
 
@@ -38,6 +41,10 @@ pub fn routes() -> OpenApiRouter<AppState> {
 const ONLINE_WITHIN_MS: u64 = 10_000;
 /// How many roasts a panel offers to start.
 const QUEUE_LEN: usize = 6;
+/// The most values a curve for a panel's graph has: a small screen is some 300 pixels wide.
+const CURVE_POINTS: usize = 150;
+/// The profile's rate of rise is its BT this far either side, s: a minute's change is °C/min.
+const PROFILE_ROR_HALF_S: f64 = 30.0;
 
 /// Where the roast on this roaster is, as a panel shows it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, ToSchema)]
@@ -136,6 +143,54 @@ struct PanelRoast {
     dropped: bool,
     /// Profile drive runs it
     drive: bool,
+    /// The profile's BT now, °C: the drive's own while one runs, else the roast's profile at
+    /// the roast clock. Null before CHARGE, after DROP and without a profile
+    target: Option<f64>,
+    /// BT minus `target`, °C: above the profile is positive
+    delta: Option<f64>,
+}
+
+/// The landmarks marked on the roast, seconds on the curve's clock.
+#[derive(Debug, Default, Serialize, ToSchema)]
+struct CurveMarks {
+    dry_end: Option<i64>,
+    first_crack: Option<i64>,
+    drop: Option<i64>,
+}
+
+/// With no roast open, the roast of the queue whose profile to draw: what Start would start.
+#[derive(Debug, Default, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct CurveOf {
+    /// A planned roast's id
+    plan: Option<String>,
+    /// A finished roast's id, to repeat
+    again: Option<String>,
+}
+
+/// The open roast as a panel's graph draws it: BT so far and the profile's BT, one value
+/// every `step_s` from CHARGE (from the roast's start before CHARGE). With no roast open, the
+/// profile alone of the roast asked for.
+#[derive(Debug, Serialize, ToSchema)]
+struct PanelCurve {
+    /// The open roast; null with none open (both curves are then empty)
+    roast: Option<String>,
+    /// Seconds between two values
+    step_s: u32,
+    /// BT so far, °C
+    bt: Vec<f64>,
+    /// The rate of rise at the same times, °C/min
+    ror: Vec<f64>,
+    /// The profile's BT at the same times and on to its end, °C; empty without a profile
+    target: Vec<f64>,
+    /// The profile's own rate of rise at those times, °C/min: its BT a minute apart
+    target_ror: Vec<f64>,
+    marks: CurveMarks,
+    /// The lowest and the highest value of `bt` and `target`, °C
+    min: f64,
+    max: f64,
+    /// The highest rate of rise, the roast's or the profile's, °C/min: the graph's second scale
+    ror_max: f64,
 }
 
 /// A roast a panel can start: a planned one, or one roasted before, again.
@@ -244,6 +299,225 @@ fn roast_time(elapsed: f64, events: &[RoastEvent]) -> i64 {
     let from = at(events, &RoastEventType::Charge).unwrap_or(0.0);
     let to = at(events, &RoastEventType::Drop).unwrap_or(elapsed);
     (to - from).max(0.0).round() as i64
+}
+
+/// Seconds since CHARGE (since the roast's start before CHARGE).
+fn live_t(session: &RoastSession, events: &[RoastEvent]) -> f64 {
+    since_start(session) - at(events, &RoastEventType::Charge).unwrap_or(0.0)
+}
+
+/// The roast's profile compiled as the drive reads it, when it has one.
+async fn profile_plan(state: &AppState, session: &RoastSession) -> Option<Plan> {
+    let id = session.profile_id.as_deref()?;
+    let profile = crate::profiles::store::get_profile_with_points(&state.db, id)
+        .await
+        .ok()
+        .flatten()?;
+    Some(Plan::from_profile(&profile))
+}
+
+/// The profile's BT now for a roast between CHARGE and DROP: the running drive's own target,
+/// else the roast's profile read at the roast clock.
+async fn target_now(
+    state: &AppState,
+    session: &RoastSession,
+    events: &[RoastEvent],
+    drive: Option<&ReplayState>,
+) -> Option<f64> {
+    if !has(events, &RoastEventType::Charge) || has(events, &RoastEventType::Drop) {
+        return None;
+    }
+    if let Some(t) = drive.filter(|d| d.active).and_then(|d| d.view.target_now) {
+        return Some(t);
+    }
+    let plan = profile_plan(state, session).await?;
+    interpolate(&plan.bt_ref, live_t(session, events))
+}
+
+/// The step that keeps `span_s` seconds within [`CURVE_POINTS`] values.
+fn curve_step(span_s: f64) -> u32 {
+    [1u32, 2, 5, 10, 15, 20, 30, 60, 120]
+        .into_iter()
+        .find(|s| span_s / f64::from(*s) < CURVE_POINTS as f64)
+        .unwrap_or(300)
+}
+
+/// BT one value every `step` seconds from stored samples at `(t, bt)`, `t` from the curve's
+/// zero: each step takes its last sample, a step with none the one before.
+fn sampled(points: &[(f64, f64)], step: u32, until_s: f64) -> Vec<f64> {
+    let step = f64::from(step);
+    let n = ((until_s / step).floor() as usize + 1).min(CURVE_POINTS);
+    let mut out: Vec<Option<f64>> = vec![None; n];
+    for (t, v) in points {
+        if *t < 0.0 || !v.is_finite() {
+            continue;
+        }
+        let i = (t / step).floor() as usize;
+        if i < n {
+            out[i] = Some(*v);
+        }
+    }
+    let first = out.iter().flatten().next().copied();
+    let mut last = first;
+    out.into_iter()
+        .filter_map(|v| {
+            last = v.or(last);
+            last
+        })
+        .map(|v| (v * 10.0).round() / 10.0)
+        .collect()
+}
+
+/// A profile at each step to its end, moved by `offset` seconds: its BT, and its rate of rise
+/// as the BT half a minute either side (a profile is a few points joined by lines: a shorter
+/// window draws stairs).
+fn profile_curves(plan: Option<&Plan>, step: u32, offset: f64) -> (Vec<f64>, Vec<f64>) {
+    let Some(curve) = plan.map(|p| &p.bt_ref).filter(|c| c.len() >= 2) else {
+        return (Vec::new(), Vec::new());
+    };
+    let end = curve.last().map_or(0.0, |(t, _)| t + offset);
+    let at = |t: f64| interpolate(curve, t - offset).unwrap_or(0.0);
+    let tenth = |v: f64| (v * 10.0).round() / 10.0;
+    let times: Vec<f64> = (0..CURVE_POINTS)
+        .map(|i| i as f64 * f64::from(step))
+        .take_while(|t| *t <= end + f64::from(step))
+        .collect();
+    (
+        times.iter().map(|t| tenth(at(*t))).collect(),
+        times
+            .iter()
+            .map(|t| tenth(at(t + PROFILE_ROR_HALF_S) - at(t - PROFILE_ROR_HALF_S)))
+            .collect(),
+    )
+}
+
+/// The profile of a roast in this roaster's queue: a planned roast's, or a finished roast's.
+async fn queued_profile(state: &AppState, device_id: &str, of: &CurveOf) -> Option<Plan> {
+    let profile_id: Option<String> = if let Some(id) = &of.plan {
+        sqlx::query_scalar(
+            "SELECT profile_id FROM planned_roasts WHERE id = ? AND session_id IS NULL \
+             AND (device_id IS NULL OR device_id = ?)",
+        )
+        .bind(id)
+        .bind(device_id)
+        .fetch_optional(&state.db)
+        .await
+        .ok()
+        .flatten()
+        .flatten()
+    } else if let Some(id) = &of.again {
+        sqlx::query_scalar(
+            "SELECT profile_id FROM roast_sessions WHERE id = ? AND device_id = ? \
+             AND status = 'completed'",
+        )
+        .bind(id)
+        .bind(device_id)
+        .fetch_optional(&state.db)
+        .await
+        .ok()
+        .flatten()
+        .flatten()
+    } else {
+        None
+    };
+    let profile = crate::profiles::store::get_profile_with_points(&state.db, &profile_id?)
+        .await
+        .ok()
+        .flatten()?;
+    Some(Plan::from_profile(&profile))
+}
+
+async fn panel_curve(state: &AppState, device_id: &str, of: &CurveOf) -> PanelCurve {
+    let empty = |roast| PanelCurve {
+        roast,
+        step_s: 5,
+        bt: Vec::new(),
+        ror: Vec::new(),
+        target: Vec::new(),
+        target_ror: Vec::new(),
+        marks: CurveMarks::default(),
+        min: 0.0,
+        max: 0.0,
+        ror_max: 0.0,
+    };
+    let Some(session) = open_roast(state, device_id).await else {
+        // Nothing roasting: the profile Start would run, to look at before starting it
+        let plan = queued_profile(state, device_id, of).await;
+        let end = plan
+            .as_ref()
+            .and_then(|p| p.bt_ref.last().map(|(t, _)| *t))
+            .unwrap_or(0.0);
+        let mut curve = empty(None);
+        curve.step_s = curve_step(end.max(60.0));
+        (curve.target, curve.target_ror) = profile_curves(plan.as_ref(), curve.step_s, 0.0);
+        if !curve.target.is_empty() {
+            curve.min = curve.target.iter().copied().fold(f64::INFINITY, f64::min);
+            curve.max = curve
+                .target
+                .iter()
+                .copied()
+                .fold(f64::NEG_INFINITY, f64::max);
+            curve.ror_max = curve.target_ror.iter().copied().fold(0.0, f64::max);
+        }
+        return curve;
+    };
+    let events = crate::roasts::events::get_roast_events(&state.db, &session.id)
+        .await
+        .unwrap_or_default();
+    let zero = at(&events, &RoastEventType::Charge).unwrap_or(0.0);
+    // The roast's clock stands still at DROP, as on the panel's own readout
+    let now = at(&events, &RoastEventType::Drop).map_or(live_t(&session, &events), |d| d - zero);
+    let rows = crate::roasts::telemetry_store::get_session_telemetry(&state.db, &session.id)
+        .await
+        .unwrap_or_default();
+    let series = |value: fn(&crate::roasts::types::SessionTelemetry) -> Option<f32>| {
+        rows.iter()
+            .filter_map(|r| {
+                let t = f64::from(r.elapsed_seconds) - zero;
+                value(r)
+                    .map(|v| (t, f64::from(v)))
+                    .filter(|(t, _)| *t <= now)
+            })
+            .collect::<Vec<(f64, f64)>>()
+    };
+    let points = series(|r| r.bean_temp);
+    let rates = series(|r| r.rate_of_rise);
+    // The drive may have moved the profile against the roast's clock (its alignment)
+    let offset = state
+        .replay
+        .state(&session.id)
+        .await
+        .filter(|d| d.active)
+        .map_or(0.0, |d| d.view.clock.live_t - d.view.clock.profile_t);
+    let plan = profile_plan(state, &session).await;
+    let profile_end = plan
+        .as_ref()
+        .and_then(|p| p.bt_ref.last().map(|(t, _)| t + offset))
+        .unwrap_or(0.0);
+    let step = curve_step(profile_end.max(now).max(60.0));
+    let bt = sampled(&points, step, now.max(0.0));
+    let ror = sampled(&rates, step, now.max(0.0));
+    let (target, target_ror) = profile_curves(plan.as_ref(), step, offset);
+    let all = || bt.iter().chain(&target).copied();
+    let mark = |t: &RoastEventType| at(&events, t).map(|e| (e - zero).round() as i64);
+    let mut curve = empty(Some(session.id.clone()));
+    curve.step_s = step;
+    curve.min = all().fold(f64::INFINITY, f64::min);
+    curve.max = all().fold(f64::NEG_INFINITY, f64::max);
+    if !curve.min.is_finite() {
+        (curve.min, curve.max) = (0.0, 0.0);
+    }
+    curve.marks = CurveMarks {
+        dry_end: mark(&RoastEventType::DryingEnd),
+        first_crack: mark(&RoastEventType::FirstCrackStart),
+        drop: mark(&RoastEventType::Drop),
+    };
+    curve.ror_max = ror.iter().chain(&target_ror).copied().fold(0.0, f64::max);
+    curve.bt = bt;
+    curve.ror = ror;
+    curve.target = target;
+    curve.target_ror = target_ror;
+    curve
 }
 
 fn stage_of(open: Option<&[RoastEvent]>) -> Stage {
@@ -408,6 +682,9 @@ async fn panel_state(state: &AppState, device_id: &str) -> PanelState {
                     .flatten(),
                 None => None,
             };
+            let drive = state.replay.state(&s.id).await;
+            let target = round(target_now(state, s, &events, drive.as_ref()).await, 1);
+            let bt_now = sample.as_ref().and_then(|x| x.bt);
             Some(PanelRoast {
                 id: s.id.clone(),
                 name: s.name.clone(),
@@ -418,7 +695,9 @@ async fn panel_state(state: &AppState, device_id: &str) -> PanelState {
                 dry_end: has(&events, &RoastEventType::DryingEnd),
                 first_crack: has(&events, &RoastEventType::FirstCrackStart),
                 dropped: has(&events, &RoastEventType::Drop),
-                drive: state.replay.state(&s.id).await.is_some_and(|r| r.active),
+                drive: drive.as_ref().is_some_and(|r| r.active),
+                target,
+                delta: round(target.zip(bt_now).map(|(t, bt)| bt - t), 1),
             })
         }
         None => None,
@@ -456,6 +735,21 @@ async fn panel_state(state: &AppState, device_id: &str) -> PanelState {
     params(("device_id" = String, Path)), responses((status = 200, body = PanelState)))]
 async fn get_panel(State(state): State<AppState>, Path(device_id): Path<String>) -> Response {
     Json(panel_state(&state, &device_id).await).into_response()
+}
+
+/// The open roast for a panel's graph (docs/panel.md): BT and its rate of rise since CHARGE,
+/// the profile's BT and rate of rise to its end, at most 150 values each, with the landmarks
+/// marked. A panel asks for it every few seconds while it shows the graph; the newest reading
+/// is in the panel's state. With no roast open, `plan` or `again` names a roast of the queue
+/// and the answer is its profile alone, to look at before Start.
+#[utoipa::path(get, path = "/api/roaster/{device_id}/panel/curve", tag = "panel",
+    params(("device_id" = String, Path), CurveOf), responses((status = 200, body = PanelCurve)))]
+async fn get_curve(
+    State(state): State<AppState>,
+    Path(device_id): Path<String>,
+    Query(of): Query<CurveOf>,
+) -> Response {
+    Json(panel_curve(&state, &device_id, &of).await).into_response()
 }
 
 /// The simulated roasters follow the buttons: CHARGE loads their beans and DROP dumps them,
@@ -1127,6 +1421,194 @@ mod tests {
             .await;
         assert_eq!(r.status, StatusCode::OK, "{:?}", r.json());
         assert_eq!(r.json()["stage"], "idle");
+    }
+
+    #[test]
+    fn a_curve_keeps_within_a_small_screen() {
+        assert_eq!(curve_step(60.0), 1);
+        assert_eq!(curve_step(149.0), 1);
+        assert_eq!(curve_step(150.0), 2);
+        assert_eq!(curve_step(600.0), 5);
+        assert_eq!(curve_step(750.0), 10);
+        assert_eq!(curve_step(20.0 * 60.0), 10);
+        assert_eq!(curve_step(3.0 * 3600.0), 120);
+        // One value a step: the step's last sample, a step with none the one before, and a
+        // sample before the curve's zero left out
+        let points = [
+            (-3.0, 20.0),
+            (0.0, 25.0),
+            (2.0, 26.0),
+            (4.9, 27.04),
+            (16.0, 40.0),
+        ];
+        assert_eq!(sampled(&points, 5, 17.0), [27.0, 27.0, 27.0, 40.0]);
+        assert_eq!(sampled(&points, 5, 9.0), [27.0, 27.0]);
+        assert_eq!(sampled(&[], 5, 30.0), Vec::<f64>::new());
+        // never more than the screen takes, however long it ran
+        let long: Vec<(f64, f64)> = (0..5000).map(|i| (f64::from(i), 100.0)).collect();
+        assert_eq!(sampled(&long, 1, 4999.0).len(), CURVE_POINTS);
+    }
+
+    /// A roast driven by its profile: the panel's state carries the profile's BT now and how
+    /// far BT is from it, and the curve route its graph: BT so far and the profile to its end.
+    #[tokio::test]
+    async fn a_driven_roast_shows_its_profile_and_its_curve() {
+        let h = Harness::new().await;
+        let on = h
+            .owner(
+                "PUT",
+                "/api/virtual-roaster",
+                Some(json!({ "enabled": true })),
+            )
+            .await;
+        assert!(on.status.is_success());
+        let token = panel_token(&h, "roast room", VR).await;
+        let url = format!("/api/roaster/{VR}/panel");
+        let curve_url = format!("/api/roaster/{VR}/panel/curve");
+        let get = |u: String| {
+            let (app, token) = (h.app.clone(), token.clone());
+            async move { call(&app, "GET", &u, Some(&token), None).await.json() }
+        };
+        // No roast: nothing to draw
+        let none = get(curve_url.clone()).await;
+        assert!(none["roast"].is_null(), "{none}");
+        assert_eq!(none["bt"], json!([]));
+        assert_eq!(none["ror"], json!([]));
+        assert_eq!(none["target"], json!([]));
+        assert_eq!(none["target_ror"], json!([]));
+
+        let plan = h
+            .owner(
+                "POST",
+                "/api/plan",
+                Some(json!({ "name": "Driven", "profile_id": "fluidbed-light", "device_id": VR })),
+            )
+            .await;
+        assert!(plan.status.is_success(), "{:?}", plan.json());
+        // Before Start: the planned roast's profile alone, to look at; a plan that is not
+        // there, or another roaster's, draws nothing
+        let plan_id = plan.json()["id"].as_str().unwrap().to_string();
+        let preview = get(format!("{curve_url}?plan={plan_id}")).await;
+        assert!(preview["roast"].is_null(), "{preview}");
+        assert_eq!(preview["bt"], json!([]));
+        let shown = preview["target"].as_array().unwrap().len();
+        assert!(shown > 20, "{preview}");
+        assert_eq!(preview["target_ror"].as_array().unwrap().len(), shown);
+        assert!(preview["max"].as_f64().unwrap() > 150.0, "{preview}");
+        assert_eq!(
+            get(format!("{curve_url}?plan=nope")).await["target"],
+            json!([])
+        );
+        let elsewhere = h
+            .owner(
+                "POST",
+                "/api/plan",
+                Some(json!({ "name": "Elsewhere", "profile_id": "fluidbed-light", "device_id": "drum_1" })),
+            )
+            .await
+            .json();
+        let other_plan = elsewhere["id"].as_str().unwrap();
+        assert_eq!(
+            get(format!("{curve_url}?plan={other_plan}")).await["target"],
+            json!([])
+        );
+        let r = press(&h, &token, VR, "start", json!({})).await;
+        assert_eq!(r.status, StatusCode::OK, "{:?}", r.json());
+        // Before CHARGE there is no target to be off from, but the graph shows the plan
+        assert!(r.json()["roast"]["target"].is_null());
+        assert!(r.json()["roast"]["delta"].is_null());
+        let before = get(curve_url.clone()).await;
+        let whole = before["target"].as_array().unwrap().len();
+        assert!(whole > 20 && whole <= CURVE_POINTS, "{before}");
+        let step = before["step_s"].as_u64().unwrap();
+        assert!(step >= 1 && (whole as u64 - 1) * step >= 300, "{before}");
+
+        let r = press(&h, &token, VR, "charge", json!({})).await;
+        assert_eq!(r.status, StatusCode::OK, "{:?}", r.json());
+        // CHARGE starts the drive (the roast sequence); the state follows it
+        assert!(
+            eventually(|| async {
+                let st = get(url.clone()).await;
+                st["roast"]["drive"] == true
+                    && st["roast"]["target"].is_number()
+                    && st["roast"]["delta"].is_number()
+            })
+            .await,
+            "{}",
+            get(url.clone()).await
+        );
+        let st = get(url.clone()).await;
+        let (bt, target, delta) = (
+            st["bt"].as_f64().unwrap(),
+            st["roast"]["target"].as_f64().unwrap(),
+            st["roast"]["delta"].as_f64().unwrap(),
+        );
+        assert!((delta - (bt - target)).abs() < 0.11, "{st}");
+        assert!(target > 20.0 && target < 260.0, "{st}");
+
+        assert!(
+            eventually(|| async {
+                get(curve_url.clone()).await["bt"]
+                    .as_array()
+                    .is_some_and(|a| !a.is_empty())
+            })
+            .await,
+            "the roast's samples reach the curve"
+        );
+        let c = get(curve_url.clone()).await;
+        assert_eq!(c["roast"], st["roast"]["id"]);
+        assert_eq!(c["target"].as_array().unwrap().len(), whole, "{c}");
+        // The profile's own rate of rise at the same times: rising through the roast
+        let profile_ror = c["target_ror"].as_array().unwrap();
+        assert_eq!(profile_ror.len(), whole, "{c}");
+        let mid = profile_ror[whole / 2].as_f64().unwrap();
+        assert!(mid > 1.0 && mid < 60.0, "{c}");
+        let (lo, hi) = (c["min"].as_f64().unwrap(), c["max"].as_f64().unwrap());
+        assert!(lo < hi && lo >= 0.0 && hi < 300.0, "{c}");
+        for v in c["bt"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .chain(c["target"].as_array().unwrap())
+        {
+            let v = v.as_f64().unwrap();
+            assert!(v >= lo && v <= hi, "{v} outside {lo}..{hi}");
+        }
+        assert!(c["marks"]["drop"].is_null());
+        // The rate of rise comes with it, on its own scale
+        let ror = c["ror"].as_array().unwrap();
+        assert!(ror.len() <= c["bt"].as_array().unwrap().len(), "{c}");
+        let top = c["ror_max"].as_f64().unwrap();
+        assert!(
+            ror.iter()
+                .chain(profile_ror)
+                .all(|v| v.as_f64().unwrap() <= top),
+            "{c}"
+        );
+
+        // DROP: the mark is on the curve, and nothing is left to be off from
+        press(&h, &token, VR, "first_crack", json!({})).await;
+        let r = press(&h, &token, VR, "drop", json!({})).await;
+        assert!(r.json()["roast"]["target"].is_null(), "{:?}", r.json());
+        let c = get(curve_url.clone()).await;
+        assert!(c["marks"]["drop"].is_number(), "{c}");
+        assert!(c["marks"]["first_crack"].is_number(), "{c}");
+        assert!(c["marks"]["dry_end"].is_null(), "{c}");
+
+        // The curve is its roaster's panel's: another roaster's is refused, and a read-only
+        // token may read it
+        let other = call(
+            &h.app,
+            "GET",
+            "/api/roaster/drum_1/panel/curve",
+            Some(&token),
+            None,
+        )
+        .await;
+        assert_eq!(other.status, StatusCode::FORBIDDEN);
+        let reader = h.token("read_only").await;
+        let r = call(&h.app, "GET", &curve_url, Some(&reader), None).await;
+        assert_eq!(r.status, StatusCode::OK);
     }
 
     /// A panel token needs a roaster the server knows, never asks first, and no other

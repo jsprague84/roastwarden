@@ -740,6 +740,13 @@ pub const SURFACE: &[(&str, &str, Via)] = &[
         Via::Cmd("roaster panel", R),
     ),
     (
+        "GET",
+        "/api/roaster/{device_id}/panel/curve",
+        Via::Api(
+            "a touch panel's graph: the open roast cut down to 150 values for a small screen; a roast's own samples are `roast export`",
+        ),
+    ),
+    (
         "POST",
         "/api/roaster/{device_id}/panel/{action}",
         Via::None(PANEL),

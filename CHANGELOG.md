@@ -14,9 +14,11 @@ matching section (`docs/DEVELOPMENT.md`, "Releases").
   server answers what the screen shows and which buttons do something now
   (`GET /api/roaster/{id}/panel`) and takes a button's name
   (`POST /api/roaster/{id}/panel/{button}`). Start offers the planned roasts, then the
-  coffees the roaster roasted last, to repeat. An example sketch for the ESP32 "Cheap Yellow
-  Display" is in `examples/panels/`; `roast roaster panel <roaster>` prints what a panel
-  shows.
+  coffees the roaster roasted last, to repeat. The readings say how far the beans are from
+  the profile, and a tap turns them into a graph: bean temperature and rate of rise over the
+  profile's during a roast (`GET /api/roaster/{id}/panel/curve`), the picked roast's profile
+  before one. An example sketch for the ESP32 "Cheap Yellow Display" is in
+  `examples/panels/`; `roast roaster panel <roaster>` prints what a panel shows.
 - A Panel token (Settings → Tokens): made for one roaster, it works that roaster's panel and
   nothing else, reads nothing of the other presets, needs no "Tokens may control this
   roaster" switch and never asks first. The roaster's control level still decides what is

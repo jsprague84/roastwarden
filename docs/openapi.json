@@ -10122,6 +10122,55 @@
         }
       }
     },
+    "/api/roaster/{device_id}/panel/curve": {
+      "get": {
+        "tags": [
+          "panel"
+        ],
+        "summary": "The open roast for a panel's graph (docs/panel.md): BT and its rate of rise since CHARGE,\nthe profile's BT and rate of rise to its end, at most 150 values each, with the landmarks\nmarked. A panel asks for it every few seconds while it shows the graph; the newest reading\nis in the panel's state. With no roast open, `plan` or `again` names a roast of the queue\nand the answer is its profile alone, to look at before Start.",
+        "operationId": "get_curve",
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "plan",
+            "in": "query",
+            "description": "A planned roast's id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "again",
+            "in": "query",
+            "description": "A finished roast's id, to repeat",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanelCurve"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/roaster/{device_id}/panel/{action}": {
       "post": {
         "tags": [
@@ -18677,6 +18726,33 @@
           }
         ]
       },
+      "CurveMarks": {
+        "type": "object",
+        "description": "The landmarks marked on the roast, seconds on the curve's clock.",
+        "properties": {
+          "dry_end": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "first_crack": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "drop": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          }
+        }
+      },
       "CurvePoint": {
         "type": "object",
         "description": "The roasts at one roast time.",
@@ -23368,6 +23444,85 @@
           }
         }
       },
+      "PanelCurve": {
+        "type": "object",
+        "description": "The open roast as a panel's graph draws it: BT so far and the profile's BT, one value\nevery `step_s` from CHARGE (from the roast's start before CHARGE). With no roast open, the\nprofile alone of the roast asked for.",
+        "required": [
+          "step_s",
+          "bt",
+          "ror",
+          "target",
+          "target_ror",
+          "marks",
+          "min",
+          "max",
+          "ror_max"
+        ],
+        "properties": {
+          "roast": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The open roast; null with none open (both curves are then empty)"
+          },
+          "step_s": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Seconds between two values",
+            "minimum": 0
+          },
+          "bt": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            },
+            "description": "BT so far, °C"
+          },
+          "ror": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            },
+            "description": "The rate of rise at the same times, °C/min"
+          },
+          "target": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            },
+            "description": "The profile's BT at the same times and on to its end, °C; empty without a profile"
+          },
+          "target_ror": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            },
+            "description": "The profile's own rate of rise at those times, °C/min: its BT a minute apart"
+          },
+          "marks": {
+            "$ref": "#/components/schemas/CurveMarks"
+          },
+          "min": {
+            "type": "number",
+            "format": "double",
+            "description": "The lowest and the highest value of `bt` and `target`, °C"
+          },
+          "max": {
+            "type": "number",
+            "format": "double"
+          },
+          "ror_max": {
+            "type": "number",
+            "format": "double",
+            "description": "The highest rate of rise, the roast's or the profile's, °C/min: the graph's second scale"
+          }
+        }
+      },
       "PanelRoast": {
         "type": "object",
         "description": "The roast open on the roaster.",
@@ -23422,6 +23577,22 @@
           "drive": {
             "type": "boolean",
             "description": "Profile drive runs it"
+          },
+          "target": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "The profile's BT now, °C: the drive's own while one runs, else the roast's profile at\nthe roast clock. Null before CHARGE, after DROP and without a profile"
+          },
+          "delta": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "BT minus `target`, °C: above the profile is positive"
           }
         }
       },

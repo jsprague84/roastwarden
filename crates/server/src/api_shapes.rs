@@ -1048,6 +1048,13 @@ async fn api_shapes_are_unchanged() {
     )
     .await;
     r.owner(
+        "GET /api/roaster/{id}/panel/curve",
+        "GET",
+        &format!("{panel}/curve"),
+        None,
+    )
+    .await;
+    r.owner(
         "PATCH /api/sessions/{id}/replay",
         "PATCH",
         &s("/replay"),

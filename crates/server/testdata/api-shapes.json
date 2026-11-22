@@ -3787,6 +3787,7 @@
       "roast": {
         "batch": "integer",
         "charged": "boolean",
+        "delta": "null",
         "drive": "boolean",
         "dropped": "boolean",
         "dry_end": "boolean",
@@ -3794,11 +3795,39 @@
         "id": "string",
         "name": "string",
         "profile": "string",
+        "target": "null",
         "time_s": "integer"
       },
       "ror": "number",
       "setpoint": "number",
       "stage": "string"
+    },
+    "status": 200
+  },
+  "GET /api/roaster/{id}/panel/curve": {
+    "body": {
+      "bt": [
+        "empty"
+      ],
+      "marks": {
+        "drop": "null",
+        "dry_end": "null",
+        "first_crack": "null"
+      },
+      "max": "number",
+      "min": "number",
+      "roast": "string",
+      "ror": [
+        "empty"
+      ],
+      "ror_max": "number",
+      "step_s": "integer",
+      "target": [
+        "number"
+      ],
+      "target_ror": [
+        "number"
+      ]
     },
     "status": 200
   },
@@ -7286,6 +7315,7 @@
       "roast": {
         "batch": "integer",
         "charged": "boolean",
+        "delta": "null",
         "drive": "boolean",
         "dropped": "boolean",
         "dry_end": "boolean",
@@ -7293,6 +7323,7 @@
         "id": "string",
         "name": "string",
         "profile": "null",
+        "target": "null",
         "time_s": "integer"
       },
       "ror": "number",

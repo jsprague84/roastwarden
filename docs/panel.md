@@ -1,9 +1,10 @@
 # Touch panel
 
 A small touch screen beside the roaster, for the roasts where you do not want a browser open.
-It shows the bean temperature and the roast clock, and the buttons for the roast in front of
-you: Start, Charge, First crack, Drop, Stop. The server still runs the roast, records it and
-follows the profile; the panel is one more screen for it, like a phone.
+It shows the bean temperature, the roast clock and how far the beans are from the profile,
+and the buttons for the roast in front of you: Start, Charge, First crack, Drop, Stop. A tap
+turns the readings into a graph of the roast against its profile. The server still runs the
+roast, records it and follows the profile; the panel is one more screen for it, like a phone.
 
 The example is an ESP32 "Cheap Yellow Display", one of the cheapest boards with a touch
 screen. Any small screen that can make two web requests works the same way.
@@ -15,7 +16,7 @@ screen. Any small screen that can make two web requests works the same way.
 | **◀ ▶** | Pick what to roast: your [planned roasts](batches.md) first, then the coffees this roaster roasted last, to roast again with the same profile and weight. |
 | **START** | Starts recording the picked roast. With nothing planned and nothing to repeat, it starts a plain roast. |
 | **CHARGE** | Marks the charge. On a roaster with a [roast sequence](roast-sequence.md) the fan and heater come on and [Profile drive](replay.md) starts. |
-| **DRY**, **CRACK** | Mark dry end and first crack. One of each: a second tap marks nothing. |
+| **DRY**, **FC** | Mark dry end and first crack. One of each: a second tap marks nothing. |
 | **DROP** | Marks the drop: the drive stops, the heater goes off and the roaster cools. |
 | **DONE** | Completes the roast. Weigh it and add notes later, in the dashboard or by asking your agent. |
 | **CANCEL** | Discards the roast. It asks "Sure?" first. |
@@ -24,6 +25,22 @@ screen. Any small screen that can make two web requests works the same way.
 
 The screen shows only the buttons that do something now. A refusal (the roaster's control is
 off, say) appears on the status line in words.
+
+## The readings and the graph
+
+Beside ET and the rate of rise, a small **Δ** with a number says how far the beans are from
+the profile: `+1.8` is 1.8 °C above it. It is green within 3 °C, amber within 6 and red
+beyond, from Charge to Drop on a roast that has a profile.
+
+**Tap the readings** and they become a graph; tap the graph to go back. The buttons stay.
+
+- **During a roast**: the bean temperature (yellow) over the profile's (grey), and the rate of
+  rise (cyan) over the profile's (darker cyan), with degrees on the left, the rate of rise's
+  scale on the right and minutes along the bottom. Dry end, first crack and Drop show as
+  dotted lines marked `D`, `FC` and `X`. The rate of rise's scale stops at 40 °C/min, so the
+  first minute of a cold charge runs off the top and the rest of the roast stays readable.
+- **Before a roast**: the profile of the roast picked, to look at before you start it. **◀ ▶**
+  step through the roasts and the graph follows.
 
 ## What you need
 
@@ -119,8 +136,14 @@ Any screen that speaks HTTP can be a panel. It makes two calls, both with the pa
 
 - `GET /api/roaster/<roaster>/panel` answers what to show: `bt`, `et`, `ror`, `heater`, `fan`
   and `setpoint` (°C and %), `online`, the roast's `stage` (`idle`, `ready`, `roasting`,
-  `dropped`) and `phase`, the open `roast` with its clock `time_s`, the `actions` that do
-  something now, and the `queue` Start can start. Ask once a second.
+  `dropped`) and `phase`, the open `roast` with its clock `time_s`, the profile's BT now
+  (`target`) and how far BT is from it (`delta`), the `actions` that do something now, and the
+  `queue` Start can start. Ask once a second.
+- `GET /api/roaster/<roaster>/panel/curve` answers the open roast for a graph, at most 150
+  values each, one every `step_s` seconds from Charge: `bt` and `ror` so far, the profile's
+  `target` and `target_ror` to its end, the `marks`, and the ranges (`min`, `max`,
+  `ror_max`). With no roast open, `?plan=<id>` or `?again=<id>` from the queue answers that
+  roast's profile alone. Ask every few seconds while the graph shows.
 - `POST /api/roaster/<roaster>/panel/<button>` presses `start`, `charge`, `dry_end`,
   `first_crack`, `drop`, `complete`, `cancel`, `stop`, `fan` or `heater`. `start` takes
   `{"plan": "<id>"}` or `{"again": "<id>"}` from the queue (neither: the first), `fan` and
@@ -168,6 +191,22 @@ The marks take the server's clock (seconds since the roast started) and the newe
 second DRY or CRACK is refused (`ALREADY_MARKED`), as CHARGE and DROP are everywhere: a
 resistive screen double-taps.
 
+## The graph's curve
+
+A roast is some 600 stored samples and a profile a handful of points; a panel has 320 pixels
+and no reason to hold either. `GET …/panel/curve` cuts both to one value a step (1, 2, 5,
+10 s… whichever keeps the longer of the roast and the profile under 150 values), from CHARGE,
+the profile moved by the drive's alignment when one runs. The roast's rate of rise is the
+stored one; the profile's is its BT half a minute either side, since a profile is points
+joined by lines and a shorter window draws stairs. The sketch keeps the four curves in 1.3 kB
+and redraws the plot every five seconds; the newest reading comes with the state as before.
+`target` and `delta` in the state are the drive's own target while it runs, else the roast's
+profile read at the roast clock, so a roast by hand against a profile shows its distance too.
+
+The sketch draws the profile's lines first and duller, the roast's over them, and keeps every
+number outside the plot. Its buttons are as wide as their words: on a row of four, `CRACK` and
+`CANCEL` in the large font ran into each other on the board, hence `FC` and the small `CANCEL`.
+
 ## The queue
 
 Start offers the roaster's planned roasts in their order, then its last finished roasts by
@@ -203,4 +242,4 @@ wall, so "panel" shares none of them: it may `GET /healthz`, `/readyz`, `/versio
 - A page in the dashboard with the same buttons, for an old phone kept at the roaster.
 - The sketch with the roaster, the token and Wi-Fi filled in, as the roaster firmware
   download does.
-- The profile's target beside BT, and the auto DROP countdown.
+- The auto DROP countdown.
