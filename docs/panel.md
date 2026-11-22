@@ -227,6 +227,12 @@ which is how its layout is checked from a desk: a helper keeps the port open (op
 resets the board), sends `G` for a tap on the readings and writes the picture. Its buttons are as wide as their words: on a row of four, `CRACK` and
 `CANCEL` in the large font ran into each other on the board, hence `FC` and the small `CANCEL`.
 
+The touch is read by a task of its own every 10 ms, on the ESP32's other core, and each new
+press is queued for the main loop. The main loop spends a quarter of a second of each poll
+waiting on the server over Wi-Fi, more at times, and a quick light tap that came and went in
+that wait was lost, which felt like having to press harder. The touch library's pressure
+threshold is left as it is, so what counts as a press has not changed.
+
 ## The queue
 
 Start offers the roaster's planned roasts in their order, then its last finished roasts by

@@ -139,6 +139,19 @@ bool adjustHeater = false;      // - and + move the heater instead of the fan
 float asked[2] = {NAN, NAN};
 unsigned long askedAt[2] = {0, 0};
 int holding = 0;                // the tap still down is on - (-1) or + (1)
+uint32_t holdingPress = 0;      // and which press that is
+
+// The touch is read by a task of its own every 10 ms (touchTask), so a tap is not missed while
+// the panel waits on the server or draws: it queues each new press, and says whether a finger
+// is down and since when. The touch has its own SPI bus, apart from the screen's.
+struct Tap {
+  int16_t x, y, rawX, rawY;
+  uint32_t press;
+};
+QueueHandle_t taps;
+volatile bool fingerDown = false;
+volatile uint32_t fingerPress = 0;       // counts presses: which one is down now
+volatile unsigned long fingerSince = 0;  // millis() it went down
 unsigned long confirmUntil = 0; // Cancel was tapped once
 String message;                 // a refusal, shown for a while
 unsigned long messageUntil = 0;
@@ -823,33 +836,50 @@ void tapped(int x, int y) {
   }
 }
 
-// A tap, once per press: where on the screen. - or + still down after HOLD_MS: once more, held.
+// The touch, read every 10 ms on the other core: what counts as a press is the library's own
+// (its pressure threshold), only nothing waits on the main loop to look.
+void touchTask(void*) {
+  bool down = false;
+  for (;;) {
+    bool now = touch.tirqTouched() && touch.touched();
+    if (now && !down) {
+      TS_Point p = touch.getPoint();
+      fingerSince = millis();
+      fingerPress = fingerPress + 1;
+      Tap t = {
+        (int16_t)constrain(map(p.x, TOUCH_X_MIN, TOUCH_X_MAX, 0, 319), 0, 319),
+        (int16_t)constrain(map(p.y, TOUCH_Y_MIN, TOUCH_Y_MAX, 0, 239), 0, 239),
+        (int16_t)p.x, (int16_t)p.y, fingerPress};
+      xQueueSend(taps, &t, 0);
+    }
+    fingerDown = now;
+    down = now;
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
+}
+
+// The taps the touch task queued, in order. - or + still down after HOLD_MS: once more, held.
 void readTouch() {
-  static bool down = false;
-  static unsigned long downAt = 0;
-  bool now = touch.tirqTouched() && touch.touched();
-  if (now && down && holding && millis() - downAt >= HOLD_MS) {
+  Tap t;
+  while (xQueueReceive(taps, &t, 0) == pdTRUE) {
+#ifdef CALIBRATE
+    say(String("raw x ") + t.rawX + "  y " + t.rawY);
+#endif
+    Serial.printf("tap: raw %d,%d  screen %d,%d\n", t.rawX, t.rawY, t.x, t.y);
+    holding = 0;
+    holdingPress = t.press;
+    tapped(t.x, t.y);
+    draw();
+  }
+  bool still = fingerDown && fingerPress == holdingPress;
+  if (holding && still && millis() - fingerSince >= HOLD_MS) {
     int which = holding;
     holding = 0;
     Serial.printf("held: %s\n", which < 0 ? "-" : "+");
     held(which);
     draw();
   }
-  if (!now) holding = 0;
-  if (now && !down) {
-    downAt = millis();
-    holding = 0;
-    TS_Point p = touch.getPoint();
-#ifdef CALIBRATE
-    say(String("raw x ") + p.x + "  y " + p.y);
-#endif
-    int x = constrain(map(p.x, TOUCH_X_MIN, TOUCH_X_MAX, 0, 319), 0, 319);
-    int y = constrain(map(p.y, TOUCH_Y_MIN, TOUCH_Y_MAX, 0, 239), 0, 239);
-    Serial.printf("tap: raw %d,%d  screen %d,%d\n", p.x, p.y, x, y);
-    tapped(x, y);
-    draw();
-  }
-  down = now;
+  if (!still) holding = 0;
 }
 
 // The screen as the display holds it, to the serial monitor (the header comment has the format).
@@ -877,6 +907,8 @@ void setup() {
   touchSpi.begin(TOUCH_CLK, TOUCH_MISO, TOUCH_MOSI, TOUCH_CS);
   touch.begin(touchSpi);
   touch.setRotation(1);
+  taps = xQueueCreate(8, sizeof(Tap));
+  xTaskCreatePinnedToCore(touchTask, "touch", 4096, nullptr, 1, nullptr, 0);
   if (strlen(RW_ROOT_CA) > 0) tlsClient.setCACert(RW_ROOT_CA);
   else tlsClient.setInsecure();
   WiFi.mode(WIFI_STA);
