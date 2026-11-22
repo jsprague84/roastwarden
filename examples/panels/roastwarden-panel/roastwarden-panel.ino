@@ -432,6 +432,8 @@ void drawHeader(bool stale) {
   line(fit(name, FONT_SMALL, 180), 32, 13, FONT_SMALL, L.text, 0, ML_DATUM, L.card);
   bool trouble = stale || !panel.online;
   line(state, 312, 13, FONT_SMALL, trouble ? L.warn : L.dim, 0, MR_DATUM, L.card);
+  use(FONT_SMALL);
+  tft.fillSmoothCircle(312 - tft.textWidth(state) - 9, 13, 3, trouble ? L.warn : L.ok, L.card);
 }
 
 // How far BT is from the profile, with its sign and a small delta before it: green near the
@@ -445,8 +447,9 @@ void drawDelta(int x, int y, int width) {
   uint16_t colour = off <= NEAR_C ? L.ok : off <= FAR_C ? L.warn : L.bad;
   line(String(panel.delta >= 0 ? "+" : "") + String(panel.delta, 1), x + 18, y, FONT_TEXT, colour, width - 18);
   tft.fillRect(x, y, 18, 22, L.bg);
-  tft.drawTriangle(x + 1, y + 15, x + 7, y + 2, x + 13, y + 15, colour);
-  tft.drawTriangle(x + 2, y + 14, x + 7, y + 4, x + 12, y + 14, colour);
+  tft.drawWideLine(x + 1, y + 15, x + 7, y + 3, 1.8, colour, L.bg);
+  tft.drawWideLine(x + 7, y + 3, x + 13, y + 15, 1.8, colour, L.bg);
+  tft.drawWideLine(x + 1, y + 15, x + 13, y + 15, 1.8, colour, L.bg);
 }
 
 void drawReadings(bool stale) {
@@ -475,6 +478,7 @@ void drawStatus() {
     text = panel.stage == "ready" ? "Recording: add the beans, then Charge"
       : panel.stage == "dropped" ? "Dropped" + String(panel.cooling ? ", cooling" : "")
       : panel.phase;
+    if (text.length()) text.setCharAt(0, toupper(text[0]));
     if (panel.stage != "ready" && panel.roast.length()) text += "  " + panel.roast;
     if (panel.drive) text += "  (drive)";
     colour = L.text;
@@ -534,13 +538,12 @@ void drawCurve(const int16_t* values, int n, int points, float lo, float hi, uin
     float v = constrain(values[i] / 10.0f, lo, hi);
     int x = PX + (long)i * (PW - 1) / (points - 1);
     int y = PY + PH - 1 - (int)((v - lo) / (hi - lo) * (PH - 1));
-    if (i > 0 && !(dashed && (i / 2) % 2)) {
-      tft.drawLine(px, py, x, y, colour);
-      if (thick) tft.drawLine(px, py - 1, x, y - 1, colour);
-    }
+    if (i > 0 && !(dashed && (i / 2) % 2)) tft.drawWideLine(px, py, x, y, thick ? 2.4 : 1.3, colour, L.bg);
     px = x;
     py = y;
   }
+  // Where the roast is now: a dot at the end of its own line
+  if (thick && n > 1) tft.fillSmoothCircle(px, py, 3, colour, L.bg);
 }
 
 // A landmark: a dotted line down the plot with its letters above it.
@@ -617,11 +620,18 @@ float level(bool heater) {
 
 // A button of its kind: the roast's next step green, a mark the dashboard's blue, Stop red,
 // the rest plain; its word in the button face, Cancel's in the small one.
-void box(int x, int y, int w, int h, const char* label, char kind) {
+void box(int x, int y, int w, int h, const char* label, char kind, bool pressed = false) {
   uint16_t fill = kind == 'g' ? L.go : kind == 'm' ? L.action : kind == 's' ? L.stop : L.plain;
   uint16_t ink = kind == 'g' ? L.goText : kind == 'm' ? L.actionText : kind == 's' ? L.stopText : L.plainText;
-  tft.fillRoundRect(x, y, w, h, 6, fill);
-  if (kind == 'p' || kind == 'c') tft.drawRoundRect(x, y, w, h, 6, L.border);
+  // Under a finger it leans towards its ink, so a tap is seen before the server answers
+  if (pressed) fill = tft.alphaBlend(70, ink, fill);
+  const int R = 8;
+  if (kind == 'p' || kind == 'c') {   // the plain ones have an edge, as the dashboard's do
+    tft.fillSmoothRoundRect(x, y, w, h, R, L.border, L.bg);
+    tft.fillSmoothRoundRect(x + 1, y + 1, w - 2, h - 2, R - 1, fill, L.border);
+  } else {
+    tft.fillSmoothRoundRect(x, y, w, h, R, fill, L.bg);
+  }
   line(label, x + w / 2, y + h / 2 + 1, kind == 'c' ? FONT_SMALL : FONT_BUTTON, ink, 0, MC_DATUM, fill);
 }
 
@@ -779,9 +789,11 @@ void tapped(int x, int y) {
   if (y >= ADJ_Y && y < ADJ_Y + ADJ_H && (panel.canFan || panel.canHeater)) {
     if (x >= PLUS_X) {
       holding = 1;
+      box(PLUS_X, ADJ_Y, ADJ_W, ADJ_H, "+", 'p', true);
       adjust(STEP_PCT);
     } else if (x >= MINUS_X) {
       holding = -1;
+      box(MINUS_X, ADJ_Y, ADJ_W, ADJ_H, "-", 'p', true);
       adjust(-STEP_PCT);
     } else if (panel.canFan && panel.canHeater && !panel.drive) {
       adjustHeater = !adjustHeater;
@@ -799,11 +811,14 @@ void tapped(int x, int y) {
     } else if (strcmp(b.action, "cancel") == 0 && !(confirmUntil && millis() < confirmUntil)) {
       confirmUntil = millis() + CONFIRM_MS;   // the roast is discarded: ask once
     } else if (strcmp(b.action, "start") == 0 && panel.queueLen > 0) {
+      box(b.x, ROW_Y, b.w, ROW_H, b.label, b.kind, true);
       press("start", "{\"" + panel.queueKind[picked] + "\":\"" + panel.queueId[picked] + "\"}");
     } else {
       confirmUntil = 0;
+      box(b.x, ROW_Y, b.w, ROW_H, b.label, b.kind, true);
       press(b.action, "{}");
     }
+    drawnButtons = "";   // back to its own colour
     return;
   }
 }
