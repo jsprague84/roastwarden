@@ -4,7 +4,9 @@ A small touch screen beside the roaster, for the roasts where you do not want a 
 It shows the bean temperature, the roast clock and how far the beans are from the profile,
 and the buttons for the roast in front of you: Start, Charge, First crack, Drop, Stop. A tap
 turns the readings into a graph of the roast against its profile. The server still runs the
-roast, records it and follows the profile; the panel is one more screen for it, like a phone.
+roast, records it and follows the profile; the panel is one more screen for it, like a phone,
+and it looks like one: the dashboard's colours and typeface, and the same colour for each
+signal as on the dashboard's scope. A tap on the top bar switches between dark and light.
 
 The example is an ESP32 "Cheap Yellow Display", one of the cheapest boards with a touch
 screen. Any small screen that can make two web requests works the same way.
@@ -33,15 +35,16 @@ the profile: `+1.8` is 1.8 °C above it. It is green within 3 °C, amber within 
 beyond, from Charge to Drop on a roast that has a profile.
 
 **Tap the readings** and they become a graph; the buttons stay. The numbers above the graph
-are in their lines' colours.
+are in their lines' colours, the dashboard's.
 
-- **During a roast**: the bean temperature (yellow) over the profile's (grey), the rate of
-  rise (cyan) over the profile's (darker cyan), and ET (orange), with degrees on the left,
-  the rate of rise's scale on the right and minutes along the bottom. Dry end, first crack
-  and Drop show as dotted lines marked `D`, `FC` and `X`. The rate of rise's scale stops at
-  40 °C/min, so the first minute of a cold charge runs off the top and the rest of the roast
-  stays readable. **Tap again** for the heater (red) and the fan (blue) over the same
-  minutes, in percent, and once more for the readings.
+- **During a roast**: the bean temperature (amber) and its rate of rise (green) as solid
+  lines, the profile's as dashed lines of the same colours, and ET (blue), with degrees on
+  the left, the rate of rise's scale on the right and minutes along the bottom. Dry end,
+  first crack and Drop show as dotted lines marked `D`, `FC` and `X`. The rate of rise's
+  scale stops at 40 °C/min, so the first minute of a cold charge runs off the top and the
+  rest of the roast stays readable. **Tap again** for the heater (red) and the fan (violet)
+  over the same minutes, in percent, with the setpoint beside them, and once more for the
+  readings.
 - **Before a roast**: the profile of the roast picked, to look at before you start it. **◀ ▶**
   step through the roasts and the graph follows.
 
@@ -69,9 +72,11 @@ are in their lines' colours.
    `RW_SERVER` is the server's address as the panel reaches it: plain `http://` on your own
    network, or `https://` behind a proxy.
 
-2. **Get the sketch**:
-   [roastwarden-panel.ino](https://roastwarden.com/examples/roastwarden-panel.ino). Paste the
-   three lines over its own, and put in your Wi-Fi's name and password.
+2. **Get the sketch**, two files in a folder named `roastwarden-panel`:
+   [roastwarden-panel.ino](https://roastwarden.com/examples/roastwarden-panel.ino) and its
+   typeface, [fonts.h](https://roastwarden.com/examples/roastwarden-panel-fonts.h) (save it
+   as `fonts.h`). Paste the three lines over the sketch's own, and put in your Wi-Fi's name
+   and password.
 
 3. **Tell the screen library about the board.** The sketch draws with TFT_eSPI, which takes
    the board's pins as build settings. In PlatformIO:
@@ -89,7 +94,7 @@ are in their lines' colours.
        -DUSER_SETUP_LOADED=1 -DILI9341_2_DRIVER=1 -DTFT_WIDTH=240 -DTFT_HEIGHT=320
        -DTFT_MISO=12 -DTFT_MOSI=13 -DTFT_SCLK=14 -DTFT_CS=15 -DTFT_DC=2 -DTFT_RST=-1
        -DTFT_BL=21 -DTFT_BACKLIGHT_ON=HIGH -DUSE_HSPI_PORT=1
-       -DLOAD_GLCD=1 -DLOAD_FONT2=1 -DLOAD_FONT4=1 -DLOAD_FONT6=1 -DLOAD_FONT7=1
+       -DLOAD_GLCD=1 -DSMOOTH_FONT=1
        -DSPI_FREQUENCY=55000000 -DSPI_READ_FREQUENCY=20000000
    ```
 
@@ -207,8 +212,15 @@ and redraws the plot every five seconds; the newest reading comes with the state
 `target` and `delta` in the state are the drive's own target while it runs, else the roast's
 profile read at the roast clock, so a roast by hand against a profile shows its distance too.
 
-The sketch draws the profile's lines first and duller, the roast's over them, and keeps every
-number outside the plot. The heater and the fan have a page of their own: a third scale and
+The sketch draws the profile's lines first and dashed, the roast's over them, and keeps every
+number outside the plot.
+
+Its look is the dashboard's "Chart paper": the colour tokens of the app's dark and light
+themes, the scope's series colours (a shade darker on paper, where they are read as numbers
+too), and Atkinson Hyperlegible Next, converted by `make-fonts.py` beside the sketch into
+the anti-aliased fonts TFT_eSPI loads from flash (`fonts.h`, 63 kB for seven sizes, with the
+Warden mark for the top bar). One font is loaded at a time. The theme is kept across power
+cuts. The heater and the fan have a page of their own: a third scale and
 two more lines on a plot 276 pixels wide would hide the roast. The sketch answers an `S` on
 its serial port with the screen as the display holds it (`readRect`, 240 rows of RGB565),
 which is how its layout is checked from a desk: a helper keeps the port open (opening it

@@ -5,7 +5,8 @@
 // Complete, Stop, fan and heater. A tap on the readings turns them into a graph of the roast:
 // bean temperature and rate of rise against the profile's, with ET; a second tap shows the
 // heater and the fan over the roast, a third the readings again. Before a roast the tap shows
-// the profile of the roast picked. No browser needed.
+// the profile of the roast picked. No browser needed. It wears Roastwarden's look: the
+// dashboard's colours, dark or light (a tap on the top bar changes it), and its typeface.
 //
 // The server does the work. Once a second the panel asks what to show,
 //
@@ -26,13 +27,14 @@
 // Libraries: TFT_eSPI (Bodmer), XPT2046_Touchscreen (Paul Stoffregen), ArduinoJson 7.
 // TFT_eSPI is told about the board with build flags: docs/panel.md has the PlatformIO lines,
 // and the same values go into its User_Setup.h for the Arduino IDE. Board: ESP32 Dev Module.
+// fonts.h beside this file holds the typeface and the mark (make-fonts.py makes it).
 //
 // The serial monitor (115200) says what it is doing: Wi-Fi, the server's answer when it changes
 // (with the free memory, which https needs some 40 kB of), each press, and each tap with what
 // the touch read and where on the screen that is. Never the token. Send it an S and it answers
 // with its screen, read back from the display: "SHOT 320 240", 240 rows of 320 pixels (two
 // bytes each, RGB565), "END": a picture of the panel without a camera. A G is a tap on the
-// readings.
+// readings, a T one on the top bar.
 
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
@@ -41,6 +43,8 @@
 #include <SPI.h>
 #include <TFT_eSPI.h>
 #include <XPT2046_Touchscreen.h>
+#include <Preferences.h>
+#include "fonts.h"
 
 // ---- Your settings ----
 const char* WIFI_SSID = "your-wifi";
@@ -73,13 +77,32 @@ const unsigned long ASKED_MS = 4000;     // how long a change stands in for the 
 const unsigned long CURVE_MS = 5000;     // how often the graph asks for the roast's curve
 const float NEAR_C = 3, FAR_C = 6;       // off the profile by up to this: green, amber; more: red
 
-// ---- Colours (RGB565) ----
-const uint16_t C_BG = 0x0000, C_TEXT = 0xFFFF, C_DIM = 0x7BEF, C_BAR = 0x2104;
-const uint16_t C_GO = 0x0560, C_MARK = 0x1A7F, C_STOP = 0xE000, C_PLAIN = 0x4208, C_WARN = 0xFD20;
-const uint16_t C_OK = 0x07E0, C_BAD = 0xF800;                       // near the profile, far from it
-const uint16_t C_BT = 0xFFE0, C_ROR = 0x07FF, C_GRID = 0x2945;      // the graph: BT, its rate of rise
-const uint16_t C_PROFILE = 0x9CF3, C_PROFILE_ROR = 0x0410;          // the profile's two, duller
-const uint16_t C_ET = 0xFB20, C_HEAT = 0xFA08, C_FAN = 0x5DDF;      // ET; the heater and the fan
+// ---- The look: Roastwarden's "Chart paper", dark and light, in the dashboard's own colours ----
+constexpr uint16_t rgb(uint32_t c) {
+  return ((c >> 8) & 0xF800) | ((c >> 5) & 0x07E0) | ((c >> 3) & 0x001F);
+}
+
+struct Look {
+  uint16_t bg, card, text, dim, border, grid;
+  uint16_t go, goText, action, actionText, plain, plainText, stop, stopText;
+  uint16_t warn, ok, bad;
+  uint16_t bt, et, sp, ror, heat, fan;   // the signals, as the dashboard's scope draws them
+};
+const Look DARK = {
+  rgb(0x1b1f25), rgb(0x22272f), rgb(0xe8ebef), rgb(0xa0a9b4), rgb(0x39414c), rgb(0x2c323f),
+  rgb(0x5fae7d), rgb(0x0c1a11), rgb(0x9db0ee), rgb(0x111933), rgb(0x39414c), rgb(0xe8ebef), rgb(0xf26d6d), rgb(0x2b0b0b),
+  rgb(0xe3b873), rgb(0x5fae7d), rgb(0xf26d6d),
+  rgb(0xf59e0b), rgb(0x60a5fa), rgb(0xf97316), rgb(0x34d399), rgb(0xf87171), rgb(0xa78bfa),
+};
+// On paper the same signals a shade darker, to read as numbers too.
+const Look LIGHT = {
+  rgb(0xf1f4ef), rgb(0xffffff), rgb(0x191e1b), rgb(0x525d57), rgb(0xc3cec4), rgb(0xc6dac8),
+  rgb(0x2d7a4b), rgb(0xffffff), rgb(0x263c7a), rgb(0xffffff), rgb(0xdfe5dc), rgb(0x191e1b), rgb(0xd92d20), rgb(0xffffff),
+  rgb(0x8a4b08), rgb(0x2d7a4b), rgb(0xd92d20),
+  rgb(0xd97706), rgb(0x2563eb), rgb(0xc2410c), rgb(0x059669), rgb(0xdc2626), rgb(0x7c3aed),
+};
+Look L = DARK;
+bool light = false;   // kept across power cuts
 
 TFT_eSPI tft;
 SPIClass touchSpi(VSPI);
@@ -87,6 +110,7 @@ XPT2046_Touchscreen touch(TOUCH_CS, TOUCH_IRQ);
 WiFiClient plainClient;
 WiFiClientSecure tlsClient;
 HTTPClient http;
+Preferences kept;
 
 const int QUEUE_MAX = 6;
 
@@ -95,7 +119,7 @@ struct {
   bool known = false;       // the server has answered at least once
   bool online = false;      // the roaster reports
   String name, stage, phase, roast;
-  float bt = NAN, et = NAN, ror = NAN, heater = NAN, fan = NAN;
+  float bt = NAN, et = NAN, ror = NAN, heater = NAN, fan = NAN, setpoint = NAN;
   float delta = NAN;        // BT minus the profile's, while there is one to be off from
   long timeS = -1;
   bool cooling = false, drive = false;
@@ -119,6 +143,7 @@ unsigned long confirmUntil = 0; // Cancel was tapped once
 String message;                 // a refusal, shown for a while
 unsigned long messageUntil = 0;
 String drawnButtons;            // the row as drawn, to redraw it only when it changes
+String drawnHeader;             // and the top bar
 
 // The graph: the roast's curve as the server cut it down, one value every curveStep seconds
 // from CHARGE, in tenths (of a degree, of a degree a minute).
@@ -140,8 +165,7 @@ String curveOf;                 // whose it is: "roast", or the queue's roast pi
 struct Button {
   const char* action;
   const char* label;
-  uint16_t colour;
-  int font;   // 4 for what the roast needs next, 2 for the way out (Cancel)
+  char kind;   // g what the roast needs next, m a mark, p plain, s Stop, c the way out (Cancel)
   int x, w;
 };
 Button buttons[5];
@@ -218,6 +242,7 @@ void take(const String& json) {
   panel.ror = number(doc["ror"]);
   panel.heater = number(doc["heater"]);
   panel.fan = number(doc["fan"]);
+  panel.setpoint = number(doc["setpoint"]);
   JsonVariantConst roast = doc["roast"];
   panel.roast = roast.isNull() ? String() : ascii(roast["name"] | "");
   panel.timeS = roast.isNull() ? -1 : (roast["time_s"] | 0L);
@@ -346,6 +371,16 @@ bool press(const char* action, const String& body) {
 
 // ---------------------------------------------------------------- drawing --
 
+const uint8_t* fontNow = nullptr;
+
+// The typeface for what is drawn next (one is loaded at a time).
+void use(const uint8_t* font) {
+  if (font == fontNow) return;
+  if (fontNow) tft.unloadFont();
+  tft.loadFont(font);
+  fontNow = font;
+}
+
 String clock(long s) {
   if (s < 0) return "-:--";
   char text[12];
@@ -359,82 +394,97 @@ String reading(float v, int places) {
 
 // The text cut to `width` pixels in `font`, ending in ".." when it was longer: a long name
 // must not run into what stands beside it.
-String fit(String text, int font, int width) {
-  if (tft.textWidth(text, font) <= width) return text;
-  while (text.length() > 1 && tft.textWidth(text + "..", font) > width) text.remove(text.length() - 1);
+String fit(String text, const uint8_t* font, int width) {
+  use(font);
+  if (tft.textWidth(text) <= width) return text;
+  while (text.length() > 1 && tft.textWidth(text + "..") > width) text.remove(text.length() - 1);
   return text + "..";
 }
 
-// A line of text over what was there before, in a box of `width`.
-void line(const String& text, int x, int y, int font, uint16_t colour, int width, uint8_t datum = TL_DATUM) {
+// A line of text over what was there before, in a box of `width` on `under` (the background
+// when left out).
+void line(const String& text, int x, int y, const uint8_t* font, uint16_t colour, int width, uint8_t datum = TL_DATUM, long under = -1) {
+  uint16_t bg = under < 0 ? L.bg : (uint16_t)under;
+  use(font);
   tft.setTextDatum(datum);
-  tft.setTextColor(colour, C_BG);
+  tft.setTextColor(colour, bg, true);
   tft.setTextPadding(width);
-  tft.drawString(text, x, y, font);
+  tft.drawString(text, x, y);
   tft.setTextPadding(0);
 }
 
+// The top bar: the Warden mark, the roaster's name and whether it is there. Drawn when it
+// changes, not every second.
 void drawHeader(bool stale) {
-  tft.fillRect(0, 0, 320, 24, C_BAR);
-  tft.setTextDatum(ML_DATUM);
-  tft.setTextColor(C_TEXT, C_BAR);
-  tft.drawString(fit(panel.known ? panel.name : String(RW_ROASTER), 2, 190), 6, 12, 2);
   const char* state = WiFi.status() != WL_CONNECTED ? "no Wi-Fi"
     : stale ? "no server"
     : panel.online ? "online" : "roaster offline";
-  tft.setTextDatum(MR_DATUM);
-  tft.setTextColor(stale || !panel.online ? C_WARN : C_TEXT, C_BAR);
-  tft.drawString(state, 314, 12, 2);
+  String name = panel.known ? panel.name : String(RW_ROASTER);
+  String now = name + "|" + state + "|" + light;
+  if (now == drawnHeader) return;
+  drawnHeader = now;
+  tft.fillRect(0, 0, 320, 26, L.card);
+  tft.drawFastHLine(0, 26, 320, L.border);
+  for (int i = 0; i < MARK_SIZE * MARK_SIZE; i++) {
+    uint8_t a = pgm_read_byte(MARK + i);
+    if (a) tft.drawPixel(6 + i % MARK_SIZE, 3 + i / MARK_SIZE, tft.alphaBlend(a, L.action, L.card));
+  }
+  line(fit(name, FONT_SMALL, 180), 32, 13, FONT_SMALL, L.text, 0, ML_DATUM, L.card);
+  bool trouble = stale || !panel.online;
+  line(state, 312, 13, FONT_SMALL, trouble ? L.warn : L.dim, 0, MR_DATUM, L.card);
 }
 
 // How far BT is from the profile, with its sign and a small delta before it: green near the
 // profile, amber further, red far. Nothing while there is no profile to be off from.
 void drawDelta(int x, int y, int width) {
   if (isnan(panel.delta)) {
-    tft.fillRect(x, y, width, 26, C_BG);
+    tft.fillRect(x, y, width, 22, L.bg);
     return;
   }
   float off = fabsf(panel.delta);
-  uint16_t colour = off <= NEAR_C ? C_OK : off <= FAR_C ? C_WARN : C_BAD;
-  line(String(panel.delta >= 0 ? "+" : "") + String(panel.delta, 1), x + 18, y, 4, colour, width - 18);
-  tft.fillRect(x, y, 18, 26, C_BG);
-  tft.drawTriangle(x + 1, y + 20, x + 7, y + 6, x + 13, y + 20, colour);
+  uint16_t colour = off <= NEAR_C ? L.ok : off <= FAR_C ? L.warn : L.bad;
+  line(String(panel.delta >= 0 ? "+" : "") + String(panel.delta, 1), x + 18, y, FONT_TEXT, colour, width - 18);
+  tft.fillRect(x, y, 18, 22, L.bg);
+  tft.drawTriangle(x + 1, y + 15, x + 7, y + 2, x + 13, y + 15, colour);
+  tft.drawTriangle(x + 2, y + 14, x + 7, y + 4, x + 12, y + 14, colour);
 }
 
 void drawReadings(bool stale) {
-  uint16_t colour = stale || !panel.online ? C_DIM : C_TEXT;
-  line(reading(panel.bt, 1), 8, 32, 7, colour, 170);
-  line(panel.timeS < 0 ? "" : clock(panel.timeS), 314, 32, 6, colour, 136, TR_DATUM);
+  bool dim = stale || !panel.online;
+  line(reading(panel.bt, 1), 8, 27, FONT_BIG, dim ? L.dim : L.text, 172);
+  line(panel.timeS < 0 ? "" : clock(panel.timeS), 312, 43, FONT_CLOCK, dim ? L.dim : L.text, 124, TR_DATUM);
   String second = "ET " + reading(panel.et, 0) + "   RoR " + reading(panel.ror, 1);
-  line(second, 8, 90, 4, colour, 214);
-  drawDelta(226, 90, 90);
+  line(second, 8, 92, FONT_TEXT, dim ? L.dim : L.text, 214);
+  drawDelta(226, 92, 90);
 }
 
 void drawStatus() {
   String text;
-  uint16_t colour = C_TEXT;
+  uint16_t colour = L.dim;
   if (messageUntil && millis() < messageUntil) {
     text = message;
-    colour = C_WARN;
+    colour = L.warn;
   } else if (!panel.known) {
     text = "Asking the server...";
   } else if (panel.stage == "idle") {
     if (panel.cooling) text = "Cooling";
     else if (panel.queueLen == 0) text = "Start: a plain roast";
     else text = String(picked + 1) + "/" + panel.queueLen + "  " + panel.queueName[picked];
+    colour = L.text;
   } else {
     text = panel.stage == "ready" ? "Recording: add the beans, then Charge"
       : panel.stage == "dropped" ? "Dropped" + String(panel.cooling ? ", cooling" : "")
       : panel.phase;
     if (panel.stage != "ready" && panel.roast.length()) text += "  " + panel.roast;
     if (panel.drive) text += "  (drive)";
+    colour = L.text;
   }
   // A tap on the readings shows the roast's graph, or the picked roast's profile: say so at
   // the line's end
   bool hint = curveWanted().length() > 0;
-  int width = hint ? 240 : 304;
-  line(fit(text, 2, width), 8, 122, 2, colour, width);
-  if (hint) line(roastOpen() ? "graph >" : "profile >", 314, 122, 2, C_DIM, 62, TR_DATUM);
+  int width = hint ? 236 : 304;
+  line(fit(text, FONT_SMALL, width), 8, 122, FONT_SMALL, colour, width);
+  if (hint) line(roastOpen() ? "graph >" : "profile >", 312, 122, FONT_SMALL, L.action, 64, TR_DATUM);
 }
 
 // ---------------------------------------------------------------- the graph --
@@ -442,46 +492,49 @@ void drawStatus() {
 // The graph's area between the readings and the buttons, and the plot inside it: degrees to
 // its left, the rate of rise's scale to its right, the landmarks' letters above and the
 // minutes below, so no line is drawn over a number.
-const int GX = 0, GY = 58, GW = 320, GH = 122;
-const int PX = 26, PY = GY + 10, PW = 276, PH = GH - 22;
+const int GX = 0, GY = 60, GW = 320, GH = 122;
+const int PX = 28, PY = GY + 13, PW = 272, PH = GH - 28;
 
 // The graph view's top line, each number in its line's colour: BT, how far from the profile,
-// the rate of rise and ET, the clock; on the second page the heater and the fan; before a
-// roast the roast picked. A refusal takes the line while it shows.
+// the rate of rise and ET, the clock; on the second page the heater, the fan and the
+// setpoint; before a roast the roast picked. A refusal takes the line while it shows.
 void drawGraphReadings(bool stale) {
   static int shown = -1;
   int now = messageUntil && millis() < messageUntil ? 1 : !roastOpen() ? 2 : page == 2 ? 3 : 0;
-  if (now != shown) tft.fillRect(0, 26, 320, 32, C_BG);
+  if (now != shown) tft.fillRect(0, 27, 320, GY - 27, L.bg);
   shown = now;
   bool dim = stale || !panel.online;
   if (now == 1) {
-    line(fit(message, 2, 308), 6, 32, 2, C_WARN, 308);
+    line(fit(message, FONT_SMALL, 308), 6, 34, FONT_SMALL, L.warn, 308);
   } else if (now == 2) {
     String text = panel.queueLen == 0 ? String("Nothing to start")
       : String(picked + 1) + "/" + panel.queueLen + "  " + panel.queueName[picked];
-    line(fit(text, 2, 308), 6, 32, 2, C_TEXT, 308);
+    line(fit(text, FONT_SMALL, 308), 6, 34, FONT_SMALL, L.text, 308);
   } else if (now == 3) {
-    line("Heater " + reading(panel.heater, 0) + " %", 6, 34, 2, dim ? C_DIM : C_HEAT, 112);
-    line("Fan " + reading(panel.fan, 0) + " %", 124, 34, 2, dim ? C_DIM : C_FAN, 100);
-    line(clock(panel.timeS), 314, 28, 4, dim ? C_DIM : C_TEXT, 64, TR_DATUM);
+    line("Heater " + reading(panel.heater, 0) + " %", 6, 28, FONT_SMALL, dim ? L.dim : L.heat, 104);
+    line("Fan " + reading(panel.fan, 0) + " %", 6, 42, FONT_SMALL, dim ? L.dim : L.fan, 104);
+    line("SP " + reading(panel.setpoint, 0), 116, 28, FONT_SMALL, dim ? L.dim : L.sp, 80);
+    line("BT " + reading(panel.bt, 0), 116, 42, FONT_SMALL, dim ? L.dim : L.bt, 80);
+    line(clock(panel.timeS), 312, 27, FONT_NUMBER, dim ? L.dim : L.text, 84, TR_DATUM);
   } else {
-    line(reading(panel.bt, 1), 6, 28, 4, dim ? C_DIM : C_BT, 76);
-    drawDelta(84, 28, 78);
-    line("RoR " + reading(panel.ror, 1), 166, 26, 2, dim ? C_DIM : C_ROR, 82);
-    line("ET " + reading(panel.et, 0), 166, 41, 2, dim ? C_DIM : C_ET, 82);
-    line(clock(panel.timeS), 314, 28, 4, dim ? C_DIM : C_TEXT, 64, TR_DATUM);
+    line(reading(panel.bt, 1), 6, 27, FONT_NUMBER, dim ? L.dim : L.bt, 84);
+    drawDelta(94, 31, 76);
+    line("RoR " + reading(panel.ror, 1), 172, 28, FONT_SMALL, dim ? L.dim : L.ror, 66);
+    line("ET " + reading(panel.et, 0), 172, 42, FONT_SMALL, dim ? L.dim : L.et, 66);
+    line(clock(panel.timeS), 312, 27, FONT_NUMBER, dim ? L.dim : L.text, 72, TR_DATUM);
   }
 }
 
 // One of the curves: `n` values in tenths, a step apart, between `lo` and `hi` on the plot's
-// height; `thick` draws it two pixels wide.
-void drawCurve(const int16_t* values, int n, int points, float lo, float hi, uint16_t colour, bool thick) {
+// height. `thick` draws it two pixels wide; `dashed` leaves every other stretch out, which is
+// how the profile's lines are told from the roast's.
+void drawCurve(const int16_t* values, int n, int points, float lo, float hi, uint16_t colour, bool thick, bool dashed = false) {
   int px = 0, py = 0;
   for (int i = 0; i < n; i++) {
     float v = constrain(values[i] / 10.0f, lo, hi);
     int x = PX + (long)i * (PW - 1) / (points - 1);
     int y = PY + PH - 1 - (int)((v - lo) / (hi - lo) * (PH - 1));
-    if (i > 0) {
+    if (i > 0 && !(dashed && (i / 2) % 2)) {
       tft.drawLine(px, py, x, y, colour);
       if (thick) tft.drawLine(px, py - 1, x, y - 1, colour);
     }
@@ -495,52 +548,47 @@ void drawMark(long at, const char* letters, int points) {
   long span = (long)(points - 1) * curveStep;
   if (at < 0 || at > span) return;
   int x = PX + at * (PW - 1) / span;
-  for (int y = PY; y < PY + PH; y += 4) tft.drawPixel(x, y, C_TEXT);
-  tft.setTextDatum(BC_DATUM);
-  tft.setTextColor(C_TEXT, C_BG);
-  tft.drawString(letters, constrain(x, PX + 6, PX + PW - 7), PY - 1, 1);
+  for (int y = PY; y < PY + PH; y += 3) tft.drawPixel(x, y, L.text);
+  line(letters, constrain(x, PX + 6, PX + PW - 7), PY - 2, FONT_TINY, L.text, 0, BC_DATUM);
 }
 
 // The plot's frame: a line and its number on the left every `every` between `lo` and `hi`,
 // the minutes along the bottom, the landmarks.
 void drawFrame(int points, float lo, float hi, float every) {
-  tft.setTextColor(C_DIM, C_BG);
-  tft.setTextDatum(MR_DATUM);
   for (float v = ceilf(lo / every) * every; v <= hi; v += every) {
     int y = PY + PH - 1 - (int)((v - lo) / (hi - lo) * (PH - 1));
-    tft.drawFastHLine(PX, y, PW, C_GRID);
-    tft.drawString(String((int)v), PX - 4, y, 1);
+    tft.drawFastHLine(PX, y, PW, L.grid);
+    line(String((int)v), PX - 4, y, FONT_TINY, L.dim, 0, MR_DATUM);
   }
   long span = (long)(points - 1) * curveStep;
-  tft.setTextDatum(TC_DATUM);
-  for (long t = 120; t < span; t += 120) {
+  long every_s = span > 960 ? 300 : 120;   // a line every two minutes, every five on a long roast
+  for (long t = every_s; t < span; t += every_s) {
     int x = PX + t * (PW - 1) / span;
-    tft.drawFastVLine(x, PY + PH, 3, C_DIM);
-    tft.drawString(String(t / 60), x, PY + PH + 4, 1);
+    tft.drawFastVLine(x, PY, PH, L.grid);
+    line(String(t / 60), x, PY + PH + 3, FONT_TINY, L.dim, 0, TC_DATUM);
   }
+  tft.drawRect(PX, PY, PW, PH, L.border);
   drawMark(markDry, "D", points);
   drawMark(markCrack, "FC", points);
   drawMark(markDrop, "X", points);
 }
 
-// The roast as a graph. The profile's two lines are the duller ones: its BT (grey) under the
-// roast's (yellow), its rate of rise (dark cyan) under the roast's (cyan); ET is the thin
-// orange one. Degrees on the left, the rate of rise's scale on the right, minutes below. The
-// second page is the heater (red) and the fan (blue) over the same minutes, in percent.
+// The roast as a graph, in the colours of the dashboard's scope: BT amber, its rate of rise
+// green (its own scale on the right), ET blue; the profile's BT and rate of rise are the
+// dashed ones under them. Degrees on the left, minutes below. The second page is the heater
+// (red) and the fan (violet) over the same minutes, in percent.
 void drawGraph() {
   graphStale = false;
-  tft.fillRect(GX, GY, GW, GH, C_BG);
+  tft.fillRect(GX, GY, GW, GH, L.bg);
   if (curveBtLen == 0 && curveTargetLen == 0) {
-    tft.setTextDatum(MC_DATUM);
-    tft.setTextColor(C_DIM, C_BG);
-    tft.drawString(roastOpen() ? "The roast's curve appears here" : "No profile: a plain roast", GX + GW / 2, GY + GH / 2, 2);
+    line(roastOpen() ? "The roast's curve appears here" : "No profile: a plain roast", GX + GW / 2, GY + GH / 2, FONT_SMALL, L.dim, 0, MC_DATUM);
     return;
   }
   int points = max(max(curveBtLen, curveTargetLen), 2);
   if (page == 2 && roastOpen()) {
     drawFrame(points, 0, 100, 50);
-    drawCurve(curveFan, curveFanLen, points, 0, 100, C_FAN, true);
-    drawCurve(curveHeater, curveHeaterLen, points, 0, 100, C_HEAT, true);
+    drawCurve(curveFan, curveFanLen, points, 0, 100, L.fan, true);
+    drawCurve(curveHeater, curveHeaterLen, points, 0, 100, L.heat, true);
     return;
   }
   float lo = floorf(curveMin / 25) * 25, hi = ceilf(curveMax / 25) * 25;
@@ -549,16 +597,14 @@ void drawGraph() {
   // the scale is for the rest of the roast, where 5 and 15 have to be told apart.
   float rorTop = constrain(ceilf(curveRorMax / 10) * 10, 20.0f, 40.0f);
   drawFrame(points, lo, hi, 50);
-  tft.setTextColor(C_ROR, C_BG);
-  tft.setTextDatum(ML_DATUM);
-  tft.drawString(String((int)rorTop), PX + PW + 3, PY + 3, 1);
-  tft.drawString(String((int)(rorTop / 2)), PX + PW + 3, PY + PH / 2, 1);
-  tft.drawString("0", PX + PW + 3, PY + PH - 4, 1);
-  drawCurve(curveTargetRor, curveTargetRorLen, points, 0, rorTop, C_PROFILE_ROR, false);
-  drawCurve(curveTarget, curveTargetLen, points, lo, hi, C_PROFILE, false);
-  drawCurve(curveEt, curveEtLen, points, lo, hi, C_ET, false);
-  drawCurve(curveRor, curveRorLen, points, 0, rorTop, C_ROR, false);
-  drawCurve(curveBt, curveBtLen, points, lo, hi, C_BT, true);
+  line(String((int)rorTop), PX + PW + 3, PY + 5, FONT_TINY, L.ror, 0, ML_DATUM);
+  line(String((int)(rorTop / 2)), PX + PW + 3, PY + PH / 2, FONT_TINY, L.ror, 0, ML_DATUM);
+  line("0", PX + PW + 3, PY + PH - 5, FONT_TINY, L.ror, 0, ML_DATUM);
+  drawCurve(curveTargetRor, curveTargetRorLen, points, 0, rorTop, L.ror, false, true);
+  drawCurve(curveTarget, curveTargetLen, points, lo, hi, L.bt, false, true);
+  drawCurve(curveEt, curveEtLen, points, lo, hi, L.et, false);
+  drawCurve(curveRor, curveRorLen, points, 0, rorTop, L.ror, false);
+  drawCurve(curveBt, curveBtLen, points, lo, hi, L.bt, true);
 }
 
 // The fan or heater as the label shows it and as - and + count from: what was just asked
@@ -569,80 +615,94 @@ float level(bool heater) {
   return heater ? panel.heater : panel.fan;
 }
 
-void box(int x, int y, int w, int h, const char* label, uint16_t colour, int font) {
-  tft.fillRoundRect(x, y, w, h, 4, colour);
-  tft.setTextDatum(MC_DATUM);
-  tft.setTextColor(C_TEXT, colour);
-  tft.drawString(label, x + w / 2, y + h / 2, font);
+// A button of its kind: the roast's next step green, a mark the dashboard's blue, Stop red,
+// the rest plain; its word in the button face, Cancel's in the small one.
+void box(int x, int y, int w, int h, const char* label, char kind) {
+  uint16_t fill = kind == 'g' ? L.go : kind == 'm' ? L.action : kind == 's' ? L.stop : L.plain;
+  uint16_t ink = kind == 'g' ? L.goText : kind == 'm' ? L.actionText : kind == 's' ? L.stopText : L.plainText;
+  tft.fillRoundRect(x, y, w, h, 6, fill);
+  if (kind == 'p' || kind == 'c') tft.drawRoundRect(x, y, w, h, 6, L.border);
+  line(label, x + w / 2, y + h / 2 + 1, kind == 'c' ? FONT_SMALL : FONT_BUTTON, ink, 0, MC_DATUM, fill);
 }
 
 // Fan or heater with - and +; a tap on the label switches between them.
 void drawAdjust() {
   bool shown = panel.canFan || panel.canHeater;
   if (!shown) {
-    tft.fillRect(0, ADJ_Y, 320, ADJ_H, C_BG);
+    tft.fillRect(0, ADJ_Y, 320, ADJ_H, L.bg);
     return;
   }
   bool heater = adjustHeater || !panel.canFan;
   String label = String(heater ? "Heater " : "Fan ") + reading(level(heater), 0) + " %";
-  line(label, 8, ADJ_Y + 6, 4, C_TEXT, 184);
-  box(MINUS_X, ADJ_Y, ADJ_W, ADJ_H, "-", C_PLAIN, 4);
-  box(PLUS_X, ADJ_Y, ADJ_W, ADJ_H, "+", C_PLAIN, 4);
+  line(label, 8, ADJ_Y + 9, FONT_TEXT, heater ? L.heat : L.fan, 184);
+  box(MINUS_X, ADJ_Y, ADJ_W, ADJ_H, "-", 'p');
+  box(PLUS_X, ADJ_Y, ADJ_W, ADJ_H, "+", 'p');
 }
 
-void add(const char* action, const char* label, uint16_t colour, int font = 4) {
-  if (buttonCount < 5) buttons[buttonCount++] = {action, label, colour, font, 0, 0};
+void add(const char* action, const char* label, char kind) {
+  if (buttonCount < 5) buttons[buttonCount++] = {action, label, kind, 0, 0};
 }
 
 // The bottom row for this stage: at most three of the roast's buttons, then STOP at the right.
 // Each is as wide as its word needs and the room left goes to the ones the roast needs next,
 // so no word runs into its neighbour; Cancel, the way out, is the small one.
 void layoutButtons() {
-  const int GAP = 4, PAD = 24, ARROW_W = 48, STOP_W = 76;
+  const int GAP = 4, PAD = 24, ARROW_W = 48, STOP_W = 78;
   buttonCount = 0;
   bool confirming = confirmUntil && millis() < confirmUntil;
   if (panel.canStart) {
-    if (panel.queueLen > 1) add("<", "<", C_PLAIN);
-    add("start", "START", C_GO);
-    if (panel.queueLen > 1) add(">", ">", C_PLAIN);
+    if (panel.queueLen > 1) add("<", "<", 'p');
+    add("start", "START", 'g');
+    if (panel.queueLen > 1) add(">", ">", 'p');
   }
-  if (panel.canCharge) add("charge", "CHARGE", C_GO);
-  if (panel.canDryEnd) add("dry_end", "DRY", C_MARK);
-  if (panel.canFirstCrack) add("first_crack", "FC", C_MARK);
-  if (panel.canDrop) add("drop", "DROP", C_GO);
-  if (panel.canComplete) add("complete", "DONE", C_GO);
-  if (panel.canCancel && buttonCount < 3) add("cancel", confirming ? "SURE?" : "CANCEL", C_PLAIN, 2);
+  if (panel.canCharge) add("charge", "CHARGE", 'g');
+  if (panel.canDryEnd) add("dry_end", "DRY", 'm');
+  if (panel.canFirstCrack) add("first_crack", "FC", 'm');
+  if (panel.canDrop) add("drop", "DROP", 'g');
+  if (panel.canComplete) add("complete", "DONE", 'g');
+  if (panel.canCancel && buttonCount < 3) add("cancel", confirming ? "SURE?" : "CANCEL", 'c');
   int room = 320 - (panel.canStop ? STOP_W + GAP : 0) - GAP * max(buttonCount - 1, 0);
   int width[5], wide = 0, sum = 0;
   for (int i = 0; i < buttonCount; i++) {
     char first = buttons[i].action[0];
     bool arrow = first == '<' || first == '>';
-    width[i] = arrow ? ARROW_W : tft.textWidth(buttons[i].label, buttons[i].font) + PAD;
+    use(buttons[i].kind == 'c' ? FONT_SMALL : FONT_BUTTON);
+    width[i] = arrow ? ARROW_W : tft.textWidth(buttons[i].label) + PAD;
     sum += width[i];
-    if (!arrow && buttons[i].font == 4) wide++;
+    if (!arrow && buttons[i].kind != 'c') wide++;
   }
   int more = wide ? max(room - sum, 0) / wide : 0;
   int x = 0;
   for (int i = 0; i < buttonCount; i++) {
     char first = buttons[i].action[0];
-    bool grows = first != '<' && first != '>' && buttons[i].font == 4;
+    bool grows = first != '<' && first != '>' && buttons[i].kind != 'c';
     buttons[i].x = x;
     buttons[i].w = width[i] + (grows ? more : 0);
     x += buttons[i].w + GAP;
   }
-  if (panel.canStop && buttonCount < 5) buttons[buttonCount++] = {"stop", "STOP", C_STOP, 4, 320 - STOP_W, STOP_W};
+  if (panel.canStop && buttonCount < 5) buttons[buttonCount++] = {"stop", "STOP", 's', 320 - STOP_W, STOP_W};
 }
 
 void drawButtons() {
   layoutButtons();
-  String row;
+  String row = String(light);
   for (int i = 0; i < buttonCount; i++) row += String(buttons[i].label) + buttons[i].x + "+" + buttons[i].w + "|";
   if (row == drawnButtons) return;
   drawnButtons = row;
-  tft.fillRect(0, ROW_Y, 320, ROW_H + 2, C_BG);
+  tft.fillRect(0, ROW_Y, 320, ROW_H + 2, L.bg);
   for (int i = 0; i < buttonCount; i++) {
-    box(buttons[i].x, ROW_Y, buttons[i].w, ROW_H, buttons[i].label, buttons[i].colour, buttons[i].font);
+    box(buttons[i].x, ROW_Y, buttons[i].w, ROW_H, buttons[i].label, buttons[i].kind);
   }
+}
+
+// The look, dark or light: everything is drawn again in it.
+void wear(bool paper) {
+  light = paper;
+  L = light ? LIGHT : DARK;
+  tft.fillScreen(L.bg);
+  drawnHeader = "";
+  drawnButtons = "";
+  viewDrawn = -1;
 }
 
 void draw() {
@@ -652,7 +712,7 @@ void draw() {
   if (!roastOpen()) page = 1;   // the heater and the fan are an open roast's
   int view = graph ? page : 0;
   if (view != viewDrawn) {
-    tft.fillRect(0, 24, 320, ROW_Y - 24, C_BG);
+    tft.fillRect(0, 27, 320, ROW_Y - 27, L.bg);
     viewDrawn = view;
     graphStale = true;
   }
@@ -695,9 +755,15 @@ void held(int which) {
 }
 
 void tapped(int x, int y) {
+  // The top bar: dark, light
+  if (y < 26) {
+    wear(!light);
+    kept.putBool("light", light);
+    return;
+  }
   // A tap on the readings turns them into the graph (the open roast's, or the profile of the
   // roast picked); a tap on an open roast's graph into its heater and fan; the next one back
-  if (curveWanted().length() && y >= 24 && y < (graph ? ROW_Y : ADJ_Y)) {
+  if (curveWanted().length() && y >= 26 && y < (graph ? ROW_Y : ADJ_Y)) {
     if (!graph) {
       graph = true;
       page = 1;
@@ -791,7 +857,8 @@ void setup() {
   digitalWrite(PIN_BACKLIGHT, HIGH);
   tft.init();
   tft.setRotation(1);
-  tft.fillScreen(C_BG);
+  kept.begin("panel");
+  wear(kept.getBool("light", false));
   touchSpi.begin(TOUCH_CLK, TOUCH_MISO, TOUCH_MOSI, TOUCH_CS);
   touch.begin(touchSpi);
   touch.setRotation(1);
@@ -814,8 +881,8 @@ void loop() {
   if (Serial.available()) {
     char key = Serial.read();
     if (key == 'S') screenshot();
-    if (key == 'G') {   // as a tap on the readings
-      tapped(160, 60);
+    if (key == 'G' || key == 'T') {   // as a tap on the readings, on the top bar
+      tapped(160, key == 'G' ? 60 : 10);
       draw();
     }
   }

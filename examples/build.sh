@@ -37,7 +37,7 @@ libs() {
 PANEL_FLAGS="-DUSER_SETUP_LOADED=1 -DILI9341_2_DRIVER=1 -DTFT_WIDTH=240 -DTFT_HEIGHT=320
     -DTFT_MISO=12 -DTFT_MOSI=13 -DTFT_SCLK=14 -DTFT_CS=15 -DTFT_DC=2 -DTFT_RST=-1
     -DTFT_BL=21 -DTFT_BACKLIGHT_ON=HIGH -DUSE_HSPI_PORT=1
-    -DLOAD_GLCD=1 -DLOAD_FONT2=1 -DLOAD_FONT4=1 -DLOAD_FONT6=1 -DLOAD_FONT7=1
+    -DLOAD_GLCD=1 -DSMOOTH_FONT=1
     -DSPI_FREQUENCY=55000000 -DSPI_READ_FREQUENCY=20000000"
 
 work="${EXAMPLES_BUILD_DIR:-${TMPDIR:-/tmp}/roastwarden-examples-build}"
@@ -56,6 +56,8 @@ for n in "${names[@]}"; do
   echo "== $n"
   # A project of its own per sketch (pio ci misses the core's WiFi and Network libraries)
   p="$work/$n"; mkdir -p "$p/src"; cp "$sketch" "$p/src/"
+  # a sketch's own headers go with it (the panel's fonts)
+  for h in "$(dirname "$sketch")"/*.h; do [ -f "$h" ] && cp "$h" "$p/src/"; done
   if [ "${n#*@}" = max6675 ] || [ "${n#*@}" = max6675-esc ]; then
     sed -i 's|^#define BOARD_MAX31855|// #define BOARD_MAX31855|; s|^// #define BOARD_MAX6675|#define BOARD_MAX6675|' \
       "$p/src/$base.ino"
