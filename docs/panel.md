@@ -83,6 +83,10 @@ If taps land beside the buttons, switch `CALIBRATE` on in the sketch: the status
 shows what each tap reads. Tap the four corners and put those numbers in the `TOUCH_…`
 settings.
 
+When something does not work, the serial monitor (115200) says what the panel is doing: its
+Wi-Fi and address, each answer of the server that is not a plain yes, and each tap with where
+on the screen it landed. It never prints the token.
+
 Try it on the [simulated roaster](virtual-roaster.md) first: make a panel token for
 `virtual_roaster` and roast there.
 

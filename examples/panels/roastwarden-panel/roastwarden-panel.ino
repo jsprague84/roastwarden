@@ -21,6 +21,9 @@
 // Libraries: TFT_eSPI (Bodmer), XPT2046_Touchscreen (Paul Stoffregen), ArduinoJson 7.
 // TFT_eSPI is told about the board with build flags: docs/panel.md has the PlatformIO lines,
 // and the same values go into its User_Setup.h for the Arduino IDE. Board: ESP32 Dev Module.
+//
+// The serial monitor (115200) says what it is doing: Wi-Fi, each answer that is not a 200,
+// each tap with what the touch read and where on the screen that is. Never the token.
 
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
@@ -214,8 +217,14 @@ void say(const String& text) {
 }
 
 void poll() {
+  static int last = 0;
   String answer;
   int status = request("GET", "/api/roaster/" RW_ROASTER "/panel", "", answer);
+  if (status != last) {
+    // below 0: no connection (HTTPClient's error); 200: the panel's state; else the server's refusal
+    Serial.printf("server: %d %s\n", status, status == 200 ? "ok" : status < 0 ? http.errorToString(status).c_str() : answer.c_str());
+    last = status;
+  }
   if (status == 200) {
     take(answer);
     answeredAt = millis();
@@ -228,6 +237,7 @@ void poll() {
 void press(const char* action, const String& body) {
   String answer;
   int status = request("POST", String("/api/roaster/" RW_ROASTER "/panel/") + action, body, answer);
+  Serial.printf("press %s %s: %d %s\n", action, body.c_str(), status, status == 200 ? "ok" : answer.c_str());
   if (status == 200) {
     take(answer);
     answeredAt = millis();
@@ -427,6 +437,7 @@ void readTouch() {
 #endif
     int x = constrain(map(p.x, TOUCH_X_MIN, TOUCH_X_MAX, 0, 319), 0, 319);
     int y = constrain(map(p.y, TOUCH_Y_MIN, TOUCH_Y_MAX, 0, 239), 0, 239);
+    Serial.printf("tap: raw %d,%d  screen %d,%d\n", p.x, p.y, x, y);
     tapped(x, y);
     draw();
   }
@@ -437,6 +448,7 @@ void readTouch() {
 
 void setup() {
   Serial.begin(115200);
+  Serial.println("\nroastwarden-panel: " RW_ROASTER " at " RW_SERVER);
   pinMode(PIN_BACKLIGHT, OUTPUT);
   digitalWrite(PIN_BACKLIGHT, HIGH);
   tft.init();
@@ -454,6 +466,12 @@ void setup() {
 }
 
 void loop() {
+  static wl_status_t wifi = WL_IDLE_STATUS;
+  if (WiFi.status() != wifi) {
+    wifi = WiFi.status();
+    if (wifi == WL_CONNECTED) Serial.printf("wifi: connected, %s, signal %d dBm\n", WiFi.localIP().toString().c_str(), WiFi.RSSI());
+    else Serial.printf("wifi: not connected (status %d)\n", (int)wifi);
+  }
   readTouch();
   if (confirmUntil && millis() >= confirmUntil) confirmUntil = 0;
   if (millis() - lastPoll >= POLL_MS) {
